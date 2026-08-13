@@ -1,17 +1,26 @@
 import { invoke } from "@tauri-apps/api/core";
 
+import { ErrorCode, type Phase1ErrorCode } from "./errorCodes";
+
 export type StartupReady = {
   workspacePath: string;
 };
 
 export type AppError =
-  | { code: "validationFailed"; details: { reason: string } }
-  | { code: "workspaceNotFound"; details: { path: string } }
-  | { code: "workspaceNotWritable"; details: { path: string; message: string } }
-  | { code: "databaseInitFailed"; details: { message: string } }
-  | { code: "configReadFailed"; details: { message: string } }
-  | { code: "configWriteFailed"; details: { message: string } }
-  | { code: "invalidPath"; details: { message: string } };
+  | { code: typeof ErrorCode.ValidationFailed; details: { reason: string } }
+  | { code: typeof ErrorCode.WorkspaceNotFound; details: { path: string } }
+  | {
+      code: typeof ErrorCode.WorkspaceNotWritable;
+      details: { path: string; message: string };
+    }
+  | { code: typeof ErrorCode.DbOpenFailed; details: { message: string } }
+  | { code: typeof ErrorCode.DbMigrationFailed; details: { message: string } }
+  | { code: typeof ErrorCode.DatabaseError; details: { message: string } }
+  | { code: typeof ErrorCode.AppNotReady; details: { message: string } }
+  | { code: typeof ErrorCode.ConfigReadFailed; details: { message: string } }
+  | { code: typeof ErrorCode.ConfigWriteFailed; details: { message: string } }
+  | { code: typeof ErrorCode.InvalidPath; details: { message: string } }
+  | { code: Phase1ErrorCode; details: Record<string, unknown> };
 
 export type StartupViewState =
   | "preparing"
@@ -26,22 +35,25 @@ export function mapStartupError(error: AppError): {
   message: string;
 } {
   switch (error.code) {
-    case "workspaceNotFound":
+    case ErrorCode.WorkspaceNotFound:
       return {
         state: "workspaceNotFound",
         message: "工作目录找不到",
       };
-    case "workspaceNotWritable":
+    case ErrorCode.WorkspaceNotWritable:
       return {
         state: "workspaceNotWritable",
         message: "工作目录不可写",
       };
-    case "databaseInitFailed":
+    case ErrorCode.DbOpenFailed:
+    case ErrorCode.DbMigrationFailed:
+    case ErrorCode.DatabaseError:
+    case ErrorCode.AppNotReady:
       return {
         state: "databaseInitFailed",
         message: "数据库初始化失败",
       };
-    case "validationFailed":
+    case ErrorCode.ValidationFailed:
       return {
         state: "validationFailed",
         message: "工作目录不可用",

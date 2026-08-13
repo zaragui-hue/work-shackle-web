@@ -1,0 +1,20 @@
+---
+globs: src/**/*.tsx, src/**/*.css, src/assets/**
+alwaysApply: false
+---
+
+# Work Shackle visual rules
+
+- Visual direction: Chinese-inspired healing cartoon + contemporary worker meme culture.
+- Reference the emotional softness of cozy life-sim UI, but never copy protected IP assets or recognizable UI.
+- Base colors:
+  - paper `#F1ECE0`
+  - green `#117C0D`
+  - wheat `#FAC75E`
+- Use CSS variables from `src/styles/tokens.css`; do not hardcode the three brand colors repeatedly in components.
+- UI should feel rounded, warm, lightweight and low-pressure, not like OA/Jira/ERP.
+- Functional clarity has priority over jokes.
+- High-risk delete/clear/error actions must use serious unambiguous copy.
+- Mascot/meme assets must be original or clearly licensed local assets. Never download random social-media stickers into the product.
+- Prefer SVG/WebP/APNG + CSS micro-animation. Do not add a large animation framework for V1.
+- DDL emotions should map consistently from calm → notice → anxious → panic → due → overdue.

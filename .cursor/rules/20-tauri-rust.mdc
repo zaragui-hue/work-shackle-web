@@ -1,0 +1,16 @@
+---
+globs: src-tauri/**/*.rs, src-tauri/**/*.toml, src-tauri/**/*.json
+alwaysApply: false
+---
+
+# Tauri / Rust rules
+
+- Rust is responsible for filesystem, SQLite, time-critical business rules, reminder scheduling, overtime reconciliation and OS integration.
+- Tauri commands are thin IPC boundaries. Put business logic in services and SQL in repositories.
+- Return structured application errors; do not expose raw Rust debug strings to the UI.
+- Use transactions for multi-step writes.
+- Use the Tauri Single Instance plugin; do not allow duplicate reminder engines.
+- Do not create an HTTP server or local REST API.
+- Do not add background daemons beyond the Tauri process for V1.
+- On app startup, reconcile persisted time-based state before reporting app readiness.
+- If a native API differs between macOS and Windows, keep the platform branch in a dedicated service/helper instead of scattering cfg checks across commands.

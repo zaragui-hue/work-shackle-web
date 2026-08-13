@@ -1,0 +1,17 @@
+---
+globs: src/**/*.ts, src/**/*.tsx, src/**/*.css
+alwaysApply: false
+---
+
+# Frontend rules
+
+- React + TypeScript only.
+- Business data is persisted in SQLite through Tauri; React state is not the source of truth.
+- React components must not call Tauri `invoke` directly. Use wrappers under `src/services/tauri/`.
+- Keep business calculations such as DDL rules, overtime reconciliation and calendar task counting out of React components.
+- Prefer feature-local components. Move a component to `src/shared/components` only after at least two features need it.
+- Do not add Redux, React Router, Tailwind, shadcn, FullCalendar, Framer Motion or another UI framework unless the current TASK explicitly approves it.
+- Use React Hook Form + Zod for non-trivial forms.
+- Use date-fns for frontend display/date-grid helpers; backend remains authoritative for work-day rules.
+- Keep components focused. If a component becomes difficult to reason about, extract meaningful feature subcomponents rather than generic abstractions.
+- All visible Chinese text should come from a clear constant/config when reused; do not scatter repeated meme copy across JSX.

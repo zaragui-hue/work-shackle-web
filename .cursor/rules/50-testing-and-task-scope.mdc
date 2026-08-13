@@ -1,0 +1,20 @@
+---
+description: Testing, debugging and task-scope rules for Work Shackle implementation work
+alwaysApply: false
+---
+
+# Task scope and testing
+
+- Before editing, state which files you expect to change.
+- If the task expands into unrelated modules, stop instead of continuing opportunistically.
+- Prefer a pure function plus unit test for date/time/business rules before wiring UI.
+- Rust tests are mandatory for:
+  - week folder calculation
+  - DDL progress/thresholds
+  - busy rule validation
+  - calendar dedup
+  - overtime 05:00 reconciliation
+- For bugs, reproduce first and make the smallest fix. Do not start by refactoring.
+- For UI-only tasks, do not modify Rust or DB schema.
+- For DB-only tasks, do not redesign UI.
+- Every TASK ends with the relevant test command or a written manual smoke-test result.

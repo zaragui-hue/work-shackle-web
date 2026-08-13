@@ -1,0 +1,17 @@
+---
+alwaysApply: true
+---
+
+# Work Shackle core constraints
+
+- `docs/PRD.md` is the product scope source of truth.
+- `docs/ARCHITECTURE.md` is the technical architecture source of truth.
+- Implement exactly one TASK at a time.
+- Do not implement features outside the current TASK.
+- Do not add V1-excluded features: AI/LLM, login, cloud sync, team collaboration, telemetry, online meme APIs, mobile app.
+- Do not switch the approved stack (Tauri 2 + React + TypeScript + Rust + rusqlite) without explicit user approval.
+- Do not perform unrelated refactors while completing a feature.
+- Preserve existing user data. Never solve a migration problem by deleting or recreating the user's database.
+- If the requested change requires more than 8 major files or crosses unrelated features, stop and propose a smaller split before editing.
+- Read the current TASK first. Read only the PRD sections and source directories needed for that TASK.
+- After implementation, run the smallest relevant tests and report only: changed files, implementation, tests run, unresolved issues.

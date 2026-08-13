@@ -1,0 +1,30 @@
+---
+globs: src-tauri/src/db/**, src-tauri/src/time/**, src-tauri/migrations/**
+alwaysApply: false
+---
+
+# Database and time rules
+
+- The business database lives at `<workspace>/.data/work-shackle.db`.
+- Do not use Tauri SQL Plugin as the core DB layer; use rusqlite so the DB can live in the user-selected workspace.
+- Never store business records in the OS AppConfig directory.
+- AppConfig may store only minimal bootstrap metadata such as `workspacePath`.
+- The SQLite workspace must be on a reliable local filesystem and must pass the Rust `WorkspaceValidator`.
+- Reject Windows UNC/network paths. macOS network mounts and removable mounts are unsupported. Ask the user to choose a local directory when a cloud-sync directory is clearly identified.
+- Frontend checks are advisory only; Rust makes the final workspace-validity decision for default and custom paths.
+- Enable SQLite foreign keys.
+- Do not enable WAL by default.
+- Every schema change must be a new migration. Never rewrite an already-released migration.
+- Migrations run in a transaction and must roll back on failure.
+- Never drop/reset the database to make development easier.
+- Store absolute instants as SQLite `INTEGER` Unix epoch milliseconds. Never store absolute instants as offset-less local ISO 8601 strings.
+- Store business dates such as `work_date` as `YYYY-MM-DD`, and daily clock times as `HH:MM`.
+- All week-folder, DDL, work-day and 05:00 overtime logic must use shared time functions under `src-tauri/src/time/`.
+- React must not implement a second set of time conversion, work-day, cutoff or DDL business rules.
+- Week is Monday through Sunday; cross-month week belongs to the month containing Monday.
+- Same task may count once per calendar day even if planned date and DDL are both that day.
+- Overdue debt displayed today must not inflate future calendar busy counts.
+- The local 05:00 WorkDay Cutoff applies only to overtime and work-status ownership: before 05:00 belongs to the previous `work_date`; at or after 05:00 belongs to the current `work_date`.
+- Task planned dates and DDL calendar dates use normal local calendar dates and never use the 05:00 cutoff.
+- An active overtime record is `end_at_ms IS NULL`. Enforce at most one active record in both `OvertimeService` and SQLite with a partial unique index.
+- Overtime creation, manual end, 05:00 auto-end and startup reconciliation must reuse the same WorkDay / Time Service.

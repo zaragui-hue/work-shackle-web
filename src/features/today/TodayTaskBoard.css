@@ -1,0 +1,88 @@
+.today-board {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.today-board__section {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.today-board__section-head {
+  display: grid;
+  gap: 4px;
+}
+
+.today-board__section-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ink);
+  letter-spacing: 0.02em;
+}
+
+.today-board__section--upcoming .today-board__section-title {
+  color: var(--color-green);
+}
+
+.today-board__section--debt .today-board__section-title {
+  color: var(--color-ink-muted);
+}
+
+.today-board__section-hint {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  color: var(--color-ink-muted);
+}
+
+.today-board__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.today-board__section--completed {
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px dashed rgba(61, 43, 31, 0.12);
+}
+
+.today-board__completed-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: var(--space-1) 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  cursor: pointer;
+  color: var(--color-ink-muted);
+  font: inherit;
+  text-align: left;
+}
+
+.today-board__completed-toggle:hover {
+  color: var(--color-ink);
+}
+
+.today-board__completed-toggle:focus-visible {
+  outline: 3px solid var(--color-wheat);
+  outline-offset: 2px;
+  border-radius: var(--radius-ticket);
+}
+
+.today-board__completed-label {
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+}
+
+.today-board__completed-chevron {
+  font-size: 0.85rem;
+  line-height: 1;
+}

@@ -1,12 +1,110 @@
-import { Card, EmptyState } from "../shared/ui";
+import { useCallback, useEffect, useState } from "react";
+
+import { CreateTaskModal } from "../features/tasks/CreateTaskModal";
+import { TaskDrawer } from "../features/tasks/TaskDrawer";
+import { TodayTaskBoard } from "../features/today/TodayTaskBoard";
+import { isTodayFullyEmpty } from "../features/today/todayDisplay";
+import {
+  mapTaskError,
+  queryTodayTasks,
+  type TaskAppError,
+  type TodayTasks,
+} from "../services/tauri/tasks";
+import { Button, Card, EmptyState } from "../shared/ui";
+import "./TodayPage.css";
+
+const EMPTY_TODAY: TodayTasks = {
+  formalTasks: [],
+  upcomingDeadlineTasks: [],
+  overdueTasks: [],
+  completedTodayTasks: [],
+};
 
 export function TodayPage() {
+  const [createOpen, setCreateOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [todayTasks, setTodayTasks] = useState<TodayTasks>(EMPTY_TODAY);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadTodayTasks = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const next = await queryTodayTasks();
+      setTodayTasks(next);
+    } catch (caught) {
+      setError(mapTaskError(caught as TaskAppError));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadTodayTasks();
+  }, [loadTodayTasks]);
+
+  const showEmpty =
+    !loading && !error && isTodayFullyEmpty(todayTasks);
+
   return (
-    <Card title="今日" headerAccent>
-      <EmptyState
-        title="今天还没安排"
-        description="班味暂未加载。先喝口水，业务页面稍后接上。"
+    <>
+      <Card title="今日" headerAccent>
+        <div className="today-page__toolbar">
+          <Button onClick={() => setCreateOpen(true)}>+ 新任务</Button>
+        </div>
+
+        {loading ? (
+          <div className="today-page__skeleton" aria-busy="true" aria-label="加载今日任务">
+            <div className="today-page__skeleton-block" />
+            <div className="today-page__skeleton-block today-page__skeleton-block--short" />
+            <div className="today-page__skeleton-block" />
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="today-page__status">
+            <p role="alert">{error}</p>
+            <Button variant="secondary" onClick={() => void loadTodayTasks()}>
+              重试
+            </Button>
+          </div>
+        ) : null}
+
+        {!loading && !error && !showEmpty ? (
+          <TodayTaskBoard
+            tasks={todayTasks}
+            onSelect={(taskId) => {
+              setSelectedTaskId(taskId);
+              setDrawerOpen(true);
+            }}
+          />
+        ) : null}
+
+        {showEmpty ? (
+          <EmptyState
+            title="今天居然没什么事"
+            description="班味暂未加载。先喝口水，有事了再记一笔。"
+            action={
+              <Button onClick={() => setCreateOpen(true)}>+ 新任务</Button>
+            }
+          />
+        ) : null}
+      </Card>
+
+      <CreateTaskModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => void loadTodayTasks()}
       />
-    </Card>
+
+      <TaskDrawer
+        taskId={selectedTaskId}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onChanged={() => void loadTodayTasks()}
+      />
+    </>
   );
 }

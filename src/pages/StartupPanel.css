@@ -1,0 +1,53 @@
+.ws-startup {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+}
+
+.ws-startup__panel {
+  width: min(100%, 420px);
+  text-align: center;
+  background: var(--color-paper-raised);
+  border: var(--border-ink);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-soft);
+  padding: var(--space-5) var(--space-4);
+}
+
+.ws-startup__eyebrow {
+  color: var(--color-green);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--space-2);
+}
+
+.ws-startup__panel h1 {
+  font-size: var(--font-size-title);
+}
+
+.ws-startup__status {
+  margin-top: var(--space-3);
+}
+
+.ws-startup__status--preparing {
+  color: var(--color-ink-muted);
+}
+
+.ws-startup__status--ready {
+  color: var(--color-green);
+}
+
+.ws-startup__status--workspaceNotFound,
+.ws-startup__status--workspaceNotWritable,
+.ws-startup__status--databaseInitFailed,
+.ws-startup__status--validationFailed {
+  color: var(--color-danger);
+}
+
+.ws-startup__path {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-caption);
+  color: var(--color-ink-muted);
+  word-break: break-all;
+}

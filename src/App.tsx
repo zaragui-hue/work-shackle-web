@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import "./App.css";
 import {
   initializeApp,
   mapStartupError,
   type AppError,
   type StartupViewState,
 } from "./services/tauri/startup";
+import { AppShell } from "./shared/shell/AppShell";
+import { StartupPanel } from "./pages/StartupPanel";
 
 function App() {
   const [viewState, setViewState] = useState<StartupViewState>("preparing");
@@ -44,16 +45,16 @@ function App() {
     };
   }, []);
 
+  if (viewState === "ready") {
+    return <AppShell />;
+  }
+
   return (
-    <main className="app">
-      <div className="startup-panel">
-        <h1>Work Shackle</h1>
-        <p className={`startup-status startup-status--${viewState}`}>{message}</p>
-        {workspacePath ? (
-          <p className="startup-path">{workspacePath}</p>
-        ) : null}
-      </div>
-    </main>
+    <StartupPanel
+      viewState={viewState}
+      message={message}
+      workspacePath={workspacePath}
+    />
   );
 }
 

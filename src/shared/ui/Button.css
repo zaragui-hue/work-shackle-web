@@ -1,0 +1,46 @@
+.ws-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 10px 22px;
+  border-radius: var(--radius-button);
+  border: var(--border-ink);
+  font-weight: var(--font-weight-medium);
+  box-shadow: var(--shadow-sticker);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.ws-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.ws-button:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(61, 43, 31, 0.16);
+}
+
+.ws-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ws-button--primary {
+  background: var(--color-green);
+  color: #f8f5ee;
+  border-color: rgba(61, 43, 31, 0.35);
+}
+
+.ws-button--secondary {
+  background: var(--color-paper-raised);
+  color: var(--color-ink);
+  border: var(--border-ink);
+  box-shadow: none;
+}
+
+.ws-button--wheat {
+  background: var(--color-wheat);
+  color: var(--color-ink);
+  border-color: rgba(61, 43, 31, 0.28);
+}

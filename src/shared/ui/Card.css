@@ -1,0 +1,43 @@
+.ws-card {
+  background: var(--color-paper-raised);
+  border: var(--border-ink);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sticker);
+  overflow: visible;
+}
+
+.ws-card__header {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4) 0;
+}
+
+.ws-card__header--accent {
+  /* Accent is the ticket chip, not a full OA yellow bar */
+  background: transparent;
+  border-bottom: 0;
+}
+
+.ws-card__title {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ink);
+}
+
+.ws-card__header--accent .ws-card__title {
+  display: inline-block;
+  margin-top: -2px;
+  margin-left: -2px;
+  padding: 6px 14px;
+  background: var(--color-wheat);
+  border: var(--border-ink);
+  border-radius: var(--radius-ticket);
+  box-shadow: var(--shadow-sticker);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  transform: rotate(-1.5deg);
+}
+
+.ws-card__body {
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}

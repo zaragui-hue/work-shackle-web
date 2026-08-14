@@ -4,6 +4,8 @@ import { CreateTaskModal } from "../features/tasks/CreateTaskModal";
 import { TaskDrawer } from "../features/tasks/TaskDrawer";
 import { TodayTaskBoard } from "../features/today/TodayTaskBoard";
 import { isTodayFullyEmpty } from "../features/today/todayDisplay";
+import { useWorkCountdown } from "../features/today/useWorkCountdown";
+import { WorkCountdownBanner } from "../features/today/WorkCountdownBanner";
 import {
   mapTaskError,
   queryTodayTasks,
@@ -27,6 +29,11 @@ export function TodayPage() {
   const [todayTasks, setTodayTasks] = useState<TodayTasks>(EMPTY_TODAY);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const {
+    display: workCountdown,
+    loading: workCountdownLoading,
+    error: workCountdownError,
+  } = useWorkCountdown();
 
   const loadTodayTasks = useCallback(async () => {
     setLoading(true);
@@ -51,6 +58,24 @@ export function TodayPage() {
   return (
     <>
       <Card title="今日" headerAccent>
+        {workCountdownLoading ? (
+          <div
+            className="today-page__countdown-skeleton"
+            aria-busy="true"
+            aria-label="加载工作时间"
+          />
+        ) : null}
+
+        {!workCountdownLoading && workCountdownError ? (
+          <div className="today-page__countdown-status">
+            <p role="alert">{workCountdownError}</p>
+          </div>
+        ) : null}
+
+        {!workCountdownLoading && !workCountdownError && workCountdown ? (
+          <WorkCountdownBanner display={workCountdown} />
+        ) : null}
+
         <div className="today-page__toolbar">
           <Button onClick={() => setCreateOpen(true)}>+ 新任务</Button>
         </div>

@@ -1,0 +1,20 @@
+.work-countdown {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-ticket);
+  border: var(--border-ink-soft);
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.work-countdown__text {
+  margin: 0;
+  font-size: var(--font-size-body);
+  color: var(--color-ink);
+}
+
+.work-countdown__time {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-green);
+}

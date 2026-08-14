@@ -1,3 +1,29 @@
+.today-page__countdown-skeleton {
+  height: 3.25rem;
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-ticket);
+  border: var(--border-ink-soft);
+  background: linear-gradient(
+    110deg,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(250, 199, 94, 0.12) 45%,
+    rgba(255, 255, 255, 0.35) 90%
+  );
+  background-size: 200% 100%;
+  animation: today-page-shimmer 1.4s ease-in-out infinite;
+}
+
+.today-page__countdown-status {
+  margin: 0 0 var(--space-3);
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-caption);
+}
+
+.today-page__countdown-status p {
+  margin: 0;
+  color: var(--color-danger);
+}
+
 .today-page__toolbar {
   margin-bottom: var(--space-3);
 }

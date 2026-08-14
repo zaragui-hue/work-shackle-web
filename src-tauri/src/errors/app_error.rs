@@ -13,6 +13,9 @@ pub mod codes {
     pub const DATABASE_ERROR: &str = "DATABASE_ERROR";
     pub const APP_NOT_READY: &str = "APP_NOT_READY";
     pub const TASK_NOT_FOUND: &str = "TASK_NOT_FOUND";
+    pub const INVALID_TASK_INPUT: &str = "INVALID_TASK_INPUT";
+    pub const INVALID_DEADLINE: &str = "INVALID_DEADLINE";
+    pub const REMINDER_LIMIT_REACHED: &str = "REMINDER_LIMIT_REACHED";
     pub const CONFIG_READ_FAILED: &str = "CONFIG_READ_FAILED";
     pub const CONFIG_WRITE_FAILED: &str = "CONFIG_WRITE_FAILED";
     pub const INVALID_PATH: &str = "INVALID_PATH";
@@ -42,6 +45,12 @@ pub enum AppError {
     AppNotReady { message: String },
     #[serde(rename = "TASK_NOT_FOUND")]
     TaskNotFound { id: String },
+    #[serde(rename = "INVALID_TASK_INPUT")]
+    InvalidTaskInput { message: String },
+    #[serde(rename = "INVALID_DEADLINE")]
+    InvalidDeadline { message: String },
+    #[serde(rename = "REMINDER_LIMIT_REACHED")]
+    ReminderLimitReached { limit: i32 },
     #[serde(rename = "CONFIG_READ_FAILED")]
     ConfigReadFailed { message: String },
     #[serde(rename = "CONFIG_WRITE_FAILED")]
@@ -89,6 +98,11 @@ impl std::fmt::Display for AppError {
             Self::DatabaseError { message } => write!(f, "database operation failed: {message}"),
             Self::AppNotReady { message } => write!(f, "app is not ready: {message}"),
             Self::TaskNotFound { id } => write!(f, "task not found: {id}"),
+            Self::InvalidTaskInput { message } => write!(f, "invalid task input: {message}"),
+            Self::InvalidDeadline { message } => write!(f, "invalid deadline: {message}"),
+            Self::ReminderLimitReached { limit } => {
+                write!(f, "reminder limit reached: max {limit}")
+            }
             Self::ConfigReadFailed { message } => write!(f, "failed to read config: {message}"),
             Self::ConfigWriteFailed { message } => write!(f, "failed to write config: {message}"),
             Self::InvalidPath { message } => write!(f, "invalid path: {message}"),
@@ -170,6 +184,28 @@ mod tests {
                     message: "database is not initialized".to_string(),
                 },
                 codes::APP_NOT_READY,
+            ),
+            (
+                AppError::TaskNotFound {
+                    id: "task-missing".to_string(),
+                },
+                codes::TASK_NOT_FOUND,
+            ),
+            (
+                AppError::InvalidTaskInput {
+                    message: "task title must not be empty".to_string(),
+                },
+                codes::INVALID_TASK_INPUT,
+            ),
+            (
+                AppError::InvalidDeadline {
+                    message: "deadline must not be before planned time".to_string(),
+                },
+                codes::INVALID_DEADLINE,
+            ),
+            (
+                AppError::ReminderLimitReached { limit: 3 },
+                codes::REMINDER_LIMIT_REACHED,
             ),
             (
                 AppError::ConfigReadFailed {

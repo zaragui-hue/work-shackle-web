@@ -3,6 +3,7 @@ pub mod lunch_reminder;
 pub mod settings;
 pub mod startup;
 pub mod task;
+pub mod work_end_decision;
 pub mod work_status;
 pub mod workspace;
 pub mod workspace_switch;

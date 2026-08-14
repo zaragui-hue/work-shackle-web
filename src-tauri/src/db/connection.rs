@@ -116,6 +116,7 @@ mod tests {
             "task_postponements".to_string(),
             "task_reminders".to_string(),
             "tasks".to_string(),
+            "work_end_decisions".to_string(),
             "work_status_records".to_string(),
         ]);
         let actual_tables = {
@@ -140,7 +141,7 @@ mod tests {
             .expect("migration rows")
             .collect::<rusqlite::Result<_>>()
             .expect("migration versions");
-        assert_eq!(applied_versions, vec![1, 2]);
+        assert_eq!(applied_versions, vec![1, 2, 3]);
 
         assert_eq!(
             connection
@@ -234,7 +235,7 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM contacts", [], |row| row.get(0))
             .expect("contact count");
 
-        assert_eq!(migration_count, 2);
+        assert_eq!(migration_count, 3);
         assert_eq!(contact_count, 1);
     }
 

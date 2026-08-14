@@ -25,6 +25,11 @@ const MIGRATIONS: &[Migration] = &[
         name: "0002_lunch_reminder_log",
         sql: include_str!("../../migrations/0002_lunch_reminder_log.sql"),
     },
+    Migration {
+        version: 3,
+        name: "0003_work_end_decisions",
+        sql: include_str!("../../migrations/0003_work_end_decisions.sql"),
+    },
 ];
 
 pub fn run_migrations(connection: &mut Connection) -> Result<(), DbError> {
@@ -210,7 +215,7 @@ mod tests {
 
         let tables_before_upgrade = table_names(&connection);
 
-        run_migration_list(&mut connection, MIGRATIONS).expect("upgrade to 0002");
+        run_migration_list(&mut connection, MIGRATIONS).expect("upgrade to latest");
 
         let versions_after_upgrade: Vec<i64> = connection
             .prepare("SELECT version FROM schema_migrations ORDER BY version")
@@ -219,7 +224,7 @@ mod tests {
             .expect("migration rows")
             .collect::<rusqlite::Result<_>>()
             .expect("migration versions");
-        assert_eq!(versions_after_upgrade, vec![1, 2]);
+        assert_eq!(versions_after_upgrade, vec![1, 2, 3]);
 
         let lunch_columns: Vec<(String, String)> = connection
             .prepare("PRAGMA table_info(\"lunch_reminder_log\")")
@@ -241,6 +246,7 @@ mod tests {
         let tables_after_upgrade = table_names(&connection);
         assert!(tables_before_upgrade.is_subset(&tables_after_upgrade));
         assert!(tables_after_upgrade.contains("lunch_reminder_log"));
+        assert!(tables_after_upgrade.contains("work_end_decisions"));
 
         let contact_name: String = connection
             .query_row(
@@ -292,7 +298,7 @@ mod tests {
                 row.get(0)
             })
             .expect("migration count");
-        assert_eq!(migration_count, 2);
+        assert_eq!(migration_count, 3);
     }
 
     fn table_names(connection: &Connection) -> BTreeSet<String> {

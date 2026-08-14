@@ -5,6 +5,11 @@ import { TaskDrawer } from "../features/tasks/TaskDrawer";
 import { LunchReminderBanner } from "../features/today/LunchReminderBanner";
 import { TodayTaskBoard } from "../features/today/TodayTaskBoard";
 import { useLunchReminder } from "../features/today/useLunchReminder";
+import {
+  WorkEndDecisionBanner,
+  WorkOffCompleteBanner,
+} from "../features/today/WorkEndDecisionBanner";
+import { useWorkEndDecision } from "../features/today/useWorkEndDecision";
 import { WorkStatusPanel } from "../features/today/WorkStatusPanel";
 import { isTodayFullyEmpty } from "../features/today/todayDisplay";
 import { useWorkCountdown } from "../features/today/useWorkCountdown";
@@ -39,6 +44,14 @@ export function TodayPage() {
     error: workCountdownError,
   } = useWorkCountdown();
   const {
+    state: workEndState,
+    loading: workEndLoading,
+    confirming: confirmingNormalOff,
+    error: workEndError,
+    confirmNormalOff,
+    refresh: refreshWorkEnd,
+  } = useWorkEndDecision();
+  const {
     reminder: lunchReminder,
     loading: lunchReminderLoading,
     dismissed: lunchReminderDismissed,
@@ -62,6 +75,24 @@ export function TodayPage() {
   useEffect(() => {
     void loadTodayTasks();
   }, [loadTodayTasks]);
+
+  useEffect(() => {
+    if (workCountdown?.phase === "after_end") {
+      void refreshWorkEnd();
+    }
+  }, [workCountdown?.phase, refreshWorkEnd]);
+
+  const showWorkEndDecision =
+    !workEndLoading && workEndState?.phase === "pending_decision";
+  const showWorkOffComplete =
+    !workEndLoading && workEndState?.phase === "normal_off";
+  const showWorkCountdownBanner =
+    !workCountdownLoading &&
+    !workCountdownError &&
+    workCountdown &&
+    !showWorkEndDecision &&
+    !showWorkOffComplete &&
+    workEndState?.phase !== "overtime_active";
 
   const showEmpty =
     !loading && !error && isTodayFullyEmpty(todayTasks);
@@ -93,8 +124,25 @@ export function TodayPage() {
           </div>
         ) : null}
 
-        {!workCountdownLoading && !workCountdownError && workCountdown ? (
-          <WorkCountdownBanner display={workCountdown} />
+        {!workCountdownLoading && !workCountdownError && showWorkCountdownBanner ? (
+          <WorkCountdownBanner display={workCountdown!} />
+        ) : null}
+
+        {workEndError ? (
+          <div className="today-page__countdown-status">
+            <p role="alert">{workEndError}</p>
+          </div>
+        ) : null}
+
+        {showWorkEndDecision ? (
+          <WorkEndDecisionBanner
+            onConfirmNormalOff={() => void confirmNormalOff()}
+            confirmingNormalOff={confirmingNormalOff}
+          />
+        ) : null}
+
+        {showWorkOffComplete && workEndState?.displayCopy ? (
+          <WorkOffCompleteBanner message={workEndState.displayCopy} />
         ) : null}
 
         {!lunchReminderLoading && lunchReminder && !lunchReminderDismissed ? (
@@ -106,7 +154,7 @@ export function TodayPage() {
           />
         ) : null}
 
-        <WorkStatusPanel />
+        {workEndState?.phase !== "normal_off" ? <WorkStatusPanel /> : null}
 
         <div className="today-page__toolbar">
           <Button onClick={() => setCreateOpen(true)}>+ 新任务</Button>

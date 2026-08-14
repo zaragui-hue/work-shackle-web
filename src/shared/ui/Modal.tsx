@@ -8,9 +8,10 @@ type ModalProps = {
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  wide?: boolean;
 };
 
-export function Modal({ open, title, onClose, children, footer }: ModalProps) {
+export function Modal({ open, title, onClose, children, footer, wide = false }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -31,7 +32,7 @@ export function Modal({ open, title, onClose, children, footer }: ModalProps) {
         onClick={onClose}
       />
       <div
-        className="ws-modal__panel"
+        className={`ws-modal__panel${wide ? " ws-modal__panel--wide" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ws-modal-title"

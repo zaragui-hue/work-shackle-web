@@ -1,0 +1,16 @@
+.postpone-task-modal__form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.postpone-task-modal__current {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-caption);
+  color: var(--color-ink-muted);
+}
+
+.postpone-task-modal__error {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-caption);
+  color: var(--color-danger);
+}

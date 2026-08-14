@@ -1,0 +1,144 @@
+.task-drawer__form {
+  display: grid;
+  gap: var(--space-3);
+  color: var(--color-ink);
+}
+
+.task-drawer__status,
+.task-drawer__empty,
+.task-drawer__terminal-note {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  color: var(--color-ink-muted);
+}
+
+.task-drawer__error {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-caption);
+  color: var(--color-danger);
+}
+
+.task-drawer__hero {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 2px 0;
+}
+
+.task-drawer__priority-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7);
+}
+
+.task-drawer__hero-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.task-drawer__priority-label {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ink);
+}
+
+.task-drawer__planned {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-ink-muted);
+}
+
+.task-drawer__deadline-band {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-ticket);
+  border: var(--border-ink-soft);
+  background:
+    linear-gradient(135deg, rgba(250, 199, 94, 0.22), rgba(241, 236, 224, 0.4));
+}
+
+.task-drawer__deadline-fields {
+  min-width: 0;
+}
+
+.task-drawer__postpone-btn {
+  justify-self: start;
+  min-height: 40px;
+  padding-inline: 18px;
+}
+
+.task-drawer__section {
+  display: grid;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.task-drawer__section h3 {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ink-muted);
+  letter-spacing: 0.02em;
+}
+
+.task-drawer__reminder-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.task-drawer__reminder-list li {
+  display: grid;
+  gap: 1px;
+  font-size: var(--font-size-caption);
+}
+
+.task-drawer__reminder-list strong {
+  color: var(--color-ink);
+}
+
+.task-drawer__reminder-list span {
+  color: var(--color-ink-muted);
+}
+
+.task-drawer__postponement-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 8px;
+  font-size: var(--font-size-caption);
+}
+
+.task-drawer__postponement-list li {
+  display: grid;
+  gap: 1px;
+}
+
+.task-drawer__postponement-list strong {
+  color: var(--color-ink);
+}
+
+.task-drawer__postponement-list span {
+  color: var(--color-ink-muted);
+}
+
+@media (min-width: 360px) {
+  .task-drawer__deadline-band {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+
+  .task-drawer__postpone-btn {
+    margin-bottom: 2px;
+  }
+}

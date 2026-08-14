@@ -7,9 +7,10 @@ type DrawerProps = {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  footer?: ReactNode;
 };
 
-export function Drawer({ open, title, onClose, children }: DrawerProps) {
+export function Drawer({ open, title, onClose, children, footer }: DrawerProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -42,6 +43,7 @@ export function Drawer({ open, title, onClose, children }: DrawerProps) {
           </button>
         </header>
         <div className="ws-drawer__body">{children}</div>
+        {footer ? <footer className="ws-drawer__footer">{footer}</footer> : null}
       </aside>
     </div>
   );

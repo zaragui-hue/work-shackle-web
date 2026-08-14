@@ -144,7 +144,9 @@ mod tests {
 
     fn assert_migration_count(connection: &Connection, expected: i64) {
         let count: i64 = connection
-            .query_row("SELECT COUNT(*) FROM schema_migrations", [], |row| row.get(0))
+            .query_row("SELECT COUNT(*) FROM schema_migrations", [], |row| {
+                row.get(0)
+            })
             .expect("migration count");
         assert_eq!(count, expected);
     }

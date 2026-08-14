@@ -51,8 +51,8 @@ fn monday_of_week(date: NaiveDate) -> NaiveDate {
 
 #[cfg(test)]
 mod tests {
-    use chrono::Weekday;
     use super::*;
+    use chrono::Weekday;
 
     fn date(value: &str) -> NaiveDate {
         NaiveDate::parse_from_str(value, "%Y-%m-%d").expect("valid test date")
@@ -66,10 +66,7 @@ mod tests {
         assert_eq!(info.monday, date("2026-08-31"));
         assert_eq!(info.sunday, date("2026-09-06"));
         assert_eq!(info.iso_week, 36);
-        assert_eq!(
-            week_folder_name(&info),
-            "第36周_08.31-09.06"
-        );
+        assert_eq!(week_folder_name(&info), "第36周_08.31-09.06");
         assert_eq!(
             week_folder_relative_path(&info),
             PathBuf::from("2026/08/第36周_08.31-09.06")
@@ -89,10 +86,7 @@ mod tests {
         assert_eq!(info.month, 8);
         assert_eq!(info.monday, date("2026-08-03"));
         assert_eq!(info.sunday, date("2026-08-09"));
-        assert_eq!(
-            week_folder_name(&info),
-            "第32周_08.03-08.09"
-        );
+        assert_eq!(week_folder_name(&info), "第32周_08.03-08.09");
     }
 
     #[test]

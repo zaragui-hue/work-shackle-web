@@ -40,7 +40,7 @@ mod tests {
         let first_connection =
             initialize_database(&workspace).expect("first database initialization");
         assert!(expected_db_path.is_file());
-        assert_migration_count(&first_connection, 1);
+        assert_migration_count(&first_connection, 2);
 
         let written = write_smoke_record(&first_connection).expect("write");
         assert_eq!(written.id, SMOKE_RECORD_ID);
@@ -67,7 +67,7 @@ mod tests {
             .expect("smoke record must still exist after reopen");
         assert_eq!(loaded, written);
 
-        assert_migration_count(&second_connection, 1);
+        assert_migration_count(&second_connection, 2);
         let contact_count: i64 = second_connection
             .query_row("SELECT COUNT(*) FROM contacts", [], |row| row.get(0))
             .expect("contact count");

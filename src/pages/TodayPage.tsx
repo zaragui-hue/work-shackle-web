@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 
 import { CreateTaskModal } from "../features/tasks/CreateTaskModal";
 import { TaskDrawer } from "../features/tasks/TaskDrawer";
+import { LunchReminderBanner } from "../features/today/LunchReminderBanner";
 import { TodayTaskBoard } from "../features/today/TodayTaskBoard";
+import { useLunchReminder } from "../features/today/useLunchReminder";
 import { WorkStatusPanel } from "../features/today/WorkStatusPanel";
 import { isTodayFullyEmpty } from "../features/today/todayDisplay";
 import { useWorkCountdown } from "../features/today/useWorkCountdown";
@@ -13,6 +15,7 @@ import {
   type TaskAppError,
   type TodayTasks,
 } from "../services/tauri/tasks";
+import { switchWorkStatus } from "../services/tauri/workStatus";
 import { Button, Card, EmptyState } from "../shared/ui";
 import "./TodayPage.css";
 
@@ -35,6 +38,13 @@ export function TodayPage() {
     loading: workCountdownLoading,
     error: workCountdownError,
   } = useWorkCountdown();
+  const {
+    reminder: lunchReminder,
+    loading: lunchReminderLoading,
+    dismissed: lunchReminderDismissed,
+    dismiss: dismissLunchReminder,
+  } = useLunchReminder();
+  const [switchingToLunch, setSwitchingToLunch] = useState(false);
 
   const loadTodayTasks = useCallback(async () => {
     setLoading(true);
@@ -56,6 +66,16 @@ export function TodayPage() {
   const showEmpty =
     !loading && !error && isTodayFullyEmpty(todayTasks);
 
+  const onSwitchToLunch = async () => {
+    setSwitchingToLunch(true);
+    try {
+      await switchWorkStatus("lunch");
+      dismissLunchReminder();
+    } finally {
+      setSwitchingToLunch(false);
+    }
+  };
+
   return (
     <>
       <Card title="今日" headerAccent>
@@ -75,6 +95,15 @@ export function TodayPage() {
 
         {!workCountdownLoading && !workCountdownError && workCountdown ? (
           <WorkCountdownBanner display={workCountdown} />
+        ) : null}
+
+        {!lunchReminderLoading && lunchReminder && !lunchReminderDismissed ? (
+          <LunchReminderBanner
+            reminder={lunchReminder}
+            onDismiss={dismissLunchReminder}
+            onSwitchToLunch={() => void onSwitchToLunch()}
+            switchingToLunch={switchingToLunch}
+          />
         ) : null}
 
         <WorkStatusPanel />

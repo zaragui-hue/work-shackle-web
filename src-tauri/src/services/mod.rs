@@ -1,4 +1,5 @@
 pub mod contact;
+pub mod lunch_reminder;
 pub mod settings;
 pub mod startup;
 pub mod task;

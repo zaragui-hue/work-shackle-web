@@ -110,6 +110,26 @@ impl SettingsRepository {
             })
     }
 
+    pub fn update_lunch_times(
+        connection: &Connection,
+        lunch_start: &str,
+        lunch_end: &str,
+        updated_at_ms: i64,
+    ) -> Result<SettingsRow, SettingsRepositoryError> {
+        let updated = connection.execute(
+            "UPDATE settings
+             SET lunch_start = ?1, lunch_end = ?2, updated_at_ms = ?3
+             WHERE id = 1",
+            params![lunch_start, lunch_end, updated_at_ms],
+        )?;
+        if updated == 0 {
+            return Err(SettingsRepositoryError::InvalidInput {
+                message: "settings row is missing".to_string(),
+            });
+        }
+        Self::get_settings(connection)
+    }
+
     pub fn update_default_work_times(
         connection: &Connection,
         start_time: &str,

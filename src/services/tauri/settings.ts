@@ -12,6 +12,16 @@ export type WorkSchedule = {
   hasTodayOverride: boolean;
 };
 
+export type LunchSchedule = {
+  lunchStart: string;
+  lunchEnd: string;
+};
+
+export type SaveLunchTimesInput = {
+  lunchStart: string;
+  lunchEnd: string;
+};
+
 export type SaveWorkTimesInput = {
   startTime: string;
   endTime: string;
@@ -27,7 +37,7 @@ export type SettingsAppError =
 export function mapSettingsError(error: SettingsAppError): string {
   switch (error.code) {
     case TaskErrorCode.InvalidTaskInput:
-      return "上下班时间无效，请检查后再保存";
+      return "时间设置无效，请检查后再保存";
     case ErrorCode.AppNotReady:
       return "应用尚未就绪";
     case ErrorCode.DatabaseError:
@@ -55,6 +65,16 @@ export async function saveTodayWorkOverride(
 
 export async function clearTodayWorkOverride(): Promise<WorkSchedule> {
   return invoke<WorkSchedule>("clear_today_work_override");
+}
+
+export async function getLunchSchedule(): Promise<LunchSchedule> {
+  return invoke<LunchSchedule>("get_lunch_schedule");
+}
+
+export async function saveLunchTimes(
+  input: SaveLunchTimesInput,
+): Promise<LunchSchedule> {
+  return invoke<LunchSchedule>("save_lunch_times", { input });
 }
 
 export function formatWorkTimeRange(start: string, end: string): string {

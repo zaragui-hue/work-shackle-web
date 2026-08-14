@@ -1,4 +1,4 @@
-use chrono::{NaiveTime, Timelike};
+use chrono::{Local, NaiveTime, TimeZone, Timelike};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ClockTime {
@@ -50,6 +50,25 @@ pub fn clock_time_to_minutes(time: &ClockTime) -> u32 {
     time.hour * 60 + time.minute
 }
 
+pub fn local_minutes_from_timestamp_ms(timestamp_ms: i64) -> u32 {
+    let local = Local
+        .timestamp_millis_opt(timestamp_ms)
+        .single()
+        .expect("timestamp must map to a valid local datetime");
+    local.time().hour() * 60 + local.time().minute()
+}
+
+pub fn is_local_time_in_half_open_range(
+    timestamp_ms: i64,
+    start: &str,
+    end: &str,
+) -> Result<bool, ClockTimeError> {
+    let start = parse_clock_time(start)?;
+    let end = parse_clock_time(end)?;
+    let now = local_minutes_from_timestamp_ms(timestamp_ms);
+    Ok(now >= clock_time_to_minutes(&start) && now < clock_time_to_minutes(&end))
+}
+
 pub fn validate_work_time_range(start: &str, end: &str) -> Result<(), ClockTimeError> {
     let start = parse_clock_time(start)?;
     let end = parse_clock_time(end)?;
@@ -92,5 +111,39 @@ mod tests {
             validate_work_time_range("09:30", "09:30"),
             Err(ClockTimeError::StartNotBeforeEnd { .. })
         ));
+    }
+
+    #[test]
+    fn half_open_range_excludes_end_boundary() {
+        use chrono::{Local, NaiveDateTime, TimeZone};
+
+        fn local_ms(date: &str, time: &str) -> i64 {
+            let naive = NaiveDateTime::parse_from_str(&format!("{date} {time}"), "%Y-%m-%d %H:%M")
+                .expect("valid");
+            Local
+                .from_local_datetime(&naive)
+                .single()
+                .expect("valid local datetime")
+                .timestamp_millis()
+        }
+
+        assert!(is_local_time_in_half_open_range(
+            local_ms("2026-08-14", "12:00"),
+            "12:00",
+            "13:00"
+        )
+        .expect("start"));
+        assert!(is_local_time_in_half_open_range(
+            local_ms("2026-08-14", "12:59"),
+            "12:00",
+            "13:00"
+        )
+        .expect("inside"));
+        assert!(!is_local_time_in_half_open_range(
+            local_ms("2026-08-14", "13:00"),
+            "12:00",
+            "13:00"
+        )
+        .expect("end"));
     }
 }

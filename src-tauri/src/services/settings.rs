@@ -9,6 +9,20 @@ use crate::time::clock_time::{normalize_clock_time, validate_work_time_range, Cl
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct LunchScheduleDto {
+    pub lunch_start: String,
+    pub lunch_end: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveLunchTimesRequest {
+    pub lunch_start: String,
+    pub lunch_end: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WorkScheduleDto {
     pub work_date: String,
     pub default_start: String,
@@ -91,6 +105,33 @@ impl SettingsService {
         SettingsRepository::delete_override(connection, today).map_err(map_settings_error)?;
 
         Self::get_work_schedule(connection, today)
+    }
+
+    pub fn get_lunch_schedule(connection: &Connection) -> Result<LunchScheduleDto, AppError> {
+        let now_ms = now_ms();
+        SettingsRepository::ensure_defaults(connection, now_ms).map_err(map_settings_error)?;
+        let settings = SettingsRepository::get_settings(connection).map_err(map_settings_error)?;
+        Ok(LunchScheduleDto {
+            lunch_start: settings.lunch_start,
+            lunch_end: settings.lunch_end,
+        })
+    }
+
+    pub fn save_lunch_times(
+        connection: &Connection,
+        input: SaveLunchTimesRequest,
+    ) -> Result<LunchScheduleDto, AppError> {
+        let (lunch_start, lunch_end) =
+            normalize_and_validate(&input.lunch_start, &input.lunch_end)?;
+        let now_ms = now_ms();
+        SettingsRepository::ensure_defaults(connection, now_ms).map_err(map_settings_error)?;
+        SettingsRepository::update_lunch_times(connection, &lunch_start, &lunch_end, now_ms)
+            .map_err(map_settings_error)?;
+
+        Ok(LunchScheduleDto {
+            lunch_start,
+            lunch_end,
+        })
     }
 }
 

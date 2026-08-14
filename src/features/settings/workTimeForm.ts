@@ -14,7 +14,7 @@ export const workTimeFormSchema = z
     if (startMinutes >= endMinutes) {
       context.addIssue({
         code: "custom",
-        message: "上班时间必须早于下班时间",
+        message: "开始时间必须早于结束时间",
         path: ["endTime"],
       });
     }

@@ -5,11 +5,11 @@ mod services;
 mod time;
 
 use commands::{
-    cancel_task, clear_today_work_override, complete_task, create_contact, create_task,
-    deactivate_contact, get_current_work_status, get_task_by_id, get_task_detail,
-    get_work_schedule, get_workspace_status, initialize_app, list_contacts, list_status_copies,
-    list_work_statuses, postpone_task, query_tasks, query_today_tasks,
-    resolve_default_workspace_path, save_default_work_times, save_status_copy,
+    cancel_task, check_lunch_reminder, clear_today_work_override, complete_task, create_contact,
+    create_task, deactivate_contact, get_current_work_status, get_lunch_schedule, get_task_by_id,
+    get_task_detail, get_work_schedule, get_workspace_status, initialize_app, list_contacts,
+    list_status_copies, list_work_statuses, postpone_task, query_tasks, query_today_tasks,
+    resolve_default_workspace_path, save_default_work_times, save_lunch_times, save_status_copy,
     save_today_work_override, set_workspace_path_command, switch_work_status, update_task,
     validate_workspace_candidate, AppState,
 };
@@ -40,6 +40,9 @@ pub fn run() {
             save_default_work_times,
             save_today_work_override,
             clear_today_work_override,
+            get_lunch_schedule,
+            save_lunch_times,
+            check_lunch_reminder,
             list_work_statuses,
             get_current_work_status,
             switch_work_status,

@@ -107,6 +107,7 @@ mod tests {
             "busy_level_messages".to_string(),
             "contacts".to_string(),
             "daily_work_overrides".to_string(),
+            "lunch_reminder_log".to_string(),
             "overtime_records".to_string(),
             "schema_migrations".to_string(),
             "settings".to_string(),
@@ -139,7 +140,7 @@ mod tests {
             .expect("migration rows")
             .collect::<rusqlite::Result<_>>()
             .expect("migration versions");
-        assert_eq!(applied_versions, vec![1]);
+        assert_eq!(applied_versions, vec![1, 2]);
 
         assert_eq!(
             connection
@@ -233,7 +234,7 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM contacts", [], |row| row.get(0))
             .expect("contact count");
 
-        assert_eq!(migration_count, 1);
+        assert_eq!(migration_count, 2);
         assert_eq!(contact_count, 1);
     }
 

@@ -11,10 +11,13 @@ import { StatusCopySection } from "../features/settings/StatusCopySection";
 import {
   clearTodayWorkOverride,
   formatWorkTimeRange,
+  getLunchSchedule,
   getWorkSchedule,
   mapSettingsError,
   saveDefaultWorkTimes,
+  saveLunchTimes,
   saveTodayWorkOverride,
+  type LunchSchedule,
   type SettingsAppError,
   type WorkSchedule,
 } from "../services/tauri/settings";
@@ -23,9 +26,11 @@ import "./SettingsPage.css";
 
 export function SettingsPage() {
   const [schedule, setSchedule] = useState<WorkSchedule | null>(null);
+  const [lunchSchedule, setLunchSchedule] = useState<LunchSchedule | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [defaultSaveError, setDefaultSaveError] = useState<string | null>(null);
+  const [lunchSaveError, setLunchSaveError] = useState<string | null>(null);
   const [todayActionError, setTodayActionError] = useState<string | null>(null);
   const [overrideModalOpen, setOverrideModalOpen] = useState(false);
   const [overrideSubmitError, setOverrideSubmitError] = useState<string | null>(null);
@@ -33,6 +38,11 @@ export function SettingsPage() {
   const defaultForm = useForm<WorkTimeFormValues>({
     resolver: zodResolver(workTimeFormSchema),
     defaultValues: defaultWorkTimeValues("09:30", "18:30"),
+  });
+
+  const lunchForm = useForm<WorkTimeFormValues>({
+    resolver: zodResolver(workTimeFormSchema),
+    defaultValues: defaultWorkTimeValues("12:00", "13:00"),
   });
 
   const overrideForm = useForm<WorkTimeFormValues>({
@@ -44,15 +54,20 @@ export function SettingsPage() {
     setLoading(true);
     setLoadError(null);
     try {
-      const next = await getWorkSchedule();
+      const [next, nextLunch] = await Promise.all([
+        getWorkSchedule(),
+        getLunchSchedule(),
+      ]);
       setSchedule(next);
+      setLunchSchedule(nextLunch);
       defaultForm.reset(defaultWorkTimeValues(next.defaultStart, next.defaultEnd));
+      lunchForm.reset(defaultWorkTimeValues(nextLunch.lunchStart, nextLunch.lunchEnd));
     } catch (error) {
       setLoadError(mapSettingsError(error as SettingsAppError));
     } finally {
       setLoading(false);
     }
-  }, [defaultForm]);
+  }, [defaultForm, lunchForm]);
 
   useEffect(() => {
     void refreshSchedule();
@@ -79,6 +94,20 @@ export function SettingsPage() {
       defaultForm.reset(defaultWorkTimeValues(next.defaultStart, next.defaultEnd));
     } catch (error) {
       setDefaultSaveError(mapSettingsError(error as SettingsAppError));
+    }
+  });
+
+  const onSaveLunch = lunchForm.handleSubmit(async (values) => {
+    setLunchSaveError(null);
+    try {
+      const next = await saveLunchTimes({
+        lunchStart: values.startTime,
+        lunchEnd: values.endTime,
+      });
+      setLunchSchedule(next);
+      lunchForm.reset(defaultWorkTimeValues(next.lunchStart, next.lunchEnd));
+    } catch (error) {
+      setLunchSaveError(mapSettingsError(error as SettingsAppError));
     }
   });
 
@@ -110,6 +139,11 @@ export function SettingsPage() {
     register: registerDefault,
     formState: { errors: defaultErrors, isSubmitting: isSavingDefault },
   } = defaultForm;
+
+  const {
+    register: registerLunch,
+    formState: { errors: lunchErrors, isSubmitting: isSavingLunch },
+  } = lunchForm;
 
   const {
     register: registerOverride,
@@ -197,6 +231,50 @@ export function SettingsPage() {
             </>
           ) : null}
         </section>
+
+        {!loading && !loadError ? (
+          <section className="settings-section">
+            <h3 className="settings-section__title">午餐时间</h3>
+            <form className="settings-work-time" onSubmit={onSaveLunch}>
+              <p className="settings-section__hint">
+                到达午餐开始时间后，今日页会轻量提醒一次。不会自动切换工作状态。
+              </p>
+              <div className="settings-work-time__row">
+                <Input
+                  label="午餐开始"
+                  type="time"
+                  step={60}
+                  error={lunchErrors.startTime?.message}
+                  {...registerLunch("startTime")}
+                />
+                <span className="settings-work-time__separator">至</span>
+                <Input
+                  label="午餐结束"
+                  type="time"
+                  step={60}
+                  error={lunchErrors.endTime?.message}
+                  {...registerLunch("endTime")}
+                />
+              </div>
+              {lunchSchedule ? (
+                <p className="settings-work-time__effective">
+                  当前设置：
+                  {formatWorkTimeRange(lunchSchedule.lunchStart, lunchSchedule.lunchEnd)}
+                </p>
+              ) : null}
+              {lunchSaveError ? (
+                <p className="settings-section__error" role="alert">
+                  {lunchSaveError}
+                </p>
+              ) : null}
+              <div className="settings-work-time__actions">
+                <Button type="submit" disabled={isSavingLunch}>
+                  {isSavingLunch ? "保存中…" : "保存"}
+                </Button>
+              </div>
+            </form>
+          </section>
+        ) : null}
 
         {!loading && !loadError ? <StatusCopySection /> : null}
       </Card>

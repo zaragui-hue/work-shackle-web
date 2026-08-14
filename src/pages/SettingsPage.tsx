@@ -7,6 +7,7 @@ import {
   workTimeFormSchema,
   type WorkTimeFormValues,
 } from "../features/settings/workTimeForm";
+import { StatusCopySection } from "../features/settings/StatusCopySection";
 import {
   clearTodayWorkOverride,
   formatWorkTimeRange,
@@ -196,6 +197,8 @@ export function SettingsPage() {
             </>
           ) : null}
         </section>
+
+        {!loading && !loadError ? <StatusCopySection /> : null}
       </Card>
 
       <Modal

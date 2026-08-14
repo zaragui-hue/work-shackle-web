@@ -1,0 +1,118 @@
+.work-status-panel {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-ticket);
+  border: var(--border-ink-soft);
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.work-status-panel--loading {
+  min-height: 7.5rem;
+  background: linear-gradient(
+    110deg,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(250, 199, 94, 0.12) 45%,
+    rgba(255, 255, 255, 0.35) 90%
+  );
+  background-size: 200% 100%;
+  animation: work-status-shimmer 1.4s ease-in-out infinite;
+}
+
+.work-status-panel__status {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  margin-bottom: var(--space-2);
+}
+
+.work-status-panel__status p {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--font-size-caption);
+}
+
+.work-status-panel__current {
+  margin-bottom: var(--space-3);
+}
+
+.work-status-panel__current--empty .work-status-panel__hint {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-caption);
+}
+
+.work-status-panel__label {
+  margin: 0 0 var(--space-1);
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-caption);
+}
+
+.work-status-panel__title {
+  margin: 0;
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-medium);
+}
+
+.work-status-panel__copy {
+  margin: var(--space-1) 0 0;
+  color: var(--color-ink);
+  line-height: var(--line-height-body);
+}
+
+.work-status-panel__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.work-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius-button);
+  border: var(--border-ink-soft);
+  background: var(--color-paper-raised);
+  color: var(--color-ink);
+  font: inherit;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.work-status-chip:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+
+.work-status-chip:disabled {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.work-status-chip--active {
+  border-color: var(--color-green);
+  background: rgba(17, 124, 13, 0.08);
+}
+
+.work-status-chip__emoji {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.work-status-chip__name {
+  font-size: var(--font-size-caption);
+}
+
+.work-status-chip__pending {
+  color: var(--color-ink-muted);
+  font-size: 0.75rem;
+}
+
+@keyframes work-status-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}

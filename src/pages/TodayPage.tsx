@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CreateTaskModal } from "../features/tasks/CreateTaskModal";
 import { TaskDrawer } from "../features/tasks/TaskDrawer";
 import { TodayTaskBoard } from "../features/today/TodayTaskBoard";
+import { WorkStatusPanel } from "../features/today/WorkStatusPanel";
 import { isTodayFullyEmpty } from "../features/today/todayDisplay";
 import { useWorkCountdown } from "../features/today/useWorkCountdown";
 import { WorkCountdownBanner } from "../features/today/WorkCountdownBanner";
@@ -75,6 +76,8 @@ export function TodayPage() {
         {!workCountdownLoading && !workCountdownError && workCountdown ? (
           <WorkCountdownBanner display={workCountdown} />
         ) : null}
+
+        <WorkStatusPanel />
 
         <div className="today-page__toolbar">
           <Button onClick={() => setCreateOpen(true)}>+ 新任务</Button>

@@ -4,7 +4,8 @@ export type WorkEndPhase =
   | "before_end"
   | "pending_decision"
   | "normal_off"
-  | "overtime_active";
+  | "overtime_active"
+  | "overtime_finished";
 
 export type WorkEndState = {
   workDate: string;

@@ -251,6 +251,46 @@ impl WorkStatusService {
         Ok(record_to_current_dto(record))
     }
 
+    pub fn open_system_linked_status(
+        connection: &Connection,
+        status_type: &str,
+        now_ms: i64,
+    ) -> Result<WorkStatusRecord, AppError> {
+        let status_def = resolve_status(status_type)?;
+        if status_def.selectable {
+            return Err(AppError::InvalidTaskInput {
+                message: format!("status is not system-linked: {status_type}"),
+            });
+        }
+
+        Self::ensure_default_copies(connection)?;
+        let work_date = format_work_date(work_day::work_date_from_timestamp_ms(now_ms));
+        let display_copy = pick_display_copy(connection, status_def.id, now_ms)?;
+
+        WorkStatusRepository::close_active_records(connection, now_ms).map_err(map_error)?;
+        WorkStatusRepository::insert_record(
+            connection,
+            CreateWorkStatusRecordInput {
+                id: new_record_id(),
+                work_date,
+                status_type: status_def.id.to_string(),
+                display_copy,
+                start_at_ms: now_ms,
+            },
+        )
+        .map_err(map_error)
+    }
+
+    pub fn close_system_linked_status(
+        connection: &Connection,
+        status_type: &str,
+        end_at_ms: i64,
+    ) -> Result<(), AppError> {
+        resolve_status(status_type)?;
+        WorkStatusRepository::close_active_records_for_status(connection, status_type, end_at_ms)
+            .map_err(map_error)
+    }
+
     pub fn list_copies(
         connection: &Connection,
         status_type: &str,

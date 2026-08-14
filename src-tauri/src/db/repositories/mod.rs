@@ -1,5 +1,6 @@
 pub mod contact_repository;
 pub mod lunch_reminder_repository;
+pub mod overtime_repository;
 pub mod postponement_repository;
 pub mod reminder_repository;
 pub mod settings_repository;

@@ -1,6 +1,7 @@
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
+use crate::db::repositories::overtime_repository::OvertimeRepository;
 use crate::db::repositories::work_end_decision_repository::{
     has_active_overtime, WorkEndDecisionRepository, WorkEndDecisionRepositoryError,
 };
@@ -9,14 +10,17 @@ use crate::db::repositories::work_status_repository::{
 };
 use crate::errors::AppError;
 use crate::services::settings::SettingsService;
-use crate::time::calendar_day::local_date_from_ms;
+use crate::time::calendar_day::{format_work_date, local_date_from_ms};
 use crate::time::clock_time::{is_local_time_at_or_after_on_work_date, ClockTimeError};
+use crate::time::work_day;
 
 pub const OFF_WORK_MESSAGES: &[&str] = &[
     "今天就到这儿，剩下的交给明天的自己。",
     "已下班。工作消息从现在开始酌情理解。",
     "电脑合上，恩怨清零。",
 ];
+
+pub const OVERTIME_FINISHED_MESSAGE: &str = "加班结束，今天真的收工啦。";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -25,6 +29,7 @@ pub enum WorkEndPhase {
     PendingDecision,
     NormalOff,
     OvertimeActive,
+    OvertimeFinished,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,19 +45,9 @@ pub struct WorkEndDecisionService;
 
 impl WorkEndDecisionService {
     pub fn get_state(connection: &Connection, now_ms: i64) -> Result<WorkEndStateDto, AppError> {
-        let work_date = local_date_from_ms(now_ms);
-        let schedule = SettingsService::get_work_schedule(connection, work_date)?;
-
-        if !is_local_time_at_or_after_on_work_date(now_ms, work_date, &schedule.effective_end)
-            .map_err(map_clock_time_error)?
-        {
-            return Ok(WorkEndStateDto {
-                work_date: schedule.work_date,
-                effective_end: schedule.effective_end,
-                phase: WorkEndPhase::BeforeEnd,
-                display_copy: None,
-            });
-        }
+        let calendar_date = local_date_from_ms(now_ms);
+        let schedule = SettingsService::get_work_schedule(connection, calendar_date)?;
+        let current_work_date = format_work_date(work_day::work_date_from_timestamp_ms(now_ms));
 
         if has_active_overtime(connection).map_err(map_db_error)? {
             return Ok(WorkEndStateDto {
@@ -63,14 +58,40 @@ impl WorkEndDecisionService {
             });
         }
 
-        if let Some(decision) = WorkEndDecisionRepository::get_for_work_date(connection, work_date)
-            .map_err(map_repo_error)?
+        if OvertimeRepository::has_manual_ended_overtime_for_work_date(
+            connection,
+            current_work_date.as_str(),
+        )
+        .map_err(map_overtime_repo_error)?
+        {
+            return Ok(WorkEndStateDto {
+                work_date: schedule.work_date,
+                effective_end: schedule.effective_end,
+                phase: WorkEndPhase::OvertimeFinished,
+                display_copy: Some(OVERTIME_FINISHED_MESSAGE.to_string()),
+            });
+        }
+
+        if let Some(decision) =
+            WorkEndDecisionRepository::get_for_work_date(connection, calendar_date)
+                .map_err(map_repo_error)?
         {
             return Ok(WorkEndStateDto {
                 work_date: schedule.work_date,
                 effective_end: schedule.effective_end,
                 phase: WorkEndPhase::NormalOff,
                 display_copy: Some(decision.display_copy),
+            });
+        }
+
+        if !is_local_time_at_or_after_on_work_date(now_ms, calendar_date, &schedule.effective_end)
+            .map_err(map_clock_time_error)?
+        {
+            return Ok(WorkEndStateDto {
+                work_date: schedule.work_date,
+                effective_end: schedule.effective_end,
+                phase: WorkEndPhase::BeforeEnd,
+                display_copy: None,
             });
         }
 
@@ -194,6 +215,21 @@ fn map_work_status_error(error: WorkStatusRepositoryError) -> AppError {
 fn map_db_error(error: crate::db::connection::DbError) -> AppError {
     AppError::DatabaseError {
         message: error.to_string(),
+    }
+}
+
+fn map_overtime_repo_error(
+    error: crate::db::repositories::overtime_repository::OvertimeRepositoryError,
+) -> AppError {
+    match error {
+        crate::db::repositories::overtime_repository::OvertimeRepositoryError::InvalidInput {
+            message,
+        } => AppError::InvalidTaskInput { message },
+        crate::db::repositories::overtime_repository::OvertimeRepositoryError::Db(db_error) => {
+            AppError::DatabaseError {
+                message: db_error.to_string(),
+            }
+        }
     }
 }
 

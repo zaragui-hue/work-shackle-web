@@ -102,6 +102,20 @@ impl WorkStatusRepository {
         Ok(())
     }
 
+    pub fn close_active_records_for_status(
+        connection: &Connection,
+        status_type: &str,
+        end_at_ms: i64,
+    ) -> Result<(), WorkStatusRepositoryError> {
+        connection.execute(
+            "UPDATE work_status_records
+             SET end_at_ms = ?1
+             WHERE end_at_ms IS NULL AND status_type = ?2",
+            params![end_at_ms, status_type],
+        )?;
+        Ok(())
+    }
+
     pub fn insert_record(
         connection: &Connection,
         input: CreateWorkStatusRecordInput,

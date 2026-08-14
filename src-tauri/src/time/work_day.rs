@@ -1,4 +1,4 @@
-use chrono::{Local, NaiveDate, NaiveTime, TimeZone};
+use chrono::{Local, NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
 
 use super::calendar_day::format_work_date;
 
@@ -29,6 +29,23 @@ pub fn work_date_from_timestamp_ms(timestamp_ms: i64) -> NaiveDate {
 
 pub fn format_current_work_date() -> String {
     format_work_date(work_date_from_local_now())
+}
+
+/// Next local 05:00 cutoff after `work_date` (exclusive end of that work day).
+pub fn auto_end_at_ms_for_work_date(work_date: NaiveDate) -> i64 {
+    let cutoff_day = work_date
+        .succ_opt()
+        .expect("work date must have a next calendar day");
+    let cutoff = NaiveDateTime::new(
+        cutoff_day,
+        NaiveTime::from_hms_opt(WORKDAY_CUTOFF_HOUR, WORKDAY_CUTOFF_MINUTE, 0)
+            .expect("valid cutoff time"),
+    );
+    Local
+        .from_local_datetime(&cutoff)
+        .single()
+        .expect("cutoff must map to a valid local datetime")
+        .timestamp_millis()
 }
 
 #[cfg(test)]
@@ -73,6 +90,25 @@ mod tests {
         assert_eq!(
             work_date,
             NaiveDate::from_ymd_opt(2026, 8, 14).expect("date")
+        );
+    }
+
+    #[test]
+    fn auto_end_at_ms_is_next_day_at_0500() {
+        let work_date = NaiveDate::from_ymd_opt(2026, 8, 14).expect("date");
+        assert_eq!(
+            auto_end_at_ms_for_work_date(work_date),
+            local_ms("2026-08-15", "05:00")
+        );
+    }
+
+    #[test]
+    fn midnight_overtime_auto_end_uses_start_work_date() {
+        let start_ms = local_ms("2026-08-15", "00:30");
+        let work_date = work_date_from_timestamp_ms(start_ms);
+        assert_eq!(
+            auto_end_at_ms_for_work_date(work_date),
+            local_ms("2026-08-15", "05:00")
         );
     }
 }

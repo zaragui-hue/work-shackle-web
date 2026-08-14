@@ -3,12 +3,16 @@ import "./WorkEndDecisionBanner.css";
 
 type WorkEndDecisionBannerProps = {
   onConfirmNormalOff: () => void;
+  onStartOvertime: () => void;
   confirmingNormalOff?: boolean;
+  startingOvertime?: boolean;
 };
 
 export function WorkEndDecisionBanner({
   onConfirmNormalOff,
+  onStartOvertime,
   confirmingNormalOff = false,
+  startingOvertime = false,
 }: WorkEndDecisionBannerProps) {
   return (
     <div className="work-end-decision" role="status" aria-live="polite">
@@ -30,8 +34,8 @@ export function WorkEndDecisionBanner({
         >
           {confirmingNormalOff ? "确认中…" : "正常下班"}
         </Button>
-        <Button variant="secondary" disabled aria-disabled="true">
-          开启加班模式
+        <Button variant="secondary" onClick={onStartOvertime} disabled={startingOvertime}>
+          {startingOvertime ? "开启中…" : "开启加班模式"}
         </Button>
       </div>
     </div>

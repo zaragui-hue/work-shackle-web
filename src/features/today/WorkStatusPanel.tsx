@@ -12,7 +12,7 @@ import {
 import { Button } from "../../shared/ui";
 import "./WorkStatusPanel.css";
 
-export function WorkStatusPanel() {
+export function WorkStatusPanel({ refreshKey }: { refreshKey?: string }) {
   const [statuses, setStatuses] = useState<FixedWorkStatus[]>([]);
   const [current, setCurrent] = useState<CurrentWorkStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +38,7 @@ export function WorkStatusPanel() {
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, refreshKey]);
 
   const onSwitch = async (statusType: string) => {
     if (switchingId || current?.statusType === statusType) {

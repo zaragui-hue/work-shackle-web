@@ -1,0 +1,55 @@
+.overtime-banner {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-ticket);
+  border: 1px solid rgba(17, 124, 13, 0.28);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.82) 0%,
+    rgba(17, 124, 13, 0.1) 100%
+  );
+}
+
+.overtime-banner__content {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.overtime-banner__emoji {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.overtime-banner__text {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.overtime-banner__title {
+  margin: 0;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-green);
+}
+
+.overtime-banner__label {
+  margin: 0;
+  font-size: var(--font-size-body);
+  color: var(--color-ink);
+}
+
+.overtime-banner__timer {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+}
+
+.overtime-banner__actions {
+  margin-top: var(--space-3);
+}

@@ -5,10 +5,13 @@ import { TaskDrawer } from "../features/tasks/TaskDrawer";
 import { LunchReminderBanner } from "../features/today/LunchReminderBanner";
 import { TodayTaskBoard } from "../features/today/TodayTaskBoard";
 import { useLunchReminder } from "../features/today/useLunchReminder";
+import { OvertimeBanner } from "../features/today/OvertimeBanner";
+import { useOvertime } from "../features/today/useOvertime";
 import {
   WorkEndDecisionBanner,
   WorkOffCompleteBanner,
 } from "../features/today/WorkEndDecisionBanner";
+import { isWorkDayFinished } from "../features/today/workEndDisplay";
 import { useWorkEndDecision } from "../features/today/useWorkEndDecision";
 import { WorkStatusPanel } from "../features/today/WorkStatusPanel";
 import { isTodayFullyEmpty } from "../features/today/todayDisplay";
@@ -52,6 +55,17 @@ export function TodayPage() {
     refresh: refreshWorkEnd,
   } = useWorkEndDecision();
   const {
+    active: activeOvertime,
+    display: overtimeDisplay,
+    loading: overtimeLoading,
+    starting: startingOvertime,
+    ending: endingOvertime,
+    error: overtimeError,
+    start: startOvertime,
+    end: endOvertime,
+    refresh: refreshOvertime,
+  } = useOvertime();
+  const {
     reminder: lunchReminder,
     loading: lunchReminderLoading,
     dismissed: lunchReminderDismissed,
@@ -82,20 +96,38 @@ export function TodayPage() {
     }
   }, [workCountdown?.phase, refreshWorkEnd]);
 
+  const showOvertimeBanner =
+    !overtimeLoading &&
+    !workEndLoading &&
+    workEndState?.phase === "overtime_active" &&
+    activeOvertime !== null &&
+    overtimeDisplay !== null;
   const showWorkEndDecision =
     !workEndLoading && workEndState?.phase === "pending_decision";
+  const workDayFinished = isWorkDayFinished(workEndState?.phase);
   const showWorkOffComplete =
-    !workEndLoading && workEndState?.phase === "normal_off";
+    !workEndLoading && workDayFinished && Boolean(workEndState?.displayCopy);
   const showWorkCountdownBanner =
     !workCountdownLoading &&
     !workCountdownError &&
     workCountdown &&
     !showWorkEndDecision &&
-    !showWorkOffComplete &&
+    !workDayFinished &&
     workEndState?.phase !== "overtime_active";
 
   const showEmpty =
     !loading && !error && isTodayFullyEmpty(todayTasks);
+
+  const onStartOvertime = async () => {
+    await startOvertime();
+    await refreshWorkEnd();
+  };
+
+  const onEndOvertime = async () => {
+    await endOvertime();
+    await refreshWorkEnd();
+    await refreshOvertime();
+  };
 
   const onSwitchToLunch = async () => {
     setSwitchingToLunch(true);
@@ -137,8 +169,24 @@ export function TodayPage() {
         {showWorkEndDecision ? (
           <WorkEndDecisionBanner
             onConfirmNormalOff={() => void confirmNormalOff()}
+            onStartOvertime={() => void onStartOvertime()}
             confirmingNormalOff={confirmingNormalOff}
+            startingOvertime={startingOvertime}
           />
+        ) : null}
+
+        {showOvertimeBanner ? (
+          <OvertimeBanner
+            elapsedText={overtimeDisplay!.elapsedText}
+            onEnd={() => void onEndOvertime()}
+            ending={endingOvertime}
+          />
+        ) : null}
+
+        {overtimeError ? (
+          <div className="today-page__countdown-status">
+            <p role="alert">{overtimeError}</p>
+          </div>
         ) : null}
 
         {showWorkOffComplete && workEndState?.displayCopy ? (
@@ -154,7 +202,9 @@ export function TodayPage() {
           />
         ) : null}
 
-        {workEndState?.phase !== "normal_off" ? <WorkStatusPanel /> : null}
+        {!workDayFinished ? (
+          <WorkStatusPanel refreshKey={workEndState?.phase ?? "unknown"} />
+        ) : null}
 
         <div className="today-page__toolbar">
           <Button onClick={() => setCreateOpen(true)}>+ 新任务</Button>

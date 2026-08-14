@@ -1,5 +1,9 @@
 use chrono::{Local, NaiveDate, TimeZone};
 
+pub fn format_work_date(date: NaiveDate) -> String {
+    date.format("%Y-%m-%d").to_string()
+}
+
 /// Local calendar date for an absolute instant (ms). Uses normal calendar days, not 05:00 cutoff.
 pub fn local_date_from_ms(timestamp_ms: i64) -> NaiveDate {
     Local

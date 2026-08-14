@@ -5,10 +5,11 @@ mod services;
 mod time;
 
 use commands::{
-    cancel_task, complete_task, create_contact, create_task, deactivate_contact, get_task_by_id,
-    get_task_detail, get_workspace_status, initialize_app, list_contacts, postpone_task,
-    query_tasks, query_today_tasks, resolve_default_workspace_path, set_workspace_path_command,
-    update_task, validate_workspace_candidate, AppState,
+    cancel_task, clear_today_work_override, complete_task, create_contact, create_task,
+    deactivate_contact, get_task_by_id, get_task_detail, get_work_schedule, get_workspace_status,
+    initialize_app, list_contacts, postpone_task, query_tasks, query_today_tasks,
+    resolve_default_workspace_path, save_default_work_times, save_today_work_override,
+    set_workspace_path_command, update_task, validate_workspace_candidate, AppState,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -33,6 +34,10 @@ pub fn run() {
             list_contacts,
             create_contact,
             deactivate_contact,
+            get_work_schedule,
+            save_default_work_times,
+            save_today_work_override,
+            clear_today_work_override,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

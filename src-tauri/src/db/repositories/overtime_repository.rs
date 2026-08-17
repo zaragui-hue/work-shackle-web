@@ -86,6 +86,19 @@ impl OvertimeRepository {
         Ok(count > 0)
     }
 
+    pub fn has_ended_overtime_for_work_date(
+        connection: &Connection,
+        work_date: &str,
+    ) -> Result<bool, OvertimeRepositoryError> {
+        let count: i64 = connection.query_row(
+            "SELECT COUNT(*) FROM overtime_records
+             WHERE work_date = ?1 AND end_at_ms IS NOT NULL",
+            [work_date],
+            |row| row.get(0),
+        )?;
+        Ok(count > 0)
+    }
+
     pub fn insert_record(
         connection: &Connection,
         input: CreateOvertimeRecordInput,

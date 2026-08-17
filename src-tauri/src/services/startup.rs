@@ -7,6 +7,7 @@ use serde::Serialize;
 use crate::db::connection::{open_connection, DbError};
 use crate::db::migrations::run_migrations;
 use crate::errors::AppError;
+use crate::services::overtime::OvertimeService;
 use crate::services::workspace::{
     default_workspace_path, initialize_current_week_directory, initialize_workspace_data_directory,
     load_app_config, AppConfig, WorkspaceContext, WorkspaceSource,
@@ -57,6 +58,9 @@ pub fn run_startup(
 
     let connection = open_and_migrate_database(&workspace_path)?;
     perform_startup_checks(&connection).map_err(map_open_db_error)?;
+
+    let now_ms = Local::now().timestamp_millis();
+    OvertimeService::reconcile_at_startup(&connection, now_ms)?;
 
     let today = Local::now().date_naive();
     let warning = initialize_current_week_directory(&workspace_path, today)
@@ -157,6 +161,7 @@ mod tests {
     };
     use std::collections::HashMap;
     use std::fs;
+    use std::path::PathBuf;
 
     fn mac_context(documents: &Path) -> WorkspaceContext {
         WorkspaceContext {
@@ -164,6 +169,40 @@ mod tests {
             d_drive_root: None,
             d_drive_writable: false,
         }
+    }
+
+    fn local_ms(date: &str, time: &str) -> i64 {
+        use chrono::{Local, NaiveDateTime, TimeZone};
+
+        let naive = NaiveDateTime::parse_from_str(&format!("{date} {time}"), "%Y-%m-%d %H:%M")
+            .expect("valid");
+        Local
+            .from_local_datetime(&naive)
+            .single()
+            .expect("valid local datetime")
+            .timestamp_millis()
+    }
+
+    fn configured_workspace(temp: &tempfile::TempDir) -> (PathBuf, PathBuf) {
+        let workspace = temp.path().join("configured");
+        fs::create_dir_all(&workspace).expect("create workspace");
+        let config_dir = temp.path().join("config");
+        set_workspace_path(&config_dir, &workspace, &WorkspaceValidator::real())
+            .expect("persist workspace");
+        (workspace, config_dir)
+    }
+
+    fn seed_expired_active_overtime(workspace: &Path, start_ms: i64) {
+        use crate::db::repositories::settings_repository::SettingsRepository;
+        use crate::services::overtime::OvertimeService;
+        use crate::services::work_status::WorkStatusService;
+
+        let connection = initialize_database(workspace).expect("initialize");
+        SettingsRepository::ensure_defaults(&connection, 1).expect("seed");
+        OvertimeService::start(&connection, start_ms).expect("start");
+        assert!(WorkStatusService::get_current(&connection)
+            .expect("current")
+            .is_some_and(|status| status.status_type == "overtime"));
     }
 
     #[test]
@@ -400,5 +439,202 @@ mod tests {
             AppError::WorkspaceNetworkDriveUnsupported { path }
                 if path == workspace.to_string_lossy()
         ));
+    }
+
+    #[test]
+    fn startup_reconciles_expired_active_overtime() {
+        use crate::services::overtime::{OvertimeService, END_TYPE_AUTO};
+        use crate::services::work_status::WorkStatusService;
+        use chrono::Local;
+
+        let temp = tempfile::tempdir().expect("tempdir");
+        let (workspace, config_dir) = configured_workspace(&temp);
+        let start_ms = local_ms("2026-08-14", "20:00");
+        let auto_end_ms = local_ms("2026-08-15", "05:00");
+
+        seed_expired_active_overtime(&workspace, start_ms);
+
+        let ctx = mac_context(&temp.path().join("Documents"));
+        let (_, connection) =
+            run_startup(&config_dir, &ctx, &WorkspaceValidator::real()).expect("startup");
+        let startup_now_ms = Local::now().timestamp_millis();
+
+        let end_at_ms: i64 = connection
+            .query_row(
+                "SELECT end_at_ms FROM overtime_records LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .expect("end_at_ms");
+        let end_type: String = connection
+            .query_row("SELECT end_type FROM overtime_records LIMIT 1", [], |row| {
+                row.get(0)
+            })
+            .expect("end_type");
+        assert_eq!(end_at_ms, auto_end_ms);
+        assert_eq!(end_type, END_TYPE_AUTO);
+        assert_ne!(end_at_ms, startup_now_ms);
+        assert!(OvertimeService::get_active(&connection)
+            .expect("get")
+            .is_none());
+        assert!(WorkStatusService::get_current(&connection)
+            .expect("current")
+            .is_none());
+
+        let status_end_at_ms: i64 = connection
+            .query_row(
+                "SELECT end_at_ms FROM work_status_records WHERE status_type = 'overtime'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("status end");
+        assert_eq!(status_end_at_ms, auto_end_ms);
+
+        let active_status_count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM work_status_records WHERE end_at_ms IS NULL AND status_type = 'overtime'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("active status count");
+        assert_eq!(active_status_count, 0);
+    }
+
+    #[test]
+    fn repeated_run_startup_after_overtime_reconciliation_is_idempotent() {
+        use crate::services::overtime::{OvertimeService, END_TYPE_AUTO};
+
+        let temp = tempfile::tempdir().expect("tempdir");
+        let (workspace, config_dir) = configured_workspace(&temp);
+        let start_ms = local_ms("2026-08-14", "20:00");
+        let auto_end_ms = local_ms("2026-08-15", "05:00");
+
+        seed_expired_active_overtime(&workspace, start_ms);
+
+        let ctx = mac_context(&temp.path().join("Documents"));
+        let validator = WorkspaceValidator::real();
+        let (_, first_connection) = run_startup(&config_dir, &ctx, &validator).expect("first");
+        drop(first_connection);
+
+        let (_, second_connection) = run_startup(&config_dir, &ctx, &validator).expect("second");
+
+        let end_at_ms: i64 = second_connection
+            .query_row(
+                "SELECT end_at_ms FROM overtime_records LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .expect("end_at_ms");
+        let end_type: String = second_connection
+            .query_row("SELECT end_type FROM overtime_records LIMIT 1", [], |row| {
+                row.get(0)
+            })
+            .expect("end_type");
+        let record_count: i64 = second_connection
+            .query_row("SELECT COUNT(*) FROM overtime_records", [], |row| {
+                row.get(0)
+            })
+            .expect("count");
+
+        assert_eq!(end_at_ms, auto_end_ms);
+        assert_eq!(end_type, END_TYPE_AUTO);
+        assert_eq!(record_count, 1);
+        assert!(OvertimeService::get_active(&second_connection)
+            .expect("get")
+            .is_none());
+    }
+
+    #[test]
+    fn run_startup_does_not_end_overtime_before_auto_end_at_ms() {
+        use crate::db::repositories::overtime_repository::OvertimeRepository;
+        use crate::db::repositories::settings_repository::SettingsRepository;
+        use crate::services::overtime::OvertimeService;
+        use crate::services::work_status::WorkStatusService;
+        use crate::time::calendar_day::format_work_date;
+        use crate::time::work_day::{auto_end_at_ms_for_work_date, work_date_from_timestamp_ms};
+        use chrono::Local;
+
+        let temp = tempfile::tempdir().expect("tempdir");
+        let (workspace, config_dir) = configured_workspace(&temp);
+        let now_ms = Local::now().timestamp_millis();
+        let work_date = work_date_from_timestamp_ms(now_ms);
+        let auto_end_ms = auto_end_at_ms_for_work_date(work_date);
+        assert!(
+            now_ms < auto_end_ms,
+            "test requires local now before the work-day auto end cutoff"
+        );
+
+        {
+            let connection = initialize_database(&workspace).expect("initialize");
+            SettingsRepository::ensure_defaults(&connection, 1).expect("seed");
+            let start_ms = now_ms - 3_600_000;
+            connection
+                .execute(
+                    "INSERT INTO overtime_records
+                     (id, work_date, start_at_ms, end_at_ms, auto_end_at_ms, end_type)
+                     VALUES ('ot-active', ?1, ?2, NULL, ?3, NULL)",
+                    rusqlite::params![format_work_date(work_date), start_ms, auto_end_ms,],
+                )
+                .expect("insert overtime");
+            connection
+                .execute(
+                    "INSERT INTO work_status_records
+                     (id, work_date, status_type, display_copy, start_at_ms, end_at_ms)
+                     VALUES ('ws-overtime', ?1, 'overtime', '加班中', ?2, NULL)",
+                    rusqlite::params![format_work_date(work_date), start_ms],
+                )
+                .expect("insert work status");
+        }
+
+        let ctx = mac_context(&temp.path().join("Documents"));
+        let (_, connection) =
+            run_startup(&config_dir, &ctx, &WorkspaceValidator::real()).expect("startup");
+
+        let active = OvertimeRepository::get_active_record(&connection)
+            .expect("query")
+            .expect("still active");
+        assert!(active.end_at_ms.is_none());
+        assert!(active.end_type.is_none());
+        assert_eq!(active.auto_end_at_ms, auto_end_ms);
+        assert!(OvertimeService::get_active(&connection)
+            .expect("get")
+            .is_some());
+        assert_eq!(
+            WorkStatusService::get_current(&connection)
+                .expect("current")
+                .expect("active status")
+                .status_type,
+            "overtime"
+        );
+    }
+
+    #[test]
+    fn run_startup_propagates_reconciliation_failure_without_mutating_overtime() {
+        use crate::db::repositories::overtime_repository::OvertimeRepository;
+        use rusqlite::Connection;
+
+        let temp = tempfile::tempdir().expect("tempdir");
+        let (workspace, config_dir) = configured_workspace(&temp);
+        let start_ms = local_ms("2026-08-14", "20:00");
+
+        seed_expired_active_overtime(&workspace, start_ms);
+
+        let broken = Connection::open(database_path(&workspace)).expect("open");
+        broken
+            .execute("DROP TABLE work_status_records", [])
+            .expect("drop work status table");
+        drop(broken);
+
+        let ctx = mac_context(&temp.path().join("Documents"));
+        let err = run_startup(&config_dir, &ctx, &WorkspaceValidator::real())
+            .expect_err("reconciliation failure must abort startup");
+        assert!(matches!(err, AppError::DatabaseError { .. }));
+
+        let reopened = initialize_database(&workspace).expect("reopen");
+        let active = OvertimeRepository::get_active_record(&reopened)
+            .expect("query")
+            .expect("overtime remains active after rollback");
+        assert!(active.end_at_ms.is_none());
+        assert!(active.end_type.is_none());
     }
 }

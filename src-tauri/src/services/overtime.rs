@@ -16,6 +16,7 @@ use crate::time::work_day::{self, auto_end_at_ms_for_work_date};
 
 pub const OVERTIME_STATUS_TYPE: &str = "overtime";
 pub const END_TYPE_MANUAL: &str = "manual";
+pub const END_TYPE_AUTO: &str = "auto";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -64,7 +65,7 @@ impl OvertimeService {
         let work_date = work_day::work_date_from_timestamp_ms(now_ms);
         let work_date_text = format_work_date(work_date);
 
-        if OvertimeRepository::has_manual_ended_overtime_for_work_date(connection, &work_date_text)
+        if OvertimeRepository::has_ended_overtime_for_work_date(connection, &work_date_text)
             .map_err(map_repo_error)?
         {
             return Err(AppError::InvalidTaskInput {
@@ -88,11 +89,8 @@ impl OvertimeService {
                 return Ok(active);
             }
 
-            if OvertimeRepository::has_manual_ended_overtime_for_work_date(
-                connection,
-                &work_date_text,
-            )
-            .map_err(map_repo_error)?
+            if OvertimeRepository::has_ended_overtime_for_work_date(connection, &work_date_text)
+                .map_err(map_repo_error)?
             {
                 return Err(AppError::InvalidTaskInput {
                     message: "该工作日加班已结束，无法再次开启".to_string(),
@@ -122,6 +120,56 @@ impl OvertimeService {
                         message: error.to_string(),
                     })?;
                 Ok(record_to_dto(record))
+            }
+            Err(error) => {
+                let _ = connection.execute("ROLLBACK", []);
+                Err(error)
+            }
+        }
+    }
+
+    pub fn reconcile_at_startup(connection: &Connection, now_ms: i64) -> Result<(), AppError> {
+        let Some(active) =
+            OvertimeRepository::get_active_record(connection).map_err(map_repo_error)?
+        else {
+            return Ok(());
+        };
+
+        if now_ms < active.auto_end_at_ms {
+            return Ok(());
+        }
+
+        let end_at_ms = active.auto_end_at_ms;
+
+        connection
+            .execute("BEGIN IMMEDIATE", [])
+            .map_err(|error| AppError::DatabaseError {
+                message: error.to_string(),
+            })?;
+
+        let saved = (|| -> Result<(), AppError> {
+            let ended = OvertimeRepository::end_active_record(connection, end_at_ms, END_TYPE_AUTO)
+                .map_err(map_repo_error)?;
+            if ended.is_none() {
+                return Ok(());
+            }
+
+            WorkStatusService::close_system_linked_status(
+                connection,
+                OVERTIME_STATUS_TYPE,
+                end_at_ms,
+            )?;
+            Ok(())
+        })();
+
+        match saved {
+            Ok(()) => {
+                connection
+                    .execute("COMMIT", [])
+                    .map_err(|error| AppError::DatabaseError {
+                        message: error.to_string(),
+                    })?;
+                Ok(())
             }
             Err(error) => {
                 let _ = connection.execute("ROLLBACK", []);
@@ -439,7 +487,7 @@ mod tests {
     }
 
     #[test]
-    fn does_not_auto_end_at_0500_in_this_task() {
+    fn does_not_auto_end_at_0500_without_reconciliation_or_scheduler() {
         let db = open_test_database();
         SettingsRepository::ensure_defaults(&db.connection, 1).expect("seed");
         let start_ms = local_ms("2026-08-14", "23:00");
@@ -467,6 +515,282 @@ mod tests {
         assert!(end_at_ms.is_none());
 
         let _ = after_cutoff;
+    }
+
+    #[test]
+    fn reconcile_does_not_end_when_now_before_auto_end() {
+        let db = open_test_database();
+        SettingsRepository::ensure_defaults(&db.connection, 1).expect("seed");
+        let start_ms = local_ms("2026-08-14", "20:00");
+        let before_auto_end = local_ms("2026-08-15", "04:59");
+
+        OvertimeService::start(&db.connection, start_ms).expect("start");
+        OvertimeService::reconcile_at_startup(&db.connection, before_auto_end).expect("reconcile");
+
+        let active = OvertimeRepository::get_active_record(&db.connection)
+            .expect("query")
+            .expect("still active");
+        assert!(active.end_at_ms.is_none());
+        assert!(OvertimeService::get_active(&db.connection)
+            .expect("get")
+            .is_some());
+    }
+
+    #[test]
+    fn reconcile_ends_at_auto_end_when_now_equals_auto_end() {
+        let db = open_test_database();
+        SettingsRepository::ensure_defaults(&db.connection, 1).expect("seed");
+        let start_ms = local_ms("2026-08-14", "20:00");
+        let auto_end_ms = local_ms("2026-08-15", "05:00");
+
+        OvertimeService::start(&db.connection, start_ms).expect("start");
+        OvertimeService::reconcile_at_startup(&db.connection, auto_end_ms).expect("reconcile");
+
+        let row = db
+            .connection
+            .query_row(
+                "SELECT end_at_ms, end_type FROM overtime_records LIMIT 1",
+                [],
+                |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?)),
+            )
+            .expect("row");
+        assert_eq!(row.0, auto_end_ms);
+        assert_eq!(row.1, END_TYPE_AUTO);
+        assert!(OvertimeService::get_active(&db.connection)
+            .expect("get")
+            .is_none());
+    }
+
+    #[test]
+    fn reconcile_uses_auto_end_not_now_when_now_after_auto_end() {
+        let db = open_test_database();
+        SettingsRepository::ensure_defaults(&db.connection, 1).expect("seed");
+        let start_ms = local_ms("2026-08-14", "20:00");
+        let auto_end_ms = local_ms("2026-08-15", "05:00");
+        let reopen_ms = local_ms("2026-08-15", "09:00");
+
+        OvertimeService::start(&db.connection, start_ms).expect("start");
+        OvertimeService::reconcile_at_startup(&db.connection, reopen_ms).expect("reconcile");
+
+        let end_at_ms: i64 = db
+            .connection
+            .query_row(
+                "SELECT end_at_ms FROM overtime_records LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .expect("end_at_ms");
+        assert_eq!(end_at_ms, auto_end_ms);
+        assert_ne!(end_at_ms, reopen_ms);
+    }
+
+    #[test]
+    fn reconcile_closes_active_overtime_work_status_at_auto_end() {
+        let db = open_test_database();
+        SettingsRepository::ensure_defaults(&db.connection, 1).expect("seed");
+        let start_ms = local_ms("2026-08-14", "20:00");
+        let auto_end_ms = local_ms("2026-08-15", "05:00");
+        let reopen_ms = local_ms("2026-08-15", "09:00");
+
+        OvertimeService::start(&db.connection, start_ms).expect("start");
+        OvertimeService::reconcile_at_startup(&db.connection, reopen_ms).expect("reconcile");
+
+        assert!(WorkStatusService::get_current(&db.connection)
+            .expect("current")
+            .is_none());
+
+        let status_end_at_ms: i64 = db
+            .connection
+            .query_row(
+                "SELECT end_at_ms FROM work_status_records WHERE status_type = 'overtime'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("status end");
+        assert_eq!(status_end_at_ms, auto_end_ms);
+    }
+
+    #[test]
+    fn reconcile_is_transactionally_consistent() {
+        let db = open_test_database();
+        SettingsRepository::ensure_defaults(&db.connection, 1).expect("seed");
+        let start_ms = local_ms("2026-08-14", "20:00");
+        let reopen_ms = local_ms("2026-08-15", "09:00");
+
+        OvertimeService::start(&db.connection, start_ms).expect("start");
+        OvertimeService::reconcile_at_startup(&db.connection, reopen_ms).expect("reconcile");
+
+        let active_overtime: i64 = db
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM overtime_records WHERE end_at_ms IS NULL",
+                [],
+                |row| row.get(0),
+            )
+            .expect("overtime count");
+        let active_status: i64 = db
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM work_status_records WHERE end_at_ms IS NULL AND status_type = 'overtime'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("status count");
+        assert_eq!(active_overtime, 0);
+        assert_eq!(active_status, 0);
+    }
+
+    #[test]
+    fn reconcile_does_not_modify_manual_ended_overtime() {
+        let db = open_test_database();
+        SettingsRepository::ensure_defaults(&db.connection, 1).expect("seed");
+        let start_ms = local_ms("2026-08-14", "19:00");
+        let manual_end_ms = local_ms("2026-08-14", "21:00");
+        let reopen_ms = local_ms("2026-08-15", "09:00");
+
+        OvertimeService::start(&db.connection, start_ms).expect("start");
+        OvertimeService::end_manual(&db.connection, manual_end_ms).expect("manual end");
+        OvertimeService::reconcile_at_startup(&db.connection, reopen_ms).expect("reconcile");
+
+        let row = db
+            .connection
+            .query_row(
+                "SELECT end_at_ms, end_type FROM overtime_records LIMIT 1",
+                [],
+                |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?)),
+            )
+            .expect("row");
+        assert_eq!(row.0, manual_end_ms);
+        assert_eq!(row.1, END_TYPE_MANUAL);
+    }
+
+    #[test]
+    fn repeated_reconcile_is_idempotent() {
+        let db = open_test_database();
+        SettingsRepository::ensure_defaults(&db.connection, 1).expect("seed");
+        let start_ms = local_ms("2026-08-14", "20:00");
+        let reopen_ms = local_ms("2026-08-15", "09:00");
+
+        OvertimeService::start(&db.connection, start_ms).expect("start");
+        OvertimeService::reconcile_at_startup(&db.connection, reopen_ms).expect("first");
+        OvertimeService::reconcile_at_startup(&db.connection, reopen_ms).expect("second");
+
+        let count: i64 = db
+            .connection
+            .query_row("SELECT COUNT(*) FROM overtime_records", [], |row| {
+                row.get(0)
+            })
+            .expect("count");
+        assert_eq!(count, 1);
+
+        let end_type: String = db
+            .connection
+            .query_row("SELECT end_type FROM overtime_records LIMIT 1", [], |row| {
+                row.get(0)
+            })
+            .expect("end_type");
+        assert_eq!(end_type, END_TYPE_AUTO);
+    }
+
+    #[test]
+    fn expired_active_overtime_reconciles_after_database_reopen() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let workspace = temp.path();
+        let start_ms = local_ms("2026-08-14", "20:00");
+        let auto_end_ms = local_ms("2026-08-15", "05:00");
+        let reopen_ms = local_ms("2026-08-15", "09:00");
+
+        {
+            let connection = initialize_database(workspace).expect("initialize");
+            SettingsRepository::ensure_defaults(&connection, 1).expect("seed");
+            OvertimeService::start(&connection, start_ms).expect("start");
+        }
+
+        let reopened = initialize_database(workspace).expect("reopen");
+        OvertimeService::reconcile_at_startup(&reopened, reopen_ms).expect("reconcile");
+
+        let row = reopened
+            .query_row(
+                "SELECT end_at_ms, end_type FROM overtime_records LIMIT 1",
+                [],
+                |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?)),
+            )
+            .expect("row");
+        assert_eq!(row.0, auto_end_ms);
+        assert_eq!(row.1, END_TYPE_AUTO);
+        assert!(OvertimeService::get_active(&reopened)
+            .expect("get")
+            .is_none());
+    }
+
+    #[test]
+    fn auto_ended_overtime_is_recognized_as_finished_for_current_work_date() {
+        let db = open_test_database();
+        SettingsRepository::ensure_defaults(&db.connection, 1).expect("seed");
+        let start_ms = local_ms("2026-08-14", "20:00");
+        let auto_end_ms = local_ms("2026-08-15", "05:00");
+
+        db.connection
+            .execute(
+                "INSERT INTO overtime_records
+                 (id, work_date, start_at_ms, end_at_ms, auto_end_at_ms, end_type)
+                 VALUES ('ot-auto', '2026-08-14', ?1, ?2, ?2, 'auto')",
+                rusqlite::params![start_ms, auto_end_ms],
+            )
+            .expect("insert");
+
+        let state =
+            WorkEndDecisionService::get_state(&db.connection, local_ms("2026-08-15", "04:00"))
+                .expect("state");
+        assert_eq!(state.phase, WorkEndPhase::OvertimeFinished);
+    }
+
+    #[test]
+    fn auto_reconciled_overtime_does_not_finish_next_work_date() {
+        let db = open_test_database();
+        SettingsRepository::ensure_defaults(&db.connection, 1).expect("seed");
+        let start_ms = local_ms("2026-08-14", "20:00");
+        let reopen_ms = local_ms("2026-08-15", "09:00");
+
+        OvertimeService::start(&db.connection, start_ms).expect("start");
+        OvertimeService::reconcile_at_startup(&db.connection, reopen_ms).expect("reconcile");
+
+        let next_day =
+            WorkEndDecisionService::get_state(&db.connection, local_ms("2026-08-15", "09:00"))
+                .expect("next day");
+        assert_eq!(next_day.phase, WorkEndPhase::BeforeEnd);
+        assert_ne!(next_day.phase, WorkEndPhase::OvertimeFinished);
+    }
+
+    #[test]
+    fn auto_reconciled_work_date_is_marked_ended() {
+        let db = open_test_database();
+        SettingsRepository::ensure_defaults(&db.connection, 1).expect("seed");
+        let start_ms = local_ms("2026-08-14", "20:00");
+        let reopen_ms = local_ms("2026-08-15", "09:00");
+
+        OvertimeService::start(&db.connection, start_ms).expect("start");
+        OvertimeService::reconcile_at_startup(&db.connection, reopen_ms).expect("reconcile");
+
+        assert!(
+            OvertimeRepository::has_ended_overtime_for_work_date(&db.connection, "2026-08-14")
+                .expect("query")
+        );
+    }
+
+    #[test]
+    fn can_start_overtime_on_new_work_date_after_auto_reconcile() {
+        let db = open_test_database();
+        SettingsRepository::ensure_defaults(&db.connection, 1).expect("seed");
+        let start_ms = local_ms("2026-08-14", "20:00");
+        let reopen_ms = local_ms("2026-08-15", "09:00");
+
+        OvertimeService::start(&db.connection, start_ms).expect("start");
+        OvertimeService::reconcile_at_startup(&db.connection, reopen_ms).expect("reconcile");
+
+        let active = OvertimeService::start(&db.connection, local_ms("2026-08-15", "19:00"))
+            .expect("new work date");
+        assert_eq!(active.work_date, "2026-08-15");
     }
 
     #[test]

@@ -58,7 +58,7 @@ impl WorkEndDecisionService {
             });
         }
 
-        if OvertimeRepository::has_manual_ended_overtime_for_work_date(
+        if OvertimeRepository::has_ended_overtime_for_work_date(
             connection,
             current_work_date.as_str(),
         )

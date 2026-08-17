@@ -128,15 +128,15 @@ impl OvertimeService {
         }
     }
 
-    pub fn reconcile_at_startup(connection: &Connection, now_ms: i64) -> Result<(), AppError> {
+    pub fn reconcile_at(connection: &Connection, now_ms: i64) -> Result<bool, AppError> {
         let Some(active) =
             OvertimeRepository::get_active_record(connection).map_err(map_repo_error)?
         else {
-            return Ok(());
+            return Ok(false);
         };
 
         if now_ms < active.auto_end_at_ms {
-            return Ok(());
+            return Ok(false);
         }
 
         let end_at_ms = active.auto_end_at_ms;
@@ -147,11 +147,11 @@ impl OvertimeService {
                 message: error.to_string(),
             })?;
 
-        let saved = (|| -> Result<(), AppError> {
+        let saved = (|| -> Result<bool, AppError> {
             let ended = OvertimeRepository::end_active_record(connection, end_at_ms, END_TYPE_AUTO)
                 .map_err(map_repo_error)?;
             if ended.is_none() {
-                return Ok(());
+                return Ok(false);
             }
 
             WorkStatusService::close_system_linked_status(
@@ -159,23 +159,27 @@ impl OvertimeService {
                 OVERTIME_STATUS_TYPE,
                 end_at_ms,
             )?;
-            Ok(())
+            Ok(true)
         })();
 
         match saved {
-            Ok(()) => {
+            Ok(did_end) => {
                 connection
                     .execute("COMMIT", [])
                     .map_err(|error| AppError::DatabaseError {
                         message: error.to_string(),
                     })?;
-                Ok(())
+                Ok(did_end)
             }
             Err(error) => {
                 let _ = connection.execute("ROLLBACK", []);
                 Err(error)
             }
         }
+    }
+
+    pub fn reconcile_at_startup(connection: &Connection, now_ms: i64) -> Result<(), AppError> {
+        Self::reconcile_at(connection, now_ms).map(|_| ())
     }
 
     pub fn end_manual(connection: &Connection, now_ms: i64) -> Result<(), AppError> {

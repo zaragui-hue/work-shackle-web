@@ -83,6 +83,26 @@ describe("useOvertime", () => {
     expect(getActiveOvertime).toHaveBeenCalledTimes(1);
   });
 
+  it("polls active overtime from rust on a 30 second cadence", async () => {
+    vi.useFakeTimers();
+    vi.mocked(getActiveOvertime).mockResolvedValue(activeOvertime);
+
+    renderHook(() => useOvertime());
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(getActiveOvertime).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(30_000);
+      await Promise.resolve();
+    });
+
+    expect(getActiveOvertime).toHaveBeenCalledTimes(2);
+  });
+
   it("cleans up interval on unmount", async () => {
     vi.useFakeTimers();
     vi.mocked(getActiveOvertime).mockResolvedValue(activeOvertime);

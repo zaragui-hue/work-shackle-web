@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager, State};
 
 use crate::errors::AppError;
+use crate::services::overtime_runtime::start_runtime_checker;
 use crate::services::startup::StartupReady;
 use crate::services::workspace::{
     build_workspace_status, resolve_workspace_path, WorkspaceContext, WorkspaceStatus,
@@ -19,7 +20,9 @@ pub fn initialize_app(
     let app_config_dir = app_config_dir(&app)?;
     let ctx = WorkspaceContext::from_system();
     let validator = WorkspaceValidator::real();
-    state.initialize(&app_config_dir, &ctx, &validator)
+    let ready = state.initialize(&app_config_dir, &ctx, &validator)?;
+    start_runtime_checker(app);
+    Ok(ready)
 }
 
 #[tauri::command]

@@ -8,6 +8,8 @@ import {
 } from "../../services/tauri/overtime";
 import { computeOvertimeDisplay, type OvertimeDisplay } from "./overtimeDisplay";
 
+const POLL_INTERVAL_MS = 30_000;
+
 type OvertimeState = {
   active: ActiveOvertime | null;
   display: OvertimeDisplay | null;
@@ -52,6 +54,20 @@ export function useOvertime(): OvertimeState & {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!active) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void refresh();
+    }, POLL_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [active, refresh]);
 
   useEffect(() => {
     if (!active) {

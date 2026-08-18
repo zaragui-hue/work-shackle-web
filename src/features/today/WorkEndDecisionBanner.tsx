@@ -1,3 +1,4 @@
+import { copy } from "../../config/copy";
 import { Button, Mascot } from "../../shared/ui";
 import "./WorkEndDecisionBanner.css";
 
@@ -24,9 +25,9 @@ export function WorkEndDecisionBanner({
           className="work-end-decision__mascot"
         />
         <div className="work-end-decision__text">
-          <p className="work-end-decision__title">理论下班时间到</p>
+          <p className="work-end-decision__title">{copy.workEnd.decisionTitle}</p>
           <p className="work-end-decision__message">
-            今天的正常打工时间结束了。
+            {copy.workEnd.decisionMessage}
           </p>
         </div>
       </div>
@@ -35,10 +36,10 @@ export function WorkEndDecisionBanner({
           onClick={onConfirmNormalOff}
           disabled={confirmingNormalOff}
         >
-          {confirmingNormalOff ? "确认中…" : "正常下班"}
+          {confirmingNormalOff ? "确认中…" : copy.workEnd.confirmOff}
         </Button>
         <Button variant="secondary" onClick={onStartOvertime} disabled={startingOvertime}>
-          {startingOvertime ? "开启中…" : "开启加班模式"}
+          {startingOvertime ? "开启中…" : copy.workEnd.startOvertime}
         </Button>
       </div>
     </div>
@@ -60,7 +61,7 @@ export function WorkOffCompleteBanner({ message }: WorkOffCompleteBannerProps) {
           className="work-end-decision__mascot"
         />
         <div className="work-end-decision__text">
-          <p className="work-end-decision__title">今天的工作到此为止</p>
+          <p className="work-end-decision__title">{copy.workEnd.completeTitle}</p>
           <p className="work-end-decision__message">{message}</p>
         </div>
       </div>

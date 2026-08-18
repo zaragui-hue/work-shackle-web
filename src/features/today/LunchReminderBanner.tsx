@@ -1,3 +1,4 @@
+import { copy } from "../../config/copy";
 import type { LunchReminder } from "../../services/tauri/lunchReminder";
 import { Button, Mascot } from "../../shared/ui";
 import "./LunchReminderBanner.css";
@@ -25,7 +26,7 @@ export function LunchReminderBanner({
           className="lunch-reminder__mascot"
         />
         <div className="lunch-reminder__text">
-          <p className="lunch-reminder__title">到饭点啦</p>
+          <p className="lunch-reminder__title">{copy.lunch.title}</p>
           <p className="lunch-reminder__message">{reminder.message}</p>
           <p className="lunch-reminder__time">
             午餐时间 {reminder.lunchStart} - {reminder.lunchEnd}

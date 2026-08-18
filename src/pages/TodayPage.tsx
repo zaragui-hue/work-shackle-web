@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { copy } from "../config/copy";
 import { CreateTaskModal } from "../features/tasks/CreateTaskModal";
 import { TaskDrawer } from "../features/tasks/TaskDrawer";
 import { LunchReminderBanner } from "../features/today/LunchReminderBanner";
@@ -239,8 +240,8 @@ export function TodayPage() {
 
         {showEmpty ? (
           <EmptyState
-            title="今天居然没什么事"
-            description="班味暂未加载。先喝口水，有事了再记一笔。"
+            title={copy.today.emptyTitle}
+            description={copy.today.emptyDescription}
             action={
               <Button onClick={() => setCreateOpen(true)}>+ 新任务</Button>
             }

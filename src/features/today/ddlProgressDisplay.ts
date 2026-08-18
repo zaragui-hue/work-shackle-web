@@ -1,3 +1,4 @@
+import { copy } from "../../config/copy";
 import type { DdlEmotion } from "../../services/tauri/ddl";
 
 export function canShowDdlProgress(
@@ -16,14 +17,7 @@ export function formatTimeElapsedCopy(progressRatio: number): string {
   return `时间已走过 ${percent}%`;
 }
 
-export const DDL_EMOTION_LABELS: Record<DdlEmotion, string> = {
-  calm: "从容",
-  notice: "注意",
-  anxious: "着急",
-  panic: "慌张",
-  burning: "火烧眉毛",
-  overdue: "已逾期",
-};
+export const DDL_EMOTION_LABELS: Record<DdlEmotion, string> = copy.ddl.emotions;
 
 export function ddlEmotionLabel(emotion: DdlEmotion): string {
   return DDL_EMOTION_LABELS[emotion];

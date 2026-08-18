@@ -1,3 +1,4 @@
+import { copy } from "../../config/copy";
 import { Button, Mascot } from "../../shared/ui";
 import "./OvertimeBanner.css";
 
@@ -22,16 +23,16 @@ export function OvertimeBanner({
           className="overtime-banner__mascot"
         />
         <div className="overtime-banner__text">
-          <p className="overtime-banner__title">加班模式</p>
-          <p className="overtime-banner__label">已加班</p>
-          <p className="overtime-banner__timer" aria-label={`已加班 ${elapsedText}`}>
+          <p className="overtime-banner__title">{copy.overtime.title}</p>
+          <p className="overtime-banner__label">{copy.overtime.label}</p>
+          <p className="overtime-banner__timer" aria-label={`${copy.overtime.label} ${elapsedText}`}>
             {elapsedText}
           </p>
         </div>
       </div>
       <div className="overtime-banner__actions">
         <Button variant="secondary" onClick={onEnd} disabled={ending}>
-          {ending ? "结束中…" : "结束加班"}
+          {ending ? "结束中…" : copy.overtime.end}
         </Button>
       </div>
     </div>

@@ -60,6 +60,10 @@
   padding-block: var(--space-1);
 }
 
+.task-calendar__weekday--weekend {
+  color: #b85c5c;
+}
+
 .task-calendar__day {
   position: relative;
   display: flex;
@@ -93,6 +97,34 @@
   opacity: 0.42;
   background: rgba(247, 243, 234, 0.65);
   box-shadow: none;
+}
+
+.task-calendar__day--weekend {
+  background: color-mix(in srgb, var(--color-wheat) 18%, var(--color-paper-raised));
+}
+
+.task-calendar__day--weekend .task-calendar__day-number {
+  color: #b85c5c;
+}
+
+.task-calendar__day--holiday {
+  border-color: color-mix(in srgb, var(--color-green) 45%, transparent);
+  background: color-mix(in srgb, var(--color-green) 8%, var(--color-paper-raised));
+}
+
+.task-calendar__holiday-label,
+.task-calendar__weekend-label {
+  font-size: 0.62rem;
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+}
+
+.task-calendar__holiday-label {
+  color: var(--color-green);
+}
+
+.task-calendar__weekend-label {
+  color: #b85c5c;
 }
 
 .task-calendar__day--today {

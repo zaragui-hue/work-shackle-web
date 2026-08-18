@@ -135,13 +135,29 @@ describe("TaskCalendar", () => {
     expect(busyCell.textContent).toContain("正常");
   });
 
-  it("shows idle busy state when count is zero", () => {
+  it("hides task details when count is zero", () => {
     render(<TaskCalendar today={FIXED_TODAY} initialMonth={AUGUST_2026} />);
 
-    const idleCell = screen.getByRole("gridcell", { name: /2026年8月18日，0 个任务，🫧 空闲/ });
-    expect(idleCell.textContent).toContain("0 个任务");
-    expect(idleCell.textContent).toContain("🫧");
-    expect(idleCell.textContent).toContain("空闲");
+    const idleCell = screen.getByRole("gridcell", { name: "2026年8月18日" });
+    expect(idleCell.textContent).not.toContain("0 个任务");
+    expect(idleCell.textContent).not.toContain("🫧");
+    expect(idleCell.textContent).not.toContain("空闲");
+  });
+
+  it("marks weekend days in the current month", () => {
+    render(<TaskCalendar today={FIXED_TODAY} initialMonth={AUGUST_2026} />);
+
+    const weekendCell = screen.getByRole("gridcell", { name: /2026年8月1日，周末/ });
+    expect(weekendCell.className).toContain("task-calendar__day--weekend");
+    expect(weekendCell.textContent).toContain("休");
+  });
+
+  it("marks statutory holidays in the current month", () => {
+    render(<TaskCalendar today={FIXED_TODAY} initialMonth={new Date(2026, 9, 1)} />);
+
+    const holidayCell = screen.getByRole("gridcell", { name: /2026年10月1日，节假日：国庆/ });
+    expect(holidayCell.className).toContain("task-calendar__day--holiday");
+    expect(holidayCell.textContent).toContain("国庆");
   });
 
   it("re-queries counts when the visible month changes", () => {

@@ -3,10 +3,10 @@ import { useMemo, useState } from "react";
 
 import { Button } from "../../../shared/ui";
 import {
-  formatBusyStateLabel,
   formatTaskCountLabel,
   resolveBusyLevel,
 } from "./busyLevel";
+import { formatCalendarCellAriaLabel } from "./calendarDayMeta";
 import { useBusyRules } from "./useBusyRules";
 import {
   buildCalendarGrid,
@@ -98,8 +98,17 @@ export function TaskCalendar({
       ) : null}
 
       <div className="task-calendar__weekdays" role="row">
-        {WEEKDAY_LABELS.map((label) => (
-          <div key={label} className="task-calendar__weekday" role="columnheader">
+        {WEEKDAY_LABELS.map((label, index) => (
+          <div
+            key={label}
+            className={[
+              "task-calendar__weekday",
+              index >= 5 ? "task-calendar__weekday--weekend" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            role="columnheader"
+          >
             {label}
           </div>
         ))}
@@ -109,13 +118,23 @@ export function TaskCalendar({
         {cells.map((cell) => {
           const taskCount = countsByDate[cell.dateKey] ?? 0;
           const busyLevel = resolveBusyLevel(taskCount, busyLevels);
-          const dayLabel = cell.isCurrentMonth
-            ? `${formatCalendarDayLabel(cell.date)}，${formatTaskCountLabel(taskCount)}，${formatBusyStateLabel(busyLevel)}`
-            : formatCalendarDayLabel(cell.date);
+          const showTaskDetails = cell.isCurrentMonth && showBusyDetails && taskCount > 0;
+          const dayLabel = formatCalendarCellAriaLabel({
+            dateLabel: formatCalendarDayLabel(cell.date),
+            taskCount,
+            busyLevel,
+            holidayName: cell.holidayName,
+            isWeekend: cell.isWeekend,
+            isCurrentMonth: cell.isCurrentMonth,
+          });
           const classNames = [
             "task-calendar__day",
             cell.isCurrentMonth ? "task-calendar__day--current-month" : "task-calendar__day--outside",
             cell.isToday ? "task-calendar__day--today" : "",
+            cell.holidayName ? "task-calendar__day--holiday" : "",
+            !cell.holidayName && cell.isWeekend && cell.isCurrentMonth
+              ? "task-calendar__day--weekend"
+              : "",
           ]
             .filter(Boolean)
             .join(" ");
@@ -131,7 +150,17 @@ export function TaskCalendar({
               onClick={() => setSelectedDateKey(cell.dateKey)}
             >
               <span className="task-calendar__day-number">{cell.dayNumber}</span>
-              {cell.isCurrentMonth && showBusyDetails ? (
+              {cell.isCurrentMonth && cell.holidayName ? (
+                <span className="task-calendar__holiday-label" aria-hidden="true">
+                  {cell.holidayName}
+                </span>
+              ) : null}
+              {cell.isCurrentMonth && !cell.holidayName && cell.isWeekend ? (
+                <span className="task-calendar__weekend-label" aria-hidden="true">
+                  休
+                </span>
+              ) : null}
+              {showTaskDetails ? (
                 <>
                   <span className="task-calendar__task-count" aria-hidden="true">
                     {formatTaskCountLabel(taskCount)}

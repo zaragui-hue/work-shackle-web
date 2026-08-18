@@ -76,6 +76,17 @@ describe("buildCalendarGrid", () => {
 
     expect(todayCell?.dateKey).toBe("2026-08-18");
     expect(todayCell?.isCurrentMonth).toBe(true);
+    expect(todayCell?.isWeekend).toBe(false);
+  });
+
+  it("includes weekend and holiday metadata on cells", () => {
+    const cells = buildCalendarGrid(month(2026, 7), today);
+    const saturday = cells.find((cell) => cell.dateKey === "2026-08-01");
+    const weekday = cells.find((cell) => cell.dateKey === "2026-08-18");
+
+    expect(saturday?.isWeekend).toBe(true);
+    expect(saturday?.holidayName).toBeNull();
+    expect(weekday?.isWeekend).toBe(false);
   });
 
   it("marks current-month cells separately from padding days", () => {

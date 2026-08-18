@@ -11,6 +11,8 @@ import {
   startOfWeek,
 } from "date-fns";
 
+import { getPublicHolidayName, isWeekend } from "./calendarDayMeta";
+
 /** Monday-first week labels (PRD / Architecture). */
 export const WEEKDAY_LABELS = ["一", "二", "三", "四", "五", "六", "日"] as const;
 
@@ -23,6 +25,8 @@ export type CalendarDayCell = {
   dayNumber: number;
   isCurrentMonth: boolean;
   isToday: boolean;
+  isWeekend: boolean;
+  holidayName: string | null;
 };
 
 export function toLocalDateKey(date: Date): string {
@@ -38,13 +42,18 @@ export function buildCalendarGrid(
   const gridStart = startOfWeek(monthStart, CALENDAR_WEEK_OPTIONS);
   const gridEnd = endOfWeek(monthEnd, CALENDAR_WEEK_OPTIONS);
 
-  return eachDayOfInterval({ start: gridStart, end: gridEnd }).map((date) => ({
-    date,
-    dateKey: toLocalDateKey(date),
-    dayNumber: date.getDate(),
-    isCurrentMonth: isSameMonth(date, visibleMonth),
-    isToday: isSameDay(date, today),
-  }));
+  return eachDayOfInterval({ start: gridStart, end: gridEnd }).map((date) => {
+    const dateKey = toLocalDateKey(date);
+    return {
+      date,
+      dateKey,
+      dayNumber: date.getDate(),
+      isCurrentMonth: isSameMonth(date, visibleMonth),
+      isToday: isSameDay(date, today),
+      isWeekend: isWeekend(date),
+      holidayName: getPublicHolidayName(dateKey),
+    };
+  });
 }
 
 export function formatCalendarMonthTitle(visibleMonth: Date): string {

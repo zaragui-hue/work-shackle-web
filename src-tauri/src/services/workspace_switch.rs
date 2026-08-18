@@ -15,8 +15,8 @@ use crate::errors::AppError;
 use super::reminder_engine::ReminderEngineService;
 use super::startup::{run_startup, StartupReady, StartupWarning};
 use super::workspace::{
-    initialize_workspace_directories, load_app_config, save_app_config, AppConfig,
-    WorkspaceContext, WorkspaceSource, WorkspaceStatus,
+    assert_workspace_directory_exists, initialize_workspace_directories, load_app_config,
+    save_app_config, AppConfig, WorkspaceContext, WorkspaceSource, WorkspaceStatus,
 };
 use super::workspace_validator::{ValidationFailure, WorkspaceValidator};
 
@@ -139,6 +139,7 @@ impl AppState {
         let active = guard.as_ref().ok_or_else(|| AppError::AppNotReady {
             message: "database is not initialized".to_string(),
         })?;
+        assert_workspace_directory_exists(&active.path)?;
         ReminderEngineService::tick(&active.connection, now_ms, active.reminder_cutoff_ms)
     }
 
@@ -172,6 +173,7 @@ impl AppState {
         let active = guard.as_ref().ok_or_else(|| AppError::AppNotReady {
             message: "database is not initialized".to_string(),
         })?;
+        assert_workspace_directory_exists(&active.path)?;
         operation(&active.connection).map_err(|error| AppError::DatabaseError {
             message: error.to_string(),
         })
@@ -187,6 +189,7 @@ impl AppState {
         let active = guard.as_ref().ok_or_else(|| AppError::AppNotReady {
             message: "database is not initialized".to_string(),
         })?;
+        assert_workspace_directory_exists(&active.path)?;
         operation(&active.connection)
     }
 
@@ -1123,5 +1126,216 @@ mod tests {
             AppError::WorkspaceNetworkDriveUnsupported { path }
                 if path == candidate.to_string_lossy()
         ));
+    }
+
+    #[cfg(unix)]
+    mod runtime_workspace_missing {
+        use super::*;
+        use crate::services::busy_rule::{BusyRuleService, SaveBusyLevelInput};
+        use crate::services::busy_rule_validation::SaveBusyRulesRequest;
+        use crate::services::task::{CreateTaskRequest, TaskService};
+        use crate::services::work_status::{SwitchWorkStatusRequest, WorkStatusService};
+
+        fn sample_create_request(title: &str, planned_at_ms: i64) -> CreateTaskRequest {
+            CreateTaskRequest {
+                title: title.to_string(),
+                note: None,
+                planned_at_ms,
+                deadline_at_ms: None,
+                priority: None,
+                contact_id: None,
+                contact_snapshot: None,
+                reminders: vec![],
+            }
+        }
+
+        fn sample_busy_rules_request() -> SaveBusyRulesRequest {
+            SaveBusyRulesRequest {
+                levels: vec![
+                    SaveBusyLevelInput {
+                        min_tasks: 0,
+                        max_tasks: Some(1),
+                        emoji: "🙂".to_string(),
+                        name: "低".to_string(),
+                        messages: vec!["低负载".to_string()],
+                    },
+                    SaveBusyLevelInput {
+                        min_tasks: 2,
+                        max_tasks: Some(4),
+                        emoji: "😵".to_string(),
+                        name: "中".to_string(),
+                        messages: vec!["中负载".to_string()],
+                    },
+                    SaveBusyLevelInput {
+                        min_tasks: 5,
+                        max_tasks: None,
+                        emoji: "🤯".to_string(),
+                        name: "高".to_string(),
+                        messages: vec!["高负载".to_string()],
+                    },
+                ],
+            }
+        }
+
+        fn delete_workspace_directory(workspace: &Path) {
+            fs::remove_dir_all(workspace).expect("delete workspace directory");
+            assert!(!workspace.exists());
+        }
+
+        fn assert_workspace_not_found(error: AppError, workspace: &Path) {
+            assert!(matches!(error, AppError::WorkspaceNotFound { .. }));
+            let serialized = serde_json::to_value(&error).expect("serialize error");
+            assert_eq!(
+                serialized["code"],
+                crate::errors::codes::WORKSPACE_NOT_FOUND
+            );
+            assert_eq!(
+                serialized["details"]["path"],
+                workspace.to_string_lossy().as_ref()
+            );
+        }
+
+        #[test]
+        fn runtime_deleted_workspace_blocks_create_task_despite_open_connection() {
+            let temp = tempfile::tempdir().expect("tempdir");
+            let workspace = temp.path().join("workspace");
+            let state = AppState::new();
+            state
+                .set_active_for_test(&workspace, 1)
+                .expect("activate workspace");
+
+            state
+                .with_db_app(|connection| {
+                    TaskService::create(connection, sample_create_request("Task A", 1_000))
+                })
+                .expect("seed task a");
+
+            delete_workspace_directory(&workspace);
+
+            let error = state
+                .with_db_app(|connection| {
+                    TaskService::create(connection, sample_create_request("Task B", 2_000))
+                })
+                .expect_err("create must fail when workspace directory is missing");
+
+            assert_workspace_not_found(error, &workspace);
+            assert!(!workspace.exists());
+        }
+
+        #[test]
+        fn runtime_deleted_workspace_blocks_complete_task() {
+            let temp = tempfile::tempdir().expect("tempdir");
+            let workspace = temp.path().join("workspace");
+            let state = AppState::new();
+            state
+                .set_active_for_test(&workspace, 1)
+                .expect("activate workspace");
+
+            let created = state
+                .with_db_app(|connection| {
+                    TaskService::create(connection, sample_create_request("Complete Me", 1_000))
+                })
+                .expect("seed task");
+
+            delete_workspace_directory(&workspace);
+
+            let error = state
+                .with_db_app(|connection| TaskService::complete(connection, &created.id))
+                .expect_err("complete must fail when workspace directory is missing");
+
+            assert_workspace_not_found(error, &workspace);
+            assert!(!workspace.exists());
+        }
+
+        #[test]
+        fn runtime_deleted_workspace_blocks_save_busy_rules() {
+            let temp = tempfile::tempdir().expect("tempdir");
+            let workspace = temp.path().join("workspace");
+            let state = AppState::new();
+            state
+                .set_active_for_test(&workspace, 1)
+                .expect("activate workspace");
+
+            delete_workspace_directory(&workspace);
+
+            let error = state
+                .with_db_app(|connection| {
+                    BusyRuleService::save_busy_rules(connection, sample_busy_rules_request())
+                })
+                .expect_err("busy rule save must fail when workspace directory is missing");
+
+            assert_workspace_not_found(error, &workspace);
+            assert!(!workspace.exists());
+        }
+
+        #[test]
+        fn runtime_deleted_workspace_blocks_switch_work_status() {
+            let temp = tempfile::tempdir().expect("tempdir");
+            let workspace = temp.path().join("workspace");
+            let state = AppState::new();
+            state
+                .set_active_for_test(&workspace, 1)
+                .expect("activate workspace");
+
+            delete_workspace_directory(&workspace);
+
+            let error = state
+                .with_db_app(|connection| {
+                    WorkStatusService::switch(
+                        connection,
+                        SwitchWorkStatusRequest {
+                            status_type: "meeting".to_string(),
+                        },
+                    )
+                })
+                .expect_err("work status switch must fail when workspace directory is missing");
+
+            assert_workspace_not_found(error, &workspace);
+            assert!(!workspace.exists());
+        }
+
+        #[test]
+        fn runtime_deleted_workspace_blocks_reminder_tick() {
+            let temp = tempfile::tempdir().expect("tempdir");
+            let workspace = temp.path().join("workspace");
+            let state = AppState::new();
+            state
+                .set_active_for_test(&workspace, 1)
+                .expect("activate workspace");
+
+            delete_workspace_directory(&workspace);
+
+            let error = state
+                .run_reminder_tick(2_000)
+                .expect_err("reminder tick must fail when workspace directory is missing");
+
+            assert_workspace_not_found(error, &workspace);
+            assert!(!workspace.exists());
+        }
+
+        #[test]
+        fn configured_missing_workspace_status_query_is_side_effect_free() {
+            let temp = tempfile::tempdir().expect("tempdir");
+            let missing = temp.path().join("missing-workspace");
+            let config_dir = temp.path().join("config");
+            save_active_config(&config_dir, &missing);
+            assert!(!missing.exists());
+
+            let ctx = WorkspaceContext {
+                documents_dir: temp.path().join("documents"),
+                d_drive_root: None,
+                d_drive_writable: false,
+            };
+            let error = crate::services::workspace::build_workspace_status(
+                &config_dir,
+                &ctx,
+                &WorkspaceValidator::real(),
+            )
+            .expect_err("missing configured workspace status must fail");
+
+            assert_workspace_not_found(error, &missing);
+            assert!(!missing.exists());
+            assert!(!missing.join(".data").exists());
+        }
     }
 }

@@ -240,6 +240,17 @@ fn path_to_string(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
 
+/// Read-only guard: configured workspace must still exist on disk.
+/// Must not create directories, databases, or week folders.
+pub fn assert_workspace_directory_exists(workspace: &Path) -> Result<(), AppError> {
+    if workspace.exists() {
+        return Ok(());
+    }
+    Err(AppError::WorkspaceNotFound {
+        path: path_to_string(workspace),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

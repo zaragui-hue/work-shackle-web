@@ -26,3 +26,20 @@ export type MascotAsset = {
 export function isMascotState(value: string): value is MascotState {
   return (MASCOT_STATES as readonly string[]).includes(value);
 }
+
+export const MASCOT_ANIMATIONS = [
+  "none",
+  "breathe",
+  "shake",
+  "panic",
+  "angry",
+  "run",
+] as const;
+
+export type MascotAnimation = (typeof MASCOT_ANIMATIONS)[number];
+
+export const FALLBACK_MASCOT_ANIMATION: MascotAnimation = "none";
+
+export function isMascotAnimation(value: string): value is MascotAnimation {
+  return (MASCOT_ANIMATIONS as readonly string[]).includes(value);
+}

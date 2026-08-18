@@ -1,16 +1,23 @@
 import type { DdlEmotion } from "../../services/tauri/ddl";
 import placeholderUrl from "./placeholder.svg";
 import {
+  FALLBACK_MASCOT_ANIMATION,
   FALLBACK_MASCOT_STATE,
+  isMascotAnimation,
   isMascotState,
+  type MascotAnimation,
   type MascotAsset,
   type MascotState,
 } from "./types";
 
 export {
+  FALLBACK_MASCOT_ANIMATION,
   FALLBACK_MASCOT_STATE,
+  isMascotAnimation,
   isMascotState,
+  MASCOT_ANIMATIONS,
   MASCOT_STATES,
+  type MascotAnimation,
   type MascotAsset,
   type MascotSize,
   type MascotState,
@@ -88,4 +95,64 @@ const WORK_STATUS_TO_MASCOT: Record<string, MascotState> = {
 
 export function mascotStateForWorkStatus(statusType: string): MascotState {
   return WORK_STATUS_TO_MASCOT[statusType] ?? FALLBACK_MASCOT_STATE;
+}
+
+const DDL_EMOTION_TO_ANIMATION: Record<DdlEmotion, MascotAnimation> = {
+  calm: "breathe",
+  notice: "breathe",
+  anxious: "shake",
+  panic: "panic",
+  burning: "angry",
+  overdue: "angry",
+};
+
+const REMINDER_KIND_TO_ANIMATION: Record<string, MascotAnimation> = {
+  ddl_60: "breathe",
+  ddl_30: "shake",
+  ddl_10: "panic",
+  ddl_due: "angry",
+  custom: "breathe",
+};
+
+const WORK_STATUS_TO_ANIMATION: Record<string, MascotAnimation> = {
+  working: "breathe",
+  focus_brick: "breathe",
+  meeting: "breathe",
+  urgent_insert: "breathe",
+  chased_by_requirements: "breathe",
+  slacking: "breathe",
+  gossip: "breathe",
+  drinking: "breathe",
+  lunch: "breathe",
+  nap: "breathe",
+  daydream: "breathe",
+  preparing_leave: "run",
+  overtime: "none",
+};
+
+export function mascotAnimationForDdlEmotion(
+  emotion: DdlEmotion,
+): MascotAnimation {
+  return DDL_EMOTION_TO_ANIMATION[emotion] ?? FALLBACK_MASCOT_ANIMATION;
+}
+
+export function mascotAnimationForReminderKind(
+  reminderKind: string,
+): MascotAnimation {
+  return REMINDER_KIND_TO_ANIMATION[reminderKind] ?? FALLBACK_MASCOT_ANIMATION;
+}
+
+export function mascotAnimationForWorkStatus(
+  statusType: string,
+): MascotAnimation {
+  return WORK_STATUS_TO_ANIMATION[statusType] ?? FALLBACK_MASCOT_ANIMATION;
+}
+
+export function resolveMascotAnimationOrFallback(
+  animation: string,
+): MascotAnimation {
+  if (isMascotAnimation(animation)) {
+    return animation;
+  }
+  return FALLBACK_MASCOT_ANIMATION;
 }

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { mascotStateForWorkStatus } from "../../assets/mascot";
+import {
+  mascotAnimationForWorkStatus,
+  mascotStateForWorkStatus,
+} from "../../assets/mascot";
 import {
   getCurrentWorkStatus,
   listWorkStatuses,
@@ -85,6 +88,7 @@ export function WorkStatusPanel({ refreshKey }: { refreshKey?: string }) {
           <div className="work-status-panel__headline">
             <Mascot
               state={mascotStateForWorkStatus(current.statusType)}
+              animation={mascotAnimationForWorkStatus(current.statusType)}
               size="sm"
               className="work-status-panel__mascot"
             />

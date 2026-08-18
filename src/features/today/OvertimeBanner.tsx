@@ -17,6 +17,7 @@ export function OvertimeBanner({
       <div className="overtime-banner__content">
         <Mascot
           state="overtime-dead-eyes"
+          animation="none"
           size="sm"
           className="overtime-banner__mascot"
         />

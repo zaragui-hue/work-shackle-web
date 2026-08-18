@@ -4,13 +4,20 @@ import { describe, expect, it } from "vitest";
 
 import type { DdlEmotion } from "../../services/tauri/ddl";
 import {
+  FALLBACK_MASCOT_ANIMATION,
   FALLBACK_MASCOT_STATE,
+  MASCOT_ANIMATIONS,
   MASCOT_ASSETS,
   MASCOT_STATES,
+  isMascotAnimation,
   isMascotState,
+  mascotAnimationForDdlEmotion,
+  mascotAnimationForReminderKind,
+  mascotAnimationForWorkStatus,
   mascotStateForDdlEmotion,
   mascotStateForReminderKind,
   mascotStateForWorkStatus,
+  resolveMascotAnimationOrFallback,
   resolveMascotAsset,
   resolveMascotAssetOrFallback,
   type MascotState,
@@ -110,6 +117,56 @@ describe("work status → MascotState", () => {
     );
     expect(mascotStateForWorkStatus("unknown-status")).toBe(
       FALLBACK_MASCOT_STATE,
+    );
+  });
+});
+
+describe("MascotAnimation contract", () => {
+  it("keeps animation names separate from the 11 mascot states", () => {
+    expect(MASCOT_STATES).toHaveLength(11);
+    expect([...MASCOT_ANIMATIONS]).toEqual([
+      "none",
+      "breathe",
+      "shake",
+      "panic",
+      "angry",
+      "run",
+    ]);
+    expect(isMascotAnimation("breathe")).toBe(true);
+    expect(isMascotAnimation("spin")).toBe(false);
+    expect(resolveMascotAnimationOrFallback("nope")).toBe(
+      FALLBACK_MASCOT_ANIMATION,
+    );
+  });
+
+  it("maps DDL emotions to animation without changing business levels", () => {
+    expect(mascotAnimationForDdlEmotion("calm")).toBe("breathe");
+    expect(mascotAnimationForDdlEmotion("notice")).toBe("breathe");
+    expect(mascotAnimationForDdlEmotion("anxious")).toBe("shake");
+    expect(mascotAnimationForDdlEmotion("panic")).toBe("panic");
+    expect(mascotAnimationForDdlEmotion("burning")).toBe("angry");
+    expect(mascotAnimationForDdlEmotion("overdue")).toBe("angry");
+  });
+
+  it("maps reminder kinds to restrained animations", () => {
+    expect(mascotAnimationForReminderKind("ddl_60")).toBe("breathe");
+    expect(mascotAnimationForReminderKind("ddl_30")).toBe("shake");
+    expect(mascotAnimationForReminderKind("ddl_10")).toBe("panic");
+    expect(mascotAnimationForReminderKind("ddl_due")).toBe("angry");
+    expect(mascotAnimationForReminderKind("custom")).toBe("breathe");
+    expect(mascotAnimationForReminderKind("unknown")).toBe(
+      FALLBACK_MASCOT_ANIMATION,
+    );
+  });
+
+  it("maps work status to light motion, with run only for leaving", () => {
+    expect(mascotAnimationForWorkStatus("working")).toBe("breathe");
+    expect(mascotAnimationForWorkStatus("meeting")).toBe("breathe");
+    expect(mascotAnimationForWorkStatus("lunch")).toBe("breathe");
+    expect(mascotAnimationForWorkStatus("overtime")).toBe("none");
+    expect(mascotAnimationForWorkStatus("preparing_leave")).toBe("run");
+    expect(mascotAnimationForWorkStatus("unknown-status")).toBe(
+      FALLBACK_MASCOT_ANIMATION,
     );
   });
 });

@@ -20,6 +20,7 @@ export function LunchReminderBanner({
       <div className="lunch-reminder__content">
         <Mascot
           state="lunch-happy"
+          animation="breathe"
           size="sm"
           className="lunch-reminder__mascot"
         />

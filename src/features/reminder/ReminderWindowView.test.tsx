@@ -35,6 +35,7 @@ describe("ReminderWindowView mascot", () => {
 
     const mascot = container.querySelector("img[data-mascot-state]");
     expect(mascot?.getAttribute("data-mascot-state")).toBe("ddl-panic");
+    expect(mascot?.getAttribute("data-mascot-animation")).toBe("panic");
     expect(screen.queryByText("占位小角色")).toBeNull();
     expect(screen.queryByText("😟")).toBeNull();
     expect(screen.getByText("距离 DDL 还有 10 分钟")).toBeTruthy();
@@ -48,6 +49,11 @@ describe("ReminderWindowView mascot", () => {
     expect(
       container.querySelector("img[data-mascot-state]")?.getAttribute("data-mascot-state"),
     ).toBe("ddl-due");
+    expect(
+      container
+        .querySelector("img[data-mascot-animation]")
+        ?.getAttribute("data-mascot-animation"),
+    ).toBe("angry");
 
     rerender(
       <ReminderWindowView
@@ -70,5 +76,10 @@ describe("ReminderWindowView mascot", () => {
     expect(
       container.querySelector("img[data-mascot-state]")?.getAttribute("data-mascot-state"),
     ).toBe("work-neutral");
+    expect(
+      container
+        .querySelector("img[data-mascot-animation]")
+        ?.getAttribute("data-mascot-animation"),
+    ).toBe("breathe");
   });
 });

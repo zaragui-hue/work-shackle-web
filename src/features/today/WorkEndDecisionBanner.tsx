@@ -19,6 +19,7 @@ export function WorkEndDecisionBanner({
       <div className="work-end-decision__content">
         <Mascot
           state="offwork-run"
+          animation="run"
           size="sm"
           className="work-end-decision__mascot"
         />
@@ -54,6 +55,7 @@ export function WorkOffCompleteBanner({ message }: WorkOffCompleteBannerProps) {
       <div className="work-end-decision__content">
         <Mascot
           state="offwork-run"
+          animation="run"
           size="sm"
           className="work-end-decision__mascot"
         />

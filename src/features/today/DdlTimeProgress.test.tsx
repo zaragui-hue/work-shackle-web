@@ -43,5 +43,10 @@ describe("DdlTimeProgress", () => {
         .querySelector("img[data-mascot-state]")
         ?.getAttribute("data-mascot-state"),
     ).toBe("ddl-calm");
+    expect(
+      document
+        .querySelector("img[data-mascot-animation]")
+        ?.getAttribute("data-mascot-animation"),
+    ).toBe("breathe");
   });
 });

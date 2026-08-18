@@ -50,6 +50,14 @@ function mascotState(container: HTMLElement): string | null {
   );
 }
 
+function mascotAnimation(container: HTMLElement): string | null {
+  return (
+    container
+      .querySelector("img[data-mascot-animation]")
+      ?.getAttribute("data-mascot-animation") ?? null
+  );
+}
+
 describe("today mascot placeholders", () => {
   it("uses overtime-dead-eyes for the overtime banner character", () => {
     const { container } = render(
@@ -57,6 +65,7 @@ describe("today mascot placeholders", () => {
     );
 
     expect(mascotState(container)).toBe("overtime-dead-eyes");
+    expect(mascotAnimation(container)).toBe("none");
     expect(screen.queryByText("🌙")).toBeNull();
   });
 
@@ -68,6 +77,7 @@ describe("today mascot placeholders", () => {
       />,
     );
     expect(mascotState(decision.container)).toBe("offwork-run");
+    expect(mascotAnimation(decision.container)).toBe("run");
     expect(screen.queryByText("🕕")).toBeNull();
     decision.unmount();
 
@@ -75,6 +85,7 @@ describe("today mascot placeholders", () => {
       <WorkOffCompleteBanner message="好好休息" />,
     );
     expect(mascotState(complete.container)).toBe("offwork-run");
+    expect(mascotAnimation(complete.container)).toBe("run");
     expect(screen.queryByText("🎒")).toBeNull();
   });
 
@@ -92,6 +103,7 @@ describe("today mascot placeholders", () => {
     );
 
     expect(mascotState(container)).toBe("lunch-happy");
+    expect(mascotAnimation(container)).toBe("breathe");
     expect(screen.queryByText("🍚")).toBeNull();
   });
 
@@ -102,6 +114,7 @@ describe("today mascot placeholders", () => {
       await screen.findByText("人还在会议室，灵魂可能已经去午睡了。"),
     ).toBeTruthy();
     expect(mascotState(container)).toBe("meeting-empty");
+    expect(mascotAnimation(container)).toBe("breathe");
     expect(screen.getByText("💻")).toBeTruthy();
   });
 });
@@ -113,5 +126,6 @@ describe("EmptyState mascot", () => {
     );
 
     expect(mascotState(container)).toBe("fish-relax");
+    expect(mascotAnimation(container)).toBe("none");
   });
 });

@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 
-import { mascotStateForDdlEmotion } from "../../assets/mascot";
+import {
+  mascotAnimationForDdlEmotion,
+  mascotStateForDdlEmotion,
+} from "../../assets/mascot";
 import { Mascot } from "../../shared/ui";
 import {
   formatOverdueDuration,
@@ -73,6 +76,7 @@ export function DdlTimeProgress({
       <div className="ddl-time-progress__meta">
         <Mascot
           state={mascotStateForDdlEmotion(progress.emotion)}
+          animation={mascotAnimationForDdlEmotion(progress.emotion)}
           size="sm"
           className="ddl-time-progress__mascot"
         />

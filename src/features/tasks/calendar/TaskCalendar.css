@@ -65,9 +65,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 2px;
-  min-height: 72px;
+  min-height: 88px;
   padding: var(--space-1);
   border-radius: var(--radius-ticket);
   border: var(--border-ink-soft);
@@ -123,4 +123,23 @@
   font-weight: var(--font-weight-medium);
   color: var(--color-ink-muted);
   line-height: 1.1;
+}
+
+.task-calendar__busy-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 1px;
+  font-size: 0.68rem;
+  color: var(--color-ink-muted);
+  line-height: 1.1;
+}
+
+.task-calendar__busy-emoji {
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.task-calendar__busy-name {
+  font-weight: var(--font-weight-medium);
 }

@@ -3,6 +3,11 @@ import { useMemo, useState } from "react";
 
 import { Button } from "../../../shared/ui";
 import {
+  formatBusyStateLabel,
+  formatTaskCountLabel,
+  resolveBusyLevel,
+} from "./busyLevel";
+import {
   buildCalendarGrid,
   formatCalendarDayLabel,
   formatCalendarMonthTitle,
@@ -39,6 +44,7 @@ export function TaskCalendar({
   );
 
   const isCurrentMonthView = visibleMonth.getTime() === startOfMonth(today).getTime();
+  const showBusyDetails = !countsLoading && !countsError;
 
   return (
     <section className="task-calendar" aria-label="任务月历">
@@ -96,10 +102,10 @@ export function TaskCalendar({
       <div className="task-calendar__grid" role="grid" aria-label={monthTitle}>
         {cells.map((cell) => {
           const taskCount = countsByDate[cell.dateKey] ?? 0;
-          const dayLabel =
-            taskCount > 0
-              ? `${formatCalendarDayLabel(cell.date)}，${taskCount} 项任务`
-              : formatCalendarDayLabel(cell.date);
+          const busyLevel = resolveBusyLevel(taskCount);
+          const dayLabel = cell.isCurrentMonth
+            ? `${formatCalendarDayLabel(cell.date)}，${formatTaskCountLabel(taskCount)}，${formatBusyStateLabel(busyLevel)}`
+            : formatCalendarDayLabel(cell.date);
           const classNames = [
             "task-calendar__day",
             cell.isCurrentMonth ? "task-calendar__day--current-month" : "task-calendar__day--outside",
@@ -118,10 +124,16 @@ export function TaskCalendar({
               aria-current={cell.isToday ? "date" : undefined}
             >
               <span className="task-calendar__day-number">{cell.dayNumber}</span>
-              {taskCount > 0 ? (
-                <span className="task-calendar__task-count" aria-hidden="true">
-                  {taskCount} 项
-                </span>
+              {cell.isCurrentMonth && showBusyDetails ? (
+                <>
+                  <span className="task-calendar__task-count" aria-hidden="true">
+                    {formatTaskCountLabel(taskCount)}
+                  </span>
+                  <span className="task-calendar__busy-state" aria-hidden="true">
+                    <span className="task-calendar__busy-emoji">{busyLevel.emoji}</span>
+                    <span className="task-calendar__busy-name">{busyLevel.name}</span>
+                  </span>
+                </>
               ) : null}
               {cell.isToday ? (
                 <span className="task-calendar__today-badge" aria-hidden="true">

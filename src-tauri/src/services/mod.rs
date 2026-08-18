@@ -2,6 +2,7 @@ pub mod contact;
 pub mod lunch_reminder;
 pub mod overtime;
 pub mod overtime_runtime;
+pub mod reminder_attention;
 pub mod reminder_engine;
 pub mod reminder_notifier;
 pub mod settings;

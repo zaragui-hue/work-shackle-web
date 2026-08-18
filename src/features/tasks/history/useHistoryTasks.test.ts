@@ -9,7 +9,13 @@ vi.mock("../../../services/tauri/tasks", () => ({
   queryHistoryTasks: vi.fn(),
 }));
 
-const DAY_QUERY = { mode: "day" as const, anchorDate: "2026-08-18" };
+const DAY_QUERY = {
+  mode: "day" as const,
+  anchorDate: "2026-08-18",
+  status: "completed" as const,
+  priority: 5,
+  keyword: "report",
+};
 
 describe("useHistoryTasks", () => {
   afterEach(() => {

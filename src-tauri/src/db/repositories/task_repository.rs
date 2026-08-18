@@ -95,10 +95,15 @@ pub struct TaskQuery {
     pub priority: Option<i32>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HistoryTaskQuery {
     pub start_ms: i64,
     pub end_ms: i64,
+    pub status: Option<TaskStatus>,
+    pub priority: Option<i32>,
+    pub contact_id: Option<String>,
+    pub contact_snapshot: Option<String>,
+    pub keyword: Option<String>,
 }
 
 #[derive(Debug)]
@@ -338,31 +343,98 @@ impl TaskRepository {
             });
         }
 
-        let mut statement = connection.prepare(
+        if query
+            .status
+            .is_some_and(|status| !matches!(status, TaskStatus::Completed | TaskStatus::Cancelled))
+        {
+            return Ok(Vec::new());
+        }
+
+        let mut sql = String::from(
             "SELECT id, title, note, planned_at_ms, deadline_at_ms, priority, status,
                     contact_id, contact_snapshot, created_at_ms, completed_at_ms,
                     cancelled_at_ms, updated_at_ms
              FROM tasks
-             WHERE (
-                 status = 'completed'
-                 AND completed_at_ms IS NOT NULL
-                 AND completed_at_ms >= ?1
-                 AND completed_at_ms < ?2
-             ) OR (
-                 status = 'cancelled'
-                 AND cancelled_at_ms IS NOT NULL
-                 AND cancelled_at_ms >= ?1
-                 AND cancelled_at_ms < ?2
-             )
-             ORDER BY
+             WHERE ",
+        );
+        let mut bind_values: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+
+        match query.status {
+            Some(TaskStatus::Completed) => {
+                sql.push_str(
+                    "status = 'completed'
+                     AND completed_at_ms IS NOT NULL
+                     AND completed_at_ms >= ?
+                     AND completed_at_ms < ?",
+                );
+                bind_values.push(Box::new(query.start_ms));
+                bind_values.push(Box::new(query.end_ms));
+            }
+            Some(TaskStatus::Cancelled) => {
+                sql.push_str(
+                    "status = 'cancelled'
+                     AND cancelled_at_ms IS NOT NULL
+                     AND cancelled_at_ms >= ?
+                     AND cancelled_at_ms < ?",
+                );
+                bind_values.push(Box::new(query.start_ms));
+                bind_values.push(Box::new(query.end_ms));
+            }
+            None => {
+                sql.push_str(
+                    "(
+                         (
+                             status = 'completed'
+                             AND completed_at_ms IS NOT NULL
+                             AND completed_at_ms >= ?
+                             AND completed_at_ms < ?
+                         ) OR (
+                             status = 'cancelled'
+                             AND cancelled_at_ms IS NOT NULL
+                             AND cancelled_at_ms >= ?
+                             AND cancelled_at_ms < ?
+                         )
+                     )",
+                );
+                bind_values.push(Box::new(query.start_ms));
+                bind_values.push(Box::new(query.end_ms));
+                bind_values.push(Box::new(query.start_ms));
+                bind_values.push(Box::new(query.end_ms));
+            }
+            Some(_) => unreachable!("non-terminal status filtered above"),
+        }
+
+        if let Some(priority) = query.priority {
+            sql.push_str(" AND priority = ?");
+            bind_values.push(Box::new(priority));
+        }
+
+        if query.contact_id.is_some() || query.contact_snapshot.is_some() {
+            sql.push_str(" AND (contact_id = ? OR contact_snapshot = ?)");
+            bind_values.push(Box::new(query.contact_id.clone()));
+            bind_values.push(Box::new(query.contact_snapshot.clone()));
+        }
+
+        if let Some(keyword) = &query.keyword {
+            let pattern = format!("%{}%", escape_like_pattern(keyword));
+            sql.push_str(" AND (title LIKE ? ESCAPE '\\' OR IFNULL(note, '') LIKE ? ESCAPE '\\')");
+            bind_values.push(Box::new(pattern.clone()));
+            bind_values.push(Box::new(pattern));
+        }
+
+        sql.push_str(
+            " ORDER BY
                  CASE
                      WHEN status = 'completed' THEN completed_at_ms
                      ELSE cancelled_at_ms
                  END DESC,
                  id ASC",
-        )?;
+        );
+
+        let mut statement = connection.prepare(&sql)?;
+        let params = rusqlite::params_from_iter(bind_values.iter().map(|value| value.as_ref()));
         let tasks = statement
-            .query_map(params![query.start_ms, query.end_ms], map_task_row)?
+            .query_map(params, map_task_row)?
             .collect::<Result<Vec<_>, _>>()?;
         Ok(tasks)
     }
@@ -465,6 +537,13 @@ fn validate_priority(priority: i32) -> Result<(), TaskRepositoryError> {
         });
     }
     Ok(())
+}
+
+fn escape_like_pattern(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_")
 }
 
 #[cfg(test)]
@@ -732,6 +811,11 @@ mod tests {
             HistoryTaskQuery {
                 start_ms: 1_400_000,
                 end_ms: 1_700_000,
+                status: None,
+                priority: None,
+                contact_id: None,
+                contact_snapshot: None,
+                keyword: None,
             },
         )
         .expect("query history");
@@ -753,10 +837,158 @@ mod tests {
             HistoryTaskQuery {
                 start_ms: 2_000,
                 end_ms: 2_000,
+                status: None,
+                priority: None,
+                contact_id: None,
+                contact_snapshot: None,
+                keyword: None,
             },
         )
         .expect_err("invalid range");
 
         assert!(matches!(error, TaskRepositoryError::InvalidInput { .. }));
+    }
+
+    #[test]
+    fn query_history_filters_by_status_and_priority() {
+        let db = open_test_database();
+        let mut completed_high = sample_create_input("completed-high", "High done", 1_000_000);
+        completed_high.priority = Some(5);
+        TaskRepository::create(&db.connection, completed_high).expect("create high");
+        TaskRepository::complete(&db.connection, "completed-high", 1_500_000).expect("complete");
+
+        let mut completed_low = sample_create_input("completed-low", "Low done", 1_000_000);
+        completed_low.priority = Some(1);
+        TaskRepository::create(&db.connection, completed_low).expect("create low");
+        TaskRepository::complete(&db.connection, "completed-low", 1_550_000).expect("complete");
+
+        TaskRepository::create(
+            &db.connection,
+            sample_create_input("cancelled-task", "Cancelled", 1_000_000),
+        )
+        .expect("create cancelled");
+        TaskRepository::cancel(&db.connection, "cancelled-task", 1_600_000).expect("cancel");
+
+        let completed_only = TaskRepository::query_history(
+            &db.connection,
+            HistoryTaskQuery {
+                start_ms: 1_400_000,
+                end_ms: 1_700_000,
+                status: Some(TaskStatus::Completed),
+                priority: None,
+                contact_id: None,
+                contact_snapshot: None,
+                keyword: None,
+            },
+        )
+        .expect("completed only");
+        assert_eq!(completed_only.len(), 2);
+
+        let high_only = TaskRepository::query_history(
+            &db.connection,
+            HistoryTaskQuery {
+                start_ms: 1_400_000,
+                end_ms: 1_700_000,
+                status: None,
+                priority: Some(5),
+                contact_id: None,
+                contact_snapshot: None,
+                keyword: None,
+            },
+        )
+        .expect("high only");
+        assert_eq!(high_only.len(), 1);
+        assert_eq!(high_only[0].id, "completed-high");
+    }
+
+    #[test]
+    fn query_history_filters_by_contact_and_keyword() {
+        let db = open_test_database();
+        let mut alpha = sample_create_input("alpha", "Alpha report", 1_000_000);
+        alpha.contact_snapshot = Some("Alpha".to_string());
+        alpha.note = Some("weekly sync".to_string());
+        TaskRepository::create(&db.connection, alpha).expect("create alpha");
+        TaskRepository::complete(&db.connection, "alpha", 1_500_000).expect("complete alpha");
+
+        let mut beta = sample_create_input("beta", "Beta draft", 1_000_000);
+        beta.contact_snapshot = Some("Beta".to_string());
+        beta.note = Some("other".to_string());
+        TaskRepository::create(&db.connection, beta).expect("create beta");
+        TaskRepository::complete(&db.connection, "beta", 1_550_000).expect("complete beta");
+
+        let by_contact = TaskRepository::query_history(
+            &db.connection,
+            HistoryTaskQuery {
+                start_ms: 1_400_000,
+                end_ms: 1_700_000,
+                status: None,
+                priority: None,
+                contact_id: None,
+                contact_snapshot: Some("Alpha".to_string()),
+                keyword: None,
+            },
+        )
+        .expect("contact filter");
+        assert_eq!(by_contact.len(), 1);
+        assert_eq!(by_contact[0].id, "alpha");
+
+        let by_keyword = TaskRepository::query_history(
+            &db.connection,
+            HistoryTaskQuery {
+                start_ms: 1_400_000,
+                end_ms: 1_700_000,
+                status: None,
+                priority: None,
+                contact_id: None,
+                contact_snapshot: None,
+                keyword: Some("weekly".to_string()),
+            },
+        )
+        .expect("keyword filter");
+        assert_eq!(by_keyword.len(), 1);
+        assert_eq!(by_keyword[0].id, "alpha");
+
+        let by_title_keyword = TaskRepository::query_history(
+            &db.connection,
+            HistoryTaskQuery {
+                start_ms: 1_400_000,
+                end_ms: 1_700_000,
+                status: None,
+                priority: None,
+                contact_id: None,
+                contact_snapshot: None,
+                keyword: Some("Beta".to_string()),
+            },
+        )
+        .expect("title keyword");
+        assert_eq!(by_title_keyword.len(), 1);
+        assert_eq!(by_title_keyword[0].id, "beta");
+    }
+
+    #[test]
+    fn query_history_non_terminal_status_returns_empty_without_error() {
+        let db = open_test_database();
+        TaskRepository::create(
+            &db.connection,
+            sample_create_input("completed-task", "Done", 1_000_000),
+        )
+        .expect("create");
+        TaskRepository::complete(&db.connection, "completed-task", 1_500_000).expect("complete");
+
+        let tasks = TaskRepository::query_history(
+            &db.connection,
+            HistoryTaskQuery {
+                start_ms: 1_400_000,
+                end_ms: 1_700_000,
+                status: Some(TaskStatus::InProgress),
+                priority: None,
+                contact_id: None,
+                contact_snapshot: None,
+                keyword: None,
+            },
+        )
+        .expect("empty for in progress");
+
+        assert!(tasks.is_empty());
     }
 }

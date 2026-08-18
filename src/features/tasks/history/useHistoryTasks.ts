@@ -18,7 +18,16 @@ function historyQueryKey(query: HistoryTasksQueryInput | null): string | null {
   if (!query) {
     return null;
   }
-  return `${query.mode}|${query.anchorDate ?? ""}|${query.startDate ?? ""}|${query.endDate ?? ""}`;
+  return [
+    query.mode,
+    query.anchorDate ?? "",
+    query.startDate ?? "",
+    query.endDate ?? "",
+    query.status ?? "",
+    query.priority?.toString() ?? "",
+    query.contactId ?? "",
+    query.keyword ?? "",
+  ].join("|");
 }
 
 export function useHistoryTasks(

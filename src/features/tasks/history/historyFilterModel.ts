@@ -13,6 +13,9 @@ import {
 } from "date-fns";
 
 import { CALENDAR_WEEK_OPTIONS, toLocalDateKey } from "../calendar/calendarGrid";
+import { TASK_PRIORITIES } from "../createTaskForm";
+import { TASK_STATUS_LABELS } from "../taskDisplay";
+import type { TaskStatus } from "../../../services/tauri/tasks";
 
 export const HISTORY_TIME_MODES = [
   { id: "day", label: "日" },
@@ -30,7 +33,20 @@ export type HistoryFilterState = {
   anchorDate: string;
   customStartDate: string;
   customEndDate: string;
+  status?: TaskStatus;
+  priority?: number;
+  contactId?: string;
+  keyword: string;
 };
+
+export const HISTORY_STATUS_OPTIONS = (
+  Object.entries(TASK_STATUS_LABELS) as [TaskStatus, string][]
+).map(([value, label]) => ({ value, label }));
+
+export const HISTORY_PRIORITY_OPTIONS = TASK_PRIORITIES.map((item) => ({
+  value: item.value,
+  label: item.label,
+}));
 
 export function createDefaultHistoryFilter(today: Date = new Date()): HistoryFilterState {
   const anchorDate = toLocalDateKey(today);
@@ -39,7 +55,17 @@ export function createDefaultHistoryFilter(today: Date = new Date()): HistoryFil
     anchorDate,
     customStartDate: anchorDate,
     customEndDate: anchorDate,
+    keyword: "",
   };
+}
+
+export function hasActiveBusinessFilters(filter: HistoryFilterState): boolean {
+  return (
+    filter.status != null ||
+    filter.priority != null ||
+    filter.contactId != null ||
+    filter.keyword.trim().length > 0
+  );
 }
 
 export function validateCustomRange(startDate: string, endDate: string): string | null {
@@ -109,23 +135,41 @@ export function shiftHistoryAnchor(
 }
 
 export function toHistoryTasksQuery(filter: HistoryFilterState) {
+  const keyword = filter.keyword.trim();
+  const businessFilters = {
+    ...(filter.status ? { status: filter.status } : {}),
+    ...(filter.priority != null ? { priority: filter.priority } : {}),
+    ...(filter.contactId ? { contactId: filter.contactId } : {}),
+    ...(keyword ? { keyword } : {}),
+  };
+
   if (filter.mode === "custom") {
     return {
       mode: filter.mode,
       startDate: filter.customStartDate,
       endDate: filter.customEndDate,
+      ...businessFilters,
     };
   }
 
   return {
     mode: filter.mode,
     anchorDate: filter.anchorDate,
+    ...businessFilters,
   };
 }
 
 export function historyFilterKey(filter: HistoryFilterState): string {
+  const keyword = filter.keyword.trim();
+  const businessKey = [
+    filter.status ?? "",
+    filter.priority?.toString() ?? "",
+    filter.contactId ?? "",
+    keyword,
+  ].join("|");
+
   if (filter.mode === "custom") {
-    return `${filter.mode}:${filter.customStartDate}:${filter.customEndDate}`;
+    return `${filter.mode}:${filter.customStartDate}:${filter.customEndDate}:${businessKey}`;
   }
-  return `${filter.mode}:${filter.anchorDate}`;
+  return `${filter.mode}:${filter.anchorDate}:${businessKey}`;
 }

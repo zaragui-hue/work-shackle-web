@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { TaskCalendar } from "../features/tasks/calendar/TaskCalendar";
 import { CreateTaskModal } from "../features/tasks/CreateTaskModal";
+import { HistoryBusinessFilter } from "../features/tasks/history/HistoryBusinessFilter";
 import { HistoryTimeFilter } from "../features/tasks/history/HistoryTimeFilter";
 import {
   createDefaultHistoryFilter,
+  hasActiveBusinessFilters,
   toHistoryTasksQuery,
   validateCustomRange,
 } from "../features/tasks/history/historyFilterModel";
@@ -94,6 +96,7 @@ export function TasksPage({
     !historyError &&
     !customValidationError &&
     historyTasks.length === 0;
+  const historyHasBusinessFilters = hasActiveBusinessFilters(historyFilter);
 
   return (
     <>
@@ -143,6 +146,7 @@ export function TasksPage({
         {viewMode === "history" ? (
           <>
             <HistoryTimeFilter filter={historyFilter} onChange={setHistoryFilter} />
+            <HistoryBusinessFilter filter={historyFilter} onChange={setHistoryFilter} />
             {customValidationError ? (
               <p className="tasks-page__status" role="alert">
                 {customValidationError}
@@ -170,8 +174,16 @@ export function TasksPage({
             ) : null}
             {showHistoryEmpty ? (
               <EmptyState
-                title="这段时间没有记录"
-                description="换个时间范围看看，或者先把今天的事搞定。"
+                title={
+                  historyHasBusinessFilters
+                    ? "当前筛选没有结果"
+                    : "这段时间没有记录"
+                }
+                description={
+                  historyHasBusinessFilters
+                    ? "试试放宽状态、紧急程度或关键词。"
+                    : "换个时间范围看看，或者先把今天的事搞定。"
+                }
               />
             ) : null}
           </>

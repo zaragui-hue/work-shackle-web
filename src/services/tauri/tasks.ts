@@ -124,6 +124,10 @@ export type HistoryTasksQueryInput = {
   anchorDate?: string;
   startDate?: string;
   endDate?: string;
+  status?: TaskStatus;
+  priority?: number;
+  contactId?: string;
+  keyword?: string;
 };
 
 export type TodayTasks = {

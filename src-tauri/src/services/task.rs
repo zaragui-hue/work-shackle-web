@@ -2,6 +2,7 @@ use crate::id::new_entity_id;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
+use crate::db::repositories::contact_repository::ContactRepository;
 use crate::db::repositories::postponement_repository::{
     CreatePostponementInput, Postponement, PostponementRepository, PostponementRepositoryError,
 };
@@ -172,6 +173,14 @@ pub struct HistoryTasksQueryRequest {
     pub start_date: Option<String>,
     #[serde(default)]
     pub end_date: Option<String>,
+    #[serde(default)]
+    pub status: Option<TaskStatusDto>,
+    #[serde(default)]
+    pub priority: Option<i32>,
+    #[serde(default)]
+    pub contact_id: Option<String>,
+    #[serde(default)]
+    pub keyword: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -362,14 +371,9 @@ impl TaskService {
         query: HistoryTasksQueryRequest,
     ) -> Result<Vec<TaskDto>, AppError> {
         let range = resolve_history_range(&query)?;
-        let tasks = TaskRepository::query_history(
-            connection,
-            HistoryTaskQuery {
-                start_ms: range.start_ms,
-                end_ms: range.end_ms,
-            },
-        )
-        .map_err(map_task_error)?;
+        let repository_query = build_history_task_query(connection, &query, range)?;
+        let tasks =
+            TaskRepository::query_history(connection, repository_query).map_err(map_task_error)?;
 
         Ok(tasks.into_iter().map(task_to_dto).collect())
     }
@@ -716,6 +720,65 @@ fn resolve_history_range(
         end_date: query.end_date.clone(),
     })
     .map_err(|message| AppError::InvalidTaskInput { message })
+}
+
+fn build_history_task_query(
+    connection: &Connection,
+    query: &HistoryTasksQueryRequest,
+    range: history_range::HistoryTimeRange,
+) -> Result<HistoryTaskQuery, AppError> {
+    if let Some(priority) = query.priority {
+        if !(1..=5).contains(&priority) {
+            return Err(AppError::InvalidTaskInput {
+                message: format!("task priority must be between 1 and 5, got {priority}"),
+            });
+        }
+    }
+
+    let keyword = query
+        .keyword
+        .as_ref()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .map(|value| value.to_string());
+
+    let (contact_id, contact_snapshot) = if let Some(contact_id) = query.contact_id.clone() {
+        let contact =
+            ContactRepository::get_by_id(connection, &contact_id).map_err(map_contact_error)?;
+        (Some(contact.id), Some(contact.name))
+    } else {
+        (None, None)
+    };
+
+    Ok(HistoryTaskQuery {
+        start_ms: range.start_ms,
+        end_ms: range.end_ms,
+        status: query.status.map(task_status_from_dto),
+        priority: query.priority,
+        contact_id,
+        contact_snapshot,
+        keyword,
+    })
+}
+
+fn map_contact_error(
+    error: crate::db::repositories::contact_repository::ContactRepositoryError,
+) -> AppError {
+    match error {
+        crate::db::repositories::contact_repository::ContactRepositoryError::NotFound { id } => {
+            AppError::InvalidTaskInput {
+                message: format!("contact not found: {id}"),
+            }
+        }
+        crate::db::repositories::contact_repository::ContactRepositoryError::InvalidInput {
+            message,
+        } => AppError::InvalidTaskInput { message },
+        crate::db::repositories::contact_repository::ContactRepositoryError::Db(db_error) => {
+            AppError::DatabaseError {
+                message: db_error.to_string(),
+            }
+        }
+    }
 }
 
 fn map_reminder_error(error: ReminderRepositoryError) -> AppError {
@@ -1847,6 +1910,19 @@ mod tests {
             .expect("create task");
         }
 
+        fn day_history_query(anchor: &str) -> HistoryTasksQueryRequest {
+            HistoryTasksQueryRequest {
+                mode: HistoryTimeModeDto::Day,
+                anchor_date: Some(anchor.to_string()),
+                start_date: None,
+                end_date: None,
+                status: None,
+                priority: None,
+                contact_id: None,
+                keyword: None,
+            }
+        }
+
         #[test]
         fn day_filter_includes_completed_on_anchor_day_only() {
             let db = open_test_database();
@@ -1867,16 +1943,8 @@ mod tests {
             .expect("complete yesterday");
             insert_task(&db.connection, "active", local_ms(TODAY, "09:00"), None);
 
-            let tasks = TaskService::query_history_tasks(
-                &db.connection,
-                HistoryTasksQueryRequest {
-                    mode: HistoryTimeModeDto::Day,
-                    anchor_date: Some(TODAY.to_string()),
-                    start_date: None,
-                    end_date: None,
-                },
-            )
-            .expect("query day history");
+            let tasks = TaskService::query_history_tasks(&db.connection, day_history_query(TODAY))
+                .expect("query day history");
 
             assert_eq!(tasks.len(), 1);
             assert_eq!(tasks[0].id, "today-done");
@@ -1892,6 +1960,10 @@ mod tests {
                     anchor_date: None,
                     start_date: Some(TOMORROW.to_string()),
                     end_date: Some(TODAY.to_string()),
+                    status: None,
+                    priority: None,
+                    contact_id: None,
+                    keyword: None,
                 },
             )
             .expect_err("invalid custom range");
@@ -1907,29 +1979,13 @@ mod tests {
             TaskRepository::complete(&first, "persist-history", local_ms(TODAY, "11:00"))
                 .expect("complete");
 
-            let before = TaskService::query_history_tasks(
-                &first,
-                HistoryTasksQueryRequest {
-                    mode: HistoryTimeModeDto::Day,
-                    anchor_date: Some(TODAY.to_string()),
-                    start_date: None,
-                    end_date: None,
-                },
-            )
-            .expect("query before reopen");
+            let before = TaskService::query_history_tasks(&first, day_history_query(TODAY))
+                .expect("query before reopen");
             drop(first);
 
             let reopened = initialize_database(temp.path()).expect("reopen database");
-            let after = TaskService::query_history_tasks(
-                &reopened,
-                HistoryTasksQueryRequest {
-                    mode: HistoryTimeModeDto::Day,
-                    anchor_date: Some(TODAY.to_string()),
-                    start_date: None,
-                    end_date: None,
-                },
-            )
-            .expect("query after reopen");
+            let after = TaskService::query_history_tasks(&reopened, day_history_query(TODAY))
+                .expect("query after reopen");
 
             assert_eq!(before, after);
         }
@@ -1944,18 +2000,113 @@ mod tests {
                 Some(local_ms(TODAY, "18:00")),
             );
 
-            let tasks = TaskService::query_history_tasks(
+            let tasks = TaskService::query_history_tasks(&db.connection, day_history_query(TODAY))
+                .expect("query day history");
+
+            assert!(tasks.is_empty());
+        }
+
+        #[test]
+        fn business_filters_combine_with_day_range() {
+            let db = open_test_database();
+            use crate::db::repositories::contact_repository::{
+                ContactRepository, CreateContactInput,
+            };
+
+            ContactRepository::create(
+                &db.connection,
+                CreateContactInput {
+                    id: "contact-a".to_string(),
+                    name: "Alice".to_string(),
+                    created_at_ms: local_ms(TODAY, "08:00"),
+                    updated_at_ms: local_ms(TODAY, "08:00"),
+                },
+            )
+            .expect("create contact");
+
+            let urgent = CreateTaskInput {
+                id: "urgent-done".to_string(),
+                title: "Urgent report".to_string(),
+                note: Some("deadline review".to_string()),
+                planned_at_ms: local_ms(TODAY, "09:00"),
+                deadline_at_ms: None,
+                priority: Some(5),
+                contact_id: Some("contact-a".to_string()),
+                contact_snapshot: Some("Alice".to_string()),
+                created_at_ms: local_ms(TODAY, "09:00"),
+                updated_at_ms: local_ms(TODAY, "09:00"),
+            };
+            TaskRepository::create(&db.connection, urgent).expect("create urgent");
+            TaskRepository::complete(&db.connection, "urgent-done", local_ms(TODAY, "16:00"))
+                .expect("complete urgent");
+
+            insert_task(&db.connection, "plain-done", local_ms(TODAY, "09:00"), None);
+            TaskRepository::complete(&db.connection, "plain-done", local_ms(TODAY, "17:00"))
+                .expect("complete plain");
+
+            let filtered = TaskService::query_history_tasks(
                 &db.connection,
                 HistoryTasksQueryRequest {
                     mode: HistoryTimeModeDto::Day,
                     anchor_date: Some(TODAY.to_string()),
                     start_date: None,
                     end_date: None,
+                    status: Some(TaskStatusDto::Completed),
+                    priority: Some(5),
+                    contact_id: Some("contact-a".to_string()),
+                    keyword: Some("report".to_string()),
                 },
             )
-            .expect("query day history");
+            .expect("combined filters");
 
-            assert!(tasks.is_empty());
+            assert_eq!(filtered.len(), 1);
+            assert_eq!(filtered[0].id, "urgent-done");
+        }
+
+        #[test]
+        fn invalid_priority_is_rejected() {
+            let db = open_test_database();
+            let error = TaskService::query_history_tasks(
+                &db.connection,
+                HistoryTasksQueryRequest {
+                    mode: HistoryTimeModeDto::Day,
+                    anchor_date: Some(TODAY.to_string()),
+                    start_date: None,
+                    end_date: None,
+                    status: None,
+                    priority: Some(9),
+                    contact_id: None,
+                    keyword: None,
+                },
+            )
+            .expect_err("invalid priority");
+
+            assert!(matches!(error, AppError::InvalidTaskInput { .. }));
+        }
+
+        #[test]
+        fn blank_keyword_is_ignored() {
+            let db = open_test_database();
+            insert_task(&db.connection, "done-task", local_ms(TODAY, "09:00"), None);
+            TaskRepository::complete(&db.connection, "done-task", local_ms(TODAY, "16:00"))
+                .expect("complete");
+
+            let with_spaces = TaskService::query_history_tasks(
+                &db.connection,
+                HistoryTasksQueryRequest {
+                    mode: HistoryTimeModeDto::Day,
+                    anchor_date: Some(TODAY.to_string()),
+                    start_date: None,
+                    end_date: None,
+                    status: None,
+                    priority: None,
+                    contact_id: None,
+                    keyword: Some("   ".to_string()),
+                },
+            )
+            .expect("blank keyword");
+
+            assert_eq!(with_spaces.len(), 1);
         }
     }
 }

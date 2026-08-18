@@ -17,10 +17,8 @@
   align-items: start;
 }
 
-.lunch-reminder__emoji {
+.lunch-reminder__mascot {
   margin: 0;
-  font-size: 1.75rem;
-  line-height: 1;
 }
 
 .lunch-reminder__text {

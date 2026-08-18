@@ -69,3 +69,23 @@ export function mascotStateForDdlEmotion(emotion: DdlEmotion): MascotState {
 export function mascotStateForReminderKind(reminderKind: string): MascotState {
   return REMINDER_KIND_TO_MASCOT[reminderKind] ?? FALLBACK_MASCOT_STATE;
 }
+
+const WORK_STATUS_TO_MASCOT: Record<string, MascotState> = {
+  working: "work-neutral",
+  focus_brick: "work-neutral",
+  meeting: "meeting-empty",
+  urgent_insert: "work-neutral",
+  chased_by_requirements: "work-neutral",
+  slacking: "fish-relax",
+  gossip: "fish-relax",
+  drinking: "fish-relax",
+  lunch: "lunch-happy",
+  nap: "fish-relax",
+  daydream: "meeting-empty",
+  preparing_leave: "offwork-run",
+  overtime: "overtime-dead-eyes",
+};
+
+export function mascotStateForWorkStatus(statusType: string): MascotState {
+  return WORK_STATUS_TO_MASCOT[statusType] ?? FALLBACK_MASCOT_STATE;
+}

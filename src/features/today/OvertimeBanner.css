@@ -17,10 +17,8 @@
   align-items: start;
 }
 
-.overtime-banner__emoji {
+.overtime-banner__mascot {
   margin: 0;
-  font-size: 1.75rem;
-  line-height: 1;
 }
 
 .overtime-banner__text {

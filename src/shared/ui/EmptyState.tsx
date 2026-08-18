@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import mascotUrl from "../../assets/mascot/placeholder.svg";
+import { Mascot } from "./Mascot";
 import "./EmptyState.css";
 
 type EmptyStateProps = {
@@ -11,13 +11,7 @@ type EmptyStateProps = {
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
     <div className="ws-empty">
-      <img
-        className="ws-empty__mascot"
-        src={mascotUrl}
-        alt=""
-        width={96}
-        height={96}
-      />
+      <Mascot state="fish-relax" size="md" className="ws-empty__mascot" />
       <h3 className="ws-empty__title">{title}</h3>
       <p className="ws-empty__desc">{description}</p>
       {action ? <div className="ws-empty__action">{action}</div> : null}

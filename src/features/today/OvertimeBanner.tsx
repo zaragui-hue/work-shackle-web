@@ -1,4 +1,4 @@
-import { Button } from "../../shared/ui";
+import { Button, Mascot } from "../../shared/ui";
 import "./OvertimeBanner.css";
 
 type OvertimeBannerProps = {
@@ -15,9 +15,11 @@ export function OvertimeBanner({
   return (
     <div className="overtime-banner" role="status" aria-live="polite">
       <div className="overtime-banner__content">
-        <p className="overtime-banner__emoji" aria-hidden="true">
-          🌙
-        </p>
+        <Mascot
+          state="overtime-dead-eyes"
+          size="sm"
+          className="overtime-banner__mascot"
+        />
         <div className="overtime-banner__text">
           <p className="overtime-banner__title">加班模式</p>
           <p className="overtime-banner__label">已加班</p>

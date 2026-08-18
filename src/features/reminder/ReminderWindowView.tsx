@@ -1,5 +1,6 @@
+import { mascotStateForReminderKind } from "../../assets/mascot";
 import type { ReminderWindowShowPayload } from "../../services/tauri/reminder";
-import { Button } from "../../shared/ui";
+import { Button, Mascot } from "../../shared/ui";
 import {
   additionalTasksLabel,
   reminderEmotion,
@@ -19,13 +20,15 @@ export function ReminderWindowView({ payload, onDismiss }: ReminderWindowViewPro
   const { primary, additionalCount } = payload;
   const emotion = reminderEmotion(primary);
   const extraLabel = additionalTasksLabel(additionalCount);
+  const mascotState = mascotStateForReminderKind(
+    primary.kind === "system" ? primary.reminderKind : "custom",
+  );
 
   return (
     <div className="reminder-window">
       <div className="reminder-window__card" role="dialog" aria-labelledby="reminder-window-title">
-        <div className="reminder-window__hero" aria-hidden="true">
-          <span className="reminder-window__emoji">{emotion.emoji}</span>
-          <span className="reminder-window__mascot">占位小角色</span>
+        <div className="reminder-window__hero">
+          <Mascot state={mascotState} size="lg" className="reminder-window__mascot" />
         </div>
 
         <div className="reminder-window__body">

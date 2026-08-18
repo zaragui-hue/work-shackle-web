@@ -38,5 +38,10 @@ describe("DdlTimeProgress", () => {
     expect(screen.getByText("注意")).toBeTruthy();
     expect(screen.queryByText(/任务完成|任务进度/)).toBeNull();
     expect(screen.getByRole("progressbar", { name: "时间进度" })).toBeTruthy();
+    expect(
+      document
+        .querySelector("img[data-mascot-state]")
+        ?.getAttribute("data-mascot-state"),
+    ).toBe("ddl-calm");
   });
 });

@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { DdlEmotion } from "../../services/tauri/ddl";
@@ -8,6 +10,7 @@ import {
   isMascotState,
   mascotStateForDdlEmotion,
   mascotStateForReminderKind,
+  mascotStateForWorkStatus,
   resolveMascotAsset,
   resolveMascotAssetOrFallback,
   type MascotState,
@@ -85,5 +88,61 @@ describe("DDL business level → MascotState", () => {
     expect(mascotStateForReminderKind("ddl_due")).toBe("ddl-due");
     expect(mascotStateForReminderKind("custom")).toBe(FALLBACK_MASCOT_STATE);
     expect(mascotStateForReminderKind("unknown")).toBe(FALLBACK_MASCOT_STATE);
+  });
+});
+
+describe("work status → MascotState", () => {
+  it("maps fixed work statuses onto canonical mascot states without new keys", () => {
+    expect(mascotStateForWorkStatus("working")).toBe("work-neutral");
+    expect(mascotStateForWorkStatus("focus_brick")).toBe("work-neutral");
+    expect(mascotStateForWorkStatus("meeting")).toBe("meeting-empty");
+    expect(mascotStateForWorkStatus("daydream")).toBe("meeting-empty");
+    expect(mascotStateForWorkStatus("slacking")).toBe("fish-relax");
+    expect(mascotStateForWorkStatus("gossip")).toBe("fish-relax");
+    expect(mascotStateForWorkStatus("drinking")).toBe("fish-relax");
+    expect(mascotStateForWorkStatus("nap")).toBe("fish-relax");
+    expect(mascotStateForWorkStatus("lunch")).toBe("lunch-happy");
+    expect(mascotStateForWorkStatus("preparing_leave")).toBe("offwork-run");
+    expect(mascotStateForWorkStatus("overtime")).toBe("overtime-dead-eyes");
+    expect(mascotStateForWorkStatus("urgent_insert")).toBe("work-neutral");
+    expect(mascotStateForWorkStatus("chased_by_requirements")).toBe(
+      "work-neutral",
+    );
+    expect(mascotStateForWorkStatus("unknown-status")).toBe(
+      FALLBACK_MASCOT_STATE,
+    );
+  });
+});
+
+describe("mascot asset import boundary", () => {
+  it("keeps svg imports inside the mascot contract", () => {
+    const srcRoot = join(process.cwd(), "src");
+    const allowed = join(srcRoot, "assets/mascot/index.ts");
+    const offenders: string[] = [];
+    const svgImport = /from\s+["'][^"']*assets\/mascot\/[^"']+\.svg["']/;
+
+    function walk(dir: string) {
+      for (const entry of readdirSync(dir)) {
+        const path = join(dir, entry);
+        const stats = statSync(path);
+        if (stats.isDirectory()) {
+          walk(path);
+          continue;
+        }
+        if (!path.endsWith(".ts") && !path.endsWith(".tsx")) {
+          continue;
+        }
+        if (path === allowed) {
+          continue;
+        }
+        const source = readFileSync(path, "utf8");
+        if (svgImport.test(source)) {
+          offenders.push(relative(srcRoot, path));
+        }
+      }
+    }
+
+    walk(srcRoot);
+    expect(offenders).toEqual([]);
   });
 });

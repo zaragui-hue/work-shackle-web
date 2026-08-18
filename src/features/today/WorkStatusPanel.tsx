@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { mascotStateForWorkStatus } from "../../assets/mascot";
 import {
   getCurrentWorkStatus,
   listWorkStatuses,
@@ -9,7 +10,7 @@ import {
   type FixedWorkStatus,
   type WorkStatusAppError,
 } from "../../services/tauri/workStatus";
-import { Button } from "../../shared/ui";
+import { Button, Mascot } from "../../shared/ui";
 import "./WorkStatusPanel.css";
 
 export function WorkStatusPanel({ refreshKey }: { refreshKey?: string }) {
@@ -81,9 +82,14 @@ export function WorkStatusPanel({ refreshKey }: { refreshKey?: string }) {
       {current ? (
         <div className="work-status-panel__current">
           <p className="work-status-panel__label">当前状态</p>
-          <p className="work-status-panel__title">
-            <span aria-hidden="true">{current.emoji}</span> {current.name}
-          </p>
+          <div className="work-status-panel__headline">
+            <Mascot
+              state={mascotStateForWorkStatus(current.statusType)}
+              size="sm"
+              className="work-status-panel__mascot"
+            />
+            <p className="work-status-panel__title">{current.name}</p>
+          </div>
           <p className="work-status-panel__copy">{current.displayCopy}</p>
         </div>
       ) : (

@@ -1,3 +1,22 @@
+.tasks-page__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.tasks-page__view-toggle {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.tasks-page__view-button {
+  min-height: 40px;
+  padding-inline: var(--space-3);
+}
+
 .tasks-page__status {
   margin: 0;
   display: grid;

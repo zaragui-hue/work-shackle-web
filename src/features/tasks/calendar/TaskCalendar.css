@@ -1,0 +1,113 @@
+.task-calendar {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.task-calendar__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.task-calendar__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.task-calendar__nav-button {
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.task-calendar__title {
+  margin: 0;
+  min-width: 8.5rem;
+  text-align: center;
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ink);
+}
+
+.task-calendar__today-button {
+  min-height: 40px;
+  padding-inline: var(--space-3);
+}
+
+.task-calendar__weekdays,
+.task-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.task-calendar__weekday {
+  text-align: center;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ink-muted);
+  padding-block: var(--space-1);
+}
+
+.task-calendar__day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 72px;
+  padding: var(--space-1);
+  border-radius: var(--radius-ticket);
+  border: var(--border-ink-soft);
+  background: var(--color-paper-raised);
+  color: var(--color-ink);
+  font: inherit;
+  box-shadow: var(--shadow-soft);
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.task-calendar__day:hover {
+  transform: translateY(-1px);
+  border-color: rgba(17, 124, 13, 0.35);
+}
+
+.task-calendar__day-number {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+}
+
+.task-calendar__day--outside {
+  opacity: 0.42;
+  background: rgba(247, 243, 234, 0.65);
+  box-shadow: none;
+}
+
+.task-calendar__day--today {
+  border-color: var(--color-green);
+  background: color-mix(in srgb, var(--color-wheat) 38%, var(--color-paper-raised));
+}
+
+.task-calendar__day--today .task-calendar__day-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  border-radius: 999px;
+  background: var(--color-green);
+  color: #f8f5ee;
+}
+
+.task-calendar__today-badge {
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-green);
+  line-height: 1;
+}

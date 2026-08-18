@@ -1,0 +1,62 @@
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { TaskCalendar } from "./TaskCalendar";
+
+const FIXED_TODAY = new Date(2026, 7, 18);
+const AUGUST_2026 = new Date(2026, 7, 1);
+
+afterEach(() => {
+  cleanup();
+});
+
+describe("TaskCalendar", () => {
+  it("shows the current month title", () => {
+    render(<TaskCalendar today={FIXED_TODAY} initialMonth={AUGUST_2026} />);
+
+    expect(screen.getByRole("heading", { level: 3, name: "2026 年 8 月" })).toBeTruthy();
+  });
+
+  it("moves to the previous month", () => {
+    render(<TaskCalendar today={FIXED_TODAY} initialMonth={AUGUST_2026} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "上一个月" }));
+
+    expect(screen.getByRole("heading", { level: 3, name: "2026 年 7 月" })).toBeTruthy();
+  });
+
+  it("moves to the next month", () => {
+    render(<TaskCalendar today={FIXED_TODAY} initialMonth={AUGUST_2026} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "下一个月" }));
+
+    expect(screen.getByRole("heading", { level: 3, name: "2026 年 9 月" })).toBeTruthy();
+  });
+
+  it("returns to today's month", () => {
+    render(<TaskCalendar today={FIXED_TODAY} initialMonth={AUGUST_2026} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "下一个月" }));
+    fireEvent.click(screen.getByRole("button", { name: "下一个月" }));
+    expect(screen.getByRole("heading", { level: 3, name: "2026 年 10 月" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "回到今天" }));
+
+    expect(screen.getByRole("heading", { level: 3, name: "2026 年 8 月" })).toBeTruthy();
+  });
+
+  it("applies today styling to the current local day", () => {
+    render(<TaskCalendar today={FIXED_TODAY} initialMonth={AUGUST_2026} />);
+
+    const todayCell = screen.getByRole("gridcell", { name: "2026年8月18日" });
+    expect(todayCell.className).toContain("task-calendar__day--today");
+    expect(todayCell.getAttribute("aria-current")).toBe("date");
+  });
+
+  it("applies outside-month styling to padding days", () => {
+    render(<TaskCalendar today={FIXED_TODAY} initialMonth={AUGUST_2026} />);
+
+    const outsideCell = screen.getByRole("gridcell", { name: "2026年7月27日" });
+    expect(outsideCell.className).toContain("task-calendar__day--outside");
+  });
+});

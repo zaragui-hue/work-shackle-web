@@ -3,10 +3,12 @@ use std::collections::{HashMap, HashSet};
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
-use crate::db::repositories::task_repository::TaskRepository;
+use crate::db::repositories::task_repository::{TaskQuery, TaskRepository};
 use crate::errors::AppError;
+use crate::services::task::{map_task_entity_to_dto, TaskDto};
 use crate::time::calendar_day::{
-    format_work_date, local_date_from_ms, local_dates_inclusive, parse_local_date,
+    format_work_date, is_local_calendar_day_before, is_same_local_calendar_day, local_date_from_ms,
+    local_dates_inclusive, parse_local_date,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -21,6 +23,22 @@ pub struct CalendarDayTaskCountDto {
 pub struct CalendarTaskCountQueryRequest {
     pub start_date: String,
     pub end_date: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarDayTasksQueryRequest {
+    pub date: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarDayTasksDto {
+    pub date: String,
+    pub formal_tasks: Vec<TaskDto>,
+    pub overdue_tasks: Vec<TaskDto>,
+    pub completed_tasks: Vec<TaskDto>,
+    pub cancelled_tasks: Vec<TaskDto>,
 }
 
 pub struct CalendarService;
@@ -84,6 +102,79 @@ impl CalendarService {
             })
             .collect())
     }
+
+    pub fn query_day_tasks(
+        connection: &Connection,
+        query: CalendarDayTasksQueryRequest,
+        as_of_ms: i64,
+    ) -> Result<CalendarDayTasksDto, AppError> {
+        let target_date =
+            parse_local_date(&query.date).map_err(|message| AppError::InvalidTaskInput {
+                message: format!("invalid calendar day date: {message}"),
+            })?;
+        let today = local_date_from_ms(as_of_ms);
+
+        let tasks =
+            TaskRepository::query(connection, TaskQuery::default()).map_err(map_task_error)?;
+
+        let mut formal_tasks = Vec::new();
+        let mut overdue_tasks = Vec::new();
+        let mut completed_tasks = Vec::new();
+        let mut cancelled_tasks = Vec::new();
+
+        for task in tasks {
+            let dto = map_task_entity_to_dto(task);
+            if !task_belongs_to_calendar_date(&dto, target_date) {
+                continue;
+            }
+
+            if matches!(dto.status, crate::services::task::TaskStatusDto::Completed) {
+                completed_tasks.push(dto);
+                continue;
+            }
+
+            if matches!(dto.status, crate::services::task::TaskStatusDto::Cancelled) {
+                cancelled_tasks.push(dto);
+                continue;
+            }
+
+            let is_historical_overdue = dto
+                .deadline_at_ms
+                .is_some_and(|deadline_at_ms| is_local_calendar_day_before(deadline_at_ms, today));
+
+            if is_historical_overdue {
+                overdue_tasks.push(dto);
+            } else {
+                formal_tasks.push(dto);
+            }
+        }
+
+        formal_tasks.sort_by_key(|task| (task.planned_at_ms, task.id.clone()));
+        overdue_tasks
+            .sort_by_key(|task| (task.deadline_at_ms.unwrap_or(i64::MAX), task.id.clone()));
+        completed_tasks.sort_by_key(|task| {
+            (
+                std::cmp::Reverse(task.completed_at_ms.unwrap_or(0)),
+                task.id.clone(),
+            )
+        });
+        cancelled_tasks.sort_by_key(|task| (task.updated_at_ms, task.id.clone()));
+
+        Ok(CalendarDayTasksDto {
+            date: format_work_date(target_date),
+            formal_tasks,
+            overdue_tasks,
+            completed_tasks,
+            cancelled_tasks,
+        })
+    }
+}
+
+fn task_belongs_to_calendar_date(dto: &TaskDto, target_date: chrono::NaiveDate) -> bool {
+    is_same_local_calendar_day(dto.planned_at_ms, target_date)
+        || dto
+            .deadline_at_ms
+            .is_some_and(|deadline_at_ms| is_same_local_calendar_day(deadline_at_ms, target_date))
 }
 
 fn accumulate_task_date(
@@ -430,5 +521,231 @@ mod tests {
         .expect_err("invalid range");
 
         assert!(matches!(error, AppError::InvalidTaskInput { .. }));
+    }
+
+    fn query_day(connection: &Connection, date: &str, as_of_ms: i64) -> CalendarDayTasksDto {
+        CalendarService::query_day_tasks(
+            connection,
+            CalendarDayTasksQueryRequest {
+                date: date.to_string(),
+            },
+            as_of_ms,
+        )
+        .expect("calendar day tasks")
+    }
+
+    fn ids_from_day(tasks: &CalendarDayTasksDto) -> Vec<&str> {
+        tasks
+            .formal_tasks
+            .iter()
+            .chain(tasks.overdue_tasks.iter())
+            .chain(tasks.completed_tasks.iter())
+            .chain(tasks.cancelled_tasks.iter())
+            .map(|task| task.id.as_str())
+            .collect()
+    }
+
+    #[test]
+    fn day_drawer_includes_planned_date_task() {
+        let db = open_test_database();
+        insert_task(
+            &db.connection,
+            "planned-only",
+            local_ms(AUG_18, "09:00"),
+            None,
+        );
+
+        let result = query_day(&db.connection, AUG_18, local_ms(AUG_18, "16:00"));
+        assert_eq!(
+            result
+                .formal_tasks
+                .iter()
+                .map(|task| task.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["planned-only"]
+        );
+    }
+
+    #[test]
+    fn day_drawer_includes_deadline_date_task() {
+        let db = open_test_database();
+        insert_task(
+            &db.connection,
+            "deadline-only",
+            local_ms(AUG_19, "09:00"),
+            Some(local_ms(AUG_18, "18:00")),
+        );
+
+        let result = query_day(&db.connection, AUG_18, local_ms(AUG_18, "16:00"));
+        assert_eq!(
+            result
+                .formal_tasks
+                .iter()
+                .map(|task| task.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["deadline-only"]
+        );
+    }
+
+    #[test]
+    fn day_drawer_deduplicates_planned_and_deadline_same_day() {
+        let db = open_test_database();
+        insert_task(
+            &db.connection,
+            "same-day",
+            local_ms(AUG_18, "09:00"),
+            Some(local_ms(AUG_18, "18:00")),
+        );
+
+        let result = query_day(&db.connection, AUG_18, local_ms(AUG_18, "16:00"));
+        assert_eq!(ids_from_day(&result), vec!["same-day"]);
+    }
+
+    #[test]
+    fn day_drawer_cross_day_task_only_on_planned_and_deadline_days() {
+        let db = open_test_database();
+        insert_task(
+            &db.connection,
+            "cross-day",
+            local_ms(AUG_18, "09:00"),
+            Some(local_ms(AUG_20, "18:00")),
+        );
+
+        let as_of = local_ms(AUG_20, "10:00");
+        assert_eq!(
+            ids_from_day(&query_day(&db.connection, AUG_18, as_of)),
+            vec!["cross-day"]
+        );
+        assert!(ids_from_day(&query_day(&db.connection, AUG_19, as_of)).is_empty());
+        assert_eq!(
+            ids_from_day(&query_day(&db.connection, AUG_20, as_of)),
+            vec!["cross-day"]
+        );
+    }
+
+    #[test]
+    fn day_drawer_historical_overdue_does_not_pollute_today() {
+        let db = open_test_database();
+        insert_task(
+            &db.connection,
+            "historical-overdue",
+            local_ms(AUG_15, "09:00"),
+            Some(local_ms(AUG_15, "18:00")),
+        );
+
+        let as_of = local_ms(AUG_18, "16:00");
+        assert_eq!(
+            ids_from_day(&query_day(&db.connection, AUG_15, as_of)),
+            vec!["historical-overdue"]
+        );
+        assert!(ids_from_day(&query_day(&db.connection, AUG_18, as_of)).is_empty());
+    }
+
+    #[test]
+    fn day_drawer_today_deadline_passed_still_shows_task() {
+        let db = open_test_database();
+        insert_task(
+            &db.connection,
+            "today-ddl-passed",
+            local_ms(AUG_18, "09:00"),
+            Some(local_ms(AUG_18, "15:00")),
+        );
+
+        let result = query_day(&db.connection, AUG_18, local_ms(AUG_18, "16:00"));
+        assert_eq!(
+            result
+                .formal_tasks
+                .iter()
+                .map(|task| task.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["today-ddl-passed"]
+        );
+        assert!(result.overdue_tasks.is_empty());
+    }
+
+    #[test]
+    fn day_drawer_places_historical_overdue_in_overdue_section() {
+        let db = open_test_database();
+        insert_task(
+            &db.connection,
+            "overdue-on-day",
+            local_ms(AUG_15, "09:00"),
+            Some(local_ms(AUG_15, "18:00")),
+        );
+
+        let result = query_day(&db.connection, AUG_15, local_ms(AUG_18, "16:00"));
+        assert!(result.formal_tasks.is_empty());
+        assert_eq!(
+            result
+                .overdue_tasks
+                .iter()
+                .map(|task| task.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["overdue-on-day"]
+        );
+    }
+
+    #[test]
+    fn day_drawer_includes_completed_and_cancelled_on_their_calendar_day() {
+        let db = open_test_database();
+        insert_task(
+            &db.connection,
+            "completed-task",
+            local_ms(AUG_18, "09:00"),
+            Some(local_ms(AUG_18, "18:00")),
+        );
+        insert_task(
+            &db.connection,
+            "cancelled-task",
+            local_ms(AUG_18, "10:00"),
+            Some(local_ms(AUG_18, "19:00")),
+        );
+        TaskRepository::complete(&db.connection, "completed-task", local_ms(AUG_18, "12:00"))
+            .expect("complete");
+        TaskRepository::cancel(&db.connection, "cancelled-task", local_ms(AUG_18, "13:00"))
+            .expect("cancel");
+
+        let result = query_day(&db.connection, AUG_18, local_ms(AUG_18, "16:00"));
+        assert_eq!(
+            result
+                .completed_tasks
+                .iter()
+                .map(|task| task.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["completed-task"]
+        );
+        assert_eq!(
+            result
+                .cancelled_tasks
+                .iter()
+                .map(|task| task.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["cancelled-task"]
+        );
+    }
+
+    #[test]
+    fn day_drawer_active_count_matches_calendar_busy_count() {
+        let db = open_test_database();
+        insert_task(
+            &db.connection,
+            "completed-task",
+            local_ms(AUG_18, "09:00"),
+            Some(local_ms(AUG_18, "18:00")),
+        );
+        insert_task(
+            &db.connection,
+            "active-task",
+            local_ms(AUG_18, "11:00"),
+            None,
+        );
+        TaskRepository::complete(&db.connection, "completed-task", local_ms(AUG_18, "12:00"))
+            .expect("complete");
+
+        let as_of = local_ms(AUG_18, "16:00");
+        let counts = query_range(&db.connection, AUG_18, AUG_18);
+        let day = query_day(&db.connection, AUG_18, as_of);
+        let active_count = day.formal_tasks.len() + day.overdue_tasks.len();
+        assert_eq!(count_on(&counts, AUG_18), active_count as i32);
     }
 }

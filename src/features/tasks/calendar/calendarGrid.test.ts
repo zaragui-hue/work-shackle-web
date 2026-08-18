@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   areCalendarCellsContiguous,
   buildCalendarGrid,
+  formatCalendarDayDrawerTitle,
   formatCalendarMonthTitle,
   getCalendarGridDateRange,
   isMondayFirstGrid,
@@ -102,6 +103,12 @@ describe("buildCalendarGrid", () => {
 describe("formatCalendarMonthTitle", () => {
   it("formats the visible month title", () => {
     expect(formatCalendarMonthTitle(month(2026, 7))).toBe("2026 年 8 月");
+  });
+});
+
+describe("formatCalendarDayDrawerTitle", () => {
+  it("formats the drawer title with month, day and count", () => {
+    expect(formatCalendarDayDrawerTitle("2026-08-18", 5)).toBe("8 月 18 日 · 5 个任务");
   });
 });
 

@@ -9,6 +9,29 @@ vi.mock("./useCalendarTaskCounts", () => ({
   useCalendarTaskCounts: (...args: unknown[]) => mockUseCalendarTaskCounts(...args),
 }));
 
+const mockCalendarDayDrawer = vi.fn();
+
+vi.mock("./CalendarDayDrawer", () => ({
+  CalendarDayDrawer: (props: {
+    dateKey: string | null;
+    open: boolean;
+    onClose: () => void;
+    onSelectTask: (taskId: string) => void;
+  }) => {
+    mockCalendarDayDrawer(props);
+    if (!props.open) {
+      return null;
+    }
+    return (
+      <div role="dialog" aria-label={`day-drawer-${props.dateKey ?? "none"}`}>
+        <button type="button" onClick={props.onClose}>
+          关闭日期抽屉
+        </button>
+      </div>
+    );
+  },
+}));
+
 const FIXED_TODAY = new Date(2026, 7, 18);
 const AUGUST_2026 = new Date(2026, 7, 1);
 
@@ -131,5 +154,27 @@ describe("TaskCalendar", () => {
     expect(screen.getByRole("alert").textContent).toContain("加载日历任务数量失败");
     expect(screen.getByRole("grid", { name: "2026 年 8 月" })).toBeTruthy();
     expect(screen.queryByText("0 个任务")).toBeNull();
+  });
+
+  it("opens the day drawer when a date cell is clicked", () => {
+    render(<TaskCalendar today={FIXED_TODAY} initialMonth={AUGUST_2026} />);
+
+    fireEvent.click(screen.getByRole("gridcell", { name: /2026年8月18日/ }));
+
+    expect(screen.getByRole("dialog", { name: "day-drawer-2026-08-18" })).toBeTruthy();
+    expect(mockCalendarDayDrawer).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        dateKey: "2026-08-18",
+        open: true,
+      }),
+    );
+  });
+
+  it("can open the day drawer for outside-month padding dates", () => {
+    render(<TaskCalendar today={FIXED_TODAY} initialMonth={AUGUST_2026} />);
+
+    fireEvent.click(screen.getByRole("gridcell", { name: "2026年7月27日" }));
+
+    expect(screen.getByRole("dialog", { name: "day-drawer-2026-07-27" })).toBeTruthy();
   });
 });

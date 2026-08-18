@@ -628,6 +628,10 @@ fn task_to_dto(task: Task) -> TaskDto {
     }
 }
 
+pub(crate) fn map_task_entity_to_dto(task: Task) -> TaskDto {
+    task_to_dto(task)
+}
+
 fn task_status_to_dto(status: TaskStatus) -> TaskStatusDto {
     match status {
         TaskStatus::NotStarted => TaskStatusDto::NotStarted,

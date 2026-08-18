@@ -15,6 +15,7 @@ import {
   WEEKDAY_LABELS,
 } from "./calendarGrid";
 import { useCalendarTaskCounts } from "./useCalendarTaskCounts";
+import { CalendarDayDrawer } from "./CalendarDayDrawer";
 import "./TaskCalendar.css";
 
 type TaskCalendarProps = {
@@ -22,15 +23,18 @@ type TaskCalendarProps = {
   today?: Date;
   /** Injected for tests; defaults to the month containing `today`. */
   initialMonth?: Date;
+  onSelectTask?: (taskId: string) => void;
 };
 
 export function TaskCalendar({
   today = new Date(),
   initialMonth,
+  onSelectTask,
 }: TaskCalendarProps) {
   const [visibleMonth, setVisibleMonth] = useState(() =>
     startOfMonth(initialMonth ?? today),
   );
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
 
   const monthTitle = formatCalendarMonthTitle(visibleMonth);
   const cells = useMemo(
@@ -122,6 +126,7 @@ export function TaskCalendar({
               role="gridcell"
               aria-label={dayLabel}
               aria-current={cell.isToday ? "date" : undefined}
+              onClick={() => setSelectedDateKey(cell.dateKey)}
             >
               <span className="task-calendar__day-number">{cell.dayNumber}</span>
               {cell.isCurrentMonth && showBusyDetails ? (
@@ -144,6 +149,13 @@ export function TaskCalendar({
           );
         })}
       </div>
+
+      <CalendarDayDrawer
+        dateKey={selectedDateKey}
+        open={selectedDateKey != null}
+        onClose={() => setSelectedDateKey(null)}
+        onSelectTask={(taskId) => onSelectTask?.(taskId)}
+      />
     </section>
   );
 }

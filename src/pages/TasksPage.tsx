@@ -87,7 +87,14 @@ export function TasksPage({
           <Button onClick={() => setCreateOpen(true)}>新建任务</Button>
         </div>
 
-        {viewMode === "calendar" ? <TaskCalendar /> : null}
+        {viewMode === "calendar" ? (
+          <TaskCalendar
+            onSelectTask={(taskId) => {
+              setSelectedTaskId(taskId);
+              setDrawerOpen(true);
+            }}
+          />
+        ) : null}
 
         {viewMode === "list" && loading ? (
           <p className="tasks-page__status">加载任务中…</p>

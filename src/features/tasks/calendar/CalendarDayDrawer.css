@@ -1,0 +1,21 @@
+.calendar-day-drawer__status {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-caption);
+}
+
+.calendar-day-drawer__status--error {
+  color: var(--color-danger, #9a3b12);
+}
+
+.calendar-day-drawer__sections {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.calendar-day-drawer__section-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ink-muted);
+}

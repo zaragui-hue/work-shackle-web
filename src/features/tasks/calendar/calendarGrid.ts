@@ -6,6 +6,7 @@ import {
   format,
   isSameDay,
   isSameMonth,
+  parseISO,
   startOfMonth,
   startOfWeek,
 } from "date-fns";
@@ -52,6 +53,11 @@ export function formatCalendarMonthTitle(visibleMonth: Date): string {
 
 export function formatCalendarDayLabel(date: Date): string {
   return format(date, "yyyy年M月d日");
+}
+
+export function formatCalendarDayDrawerTitle(dateKey: string, taskCount: number): string {
+  const date = parseISO(dateKey);
+  return `${format(date, "M 月 d 日")} · ${taskCount} 个任务`;
 }
 
 export function isMondayFirstGrid(cells: CalendarDayCell[]): boolean {

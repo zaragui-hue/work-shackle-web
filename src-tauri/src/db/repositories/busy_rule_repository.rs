@@ -117,6 +117,19 @@ impl From<rusqlite::Error> for BusyRuleRepositoryError {
 pub struct BusyRuleRepository;
 
 impl BusyRuleRepository {
+    pub fn default_write_inputs() -> Vec<BusyLevelWriteInput> {
+        DEFAULT_BUSY_LEVELS
+            .iter()
+            .map(|level| BusyLevelWriteInput {
+                min_tasks: level.min_tasks,
+                max_tasks: level.max_tasks,
+                emoji: level.emoji.to_string(),
+                name: level.name.to_string(),
+                messages: vec![level.message.to_string()],
+            })
+            .collect()
+    }
+
     pub fn ensure_defaults(connection: &Connection) -> Result<(), BusyRuleRepositoryError> {
         let count: i64 =
             connection.query_row("SELECT COUNT(*) FROM busy_level_configs", [], |row| {

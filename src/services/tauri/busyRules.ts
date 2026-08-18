@@ -80,6 +80,12 @@ export async function saveBusyRules(input: SaveBusyRulesInput): Promise<BusyLeve
   return saved;
 }
 
+export async function resetBusyRulesToDefault(): Promise<BusyLevelRule[]> {
+  const restored = await invoke<BusyLevelRule[]>("reset_busy_rules_to_default");
+  notifyBusyRulesUpdated();
+  return restored;
+}
+
 export function formatBusyRangeLabel(
   minTasks: number,
   maxTasks: number | null,

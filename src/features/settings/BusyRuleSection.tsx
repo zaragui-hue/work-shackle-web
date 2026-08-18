@@ -14,6 +14,7 @@ import {
   formatBusyRangeLabel,
   getBusyRules,
   mapBusyRulesError,
+  resetBusyRulesToDefault,
   saveBusyRules,
   type BusyRulesAppError,
 } from "../../services/tauri/busyRules";
@@ -24,7 +25,9 @@ export function BusyRuleSection() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const form = useForm<BusyRuleFormValues>({
     resolver: zodResolver(busyRuleFormSchema),
@@ -92,6 +95,22 @@ export function BusyRuleSection() {
       return;
     }
     removeLevel(index);
+  };
+
+  const onReset = async () => {
+    setResetError(null);
+    setSaveError(null);
+    setSaveSuccess(false);
+    setIsResetting(true);
+    try {
+      const restored = await resetBusyRulesToDefault();
+      reset(fromBusyLevelRules(restored));
+      setSaveSuccess(true);
+    } catch (error) {
+      setResetError(mapBusyRulesError(error as BusyRulesAppError));
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   const onSave = handleSubmit(async (values) => {
@@ -272,8 +291,21 @@ export function BusyRuleSection() {
             <Button type="button" variant="secondary" onClick={onAddLevel}>
               添加档位
             </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isResetting || isSubmitting}
+              onClick={() => void onReset()}
+            >
+              {isResetting ? "恢复中…" : "恢复默认"}
+            </Button>
           </div>
 
+          {resetError ? (
+            <p className="settings-section__error" role="alert">
+              {resetError}
+            </p>
+          ) : null}
           {saveError ? (
             <p className="settings-section__error" role="alert">
               {saveError}

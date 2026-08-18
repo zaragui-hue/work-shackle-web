@@ -5,6 +5,7 @@ import { BusyRuleSection } from "./BusyRuleSection";
 
 const mockGetBusyRules = vi.fn();
 const mockSaveBusyRules = vi.fn();
+const mockResetBusyRulesToDefault = vi.fn();
 
 vi.mock("../../services/tauri/busyRules", async () => {
   const actual = await vi.importActual<typeof import("../../services/tauri/busyRules")>(
@@ -17,6 +18,11 @@ vi.mock("../../services/tauri/busyRules", async () => {
       const saved = await mockSaveBusyRules(...args);
       actual.notifyBusyRulesUpdated();
       return saved;
+    },
+    resetBusyRulesToDefault: async () => {
+      const restored = await mockResetBusyRulesToDefault();
+      actual.notifyBusyRulesUpdated();
+      return restored;
     },
   };
 });
@@ -80,6 +86,7 @@ beforeEach(() => {
       }),
     );
   });
+  mockResetBusyRulesToDefault.mockResolvedValue(DEFAULT_RULES);
 });
 
 describe("BusyRuleSection", () => {
@@ -233,6 +240,36 @@ describe("BusyRuleSection", () => {
     });
 
     unsubscribe();
+  });
+
+  it("restores defaults from reset button", async () => {
+    render(<BusyRuleSection />);
+    await screen.findByDisplayValue("空闲");
+
+    fireEvent.click(screen.getByRole("button", { name: "恢复默认" }));
+
+    await waitFor(() => {
+      expect(mockResetBusyRulesToDefault).toHaveBeenCalledTimes(1);
+      expect(screen.getByText("已保存")).toBeTruthy();
+    });
+  });
+
+  it("shows rust validation errors without losing draft", async () => {
+    mockSaveBusyRules.mockRejectedValueOnce({
+      code: "INVALID_TASK_INPUT",
+      details: { message: "忙碌档位之间存在空档" },
+    });
+
+    render(<BusyRuleSection />);
+    await screen.findByDisplayValue("空闲");
+
+    fireEvent.change(screen.getByDisplayValue("空闲"), { target: { value: "草稿" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("忙碌档位之间存在空档")).toBeTruthy();
+    });
+    expect(screen.getByDisplayValue("草稿")).toBeTruthy();
   });
 });
 

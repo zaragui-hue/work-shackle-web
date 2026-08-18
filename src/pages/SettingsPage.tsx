@@ -9,6 +9,7 @@ import {
 } from "../features/settings/workTimeForm";
 import { StatusCopySection } from "../features/settings/StatusCopySection";
 import { BusyRuleSection } from "../features/settings/BusyRuleSection";
+import { WorkspaceSection } from "../features/settings/WorkspaceSection";
 import {
   clearTodayWorkOverride,
   formatWorkTimeRange,
@@ -154,6 +155,7 @@ export function SettingsPage() {
   return (
     <>
       <Card title="设置" headerAccent>
+        {!loading && !loadError ? <WorkspaceSection /> : null}
         <section className="settings-section">
           <h3 className="settings-section__title">工作时间</h3>
 

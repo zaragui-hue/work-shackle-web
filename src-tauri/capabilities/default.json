@@ -5,6 +5,7 @@
   "windows": ["main", "ddl-reminder"],
   "permissions": [
     "core:default",
-    "notification:default"
+    "notification:default",
+    "dialog:default"
   ]
 }

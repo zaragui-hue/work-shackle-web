@@ -1,14 +1,12 @@
-use std::collections::BTreeMap;
-use std::fs::{self, OpenOptions};
+use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use std::time::Duration;
 
 use chrono::Local;
-use rusqlite::{backup::Backup, Connection};
+use rusqlite::Connection;
 
-use crate::db::connection::{open_connection, DbError, DATABASE_FILE_NAME};
+use crate::db::connection::{database_path, open_connection, DbError};
 use crate::db::migrations::run_migrations;
 use crate::errors::AppError;
 
@@ -46,9 +44,9 @@ impl std::fmt::Display for WorkspaceSwitchError {
                 "workspace target overlaps the active workspace: {}",
                 path.display()
             ),
-            Self::Io(error) => write!(formatter, "workspace copy failed: {error}"),
+            Self::Io(error) => write!(formatter, "workspace switch failed: {error}"),
             Self::Database(error) => write!(formatter, "workspace database failed: {error}"),
-            Self::Sqlite(error) => write!(formatter, "workspace sqlite copy failed: {error}"),
+            Self::Sqlite(error) => write!(formatter, "workspace sqlite failed: {error}"),
             Self::Validation(error) => write!(formatter, "workspace validation failed: {error}"),
             Self::Verification(message) => {
                 write!(formatter, "workspace verification failed: {message}")
@@ -203,7 +201,7 @@ impl AppState {
             app_config_dir,
             candidate,
             validator,
-            prepare_workspace_switch,
+            prepare_workspace_target,
             save_app_config,
         )
     }
@@ -218,8 +216,7 @@ impl AppState {
     ) -> Result<WorkspaceStatus, AppError>
     where
         P: FnOnce(
-            &Path,
-            &Connection,
+            Option<&Path>,
             &Path,
             &WorkspaceValidator,
         ) -> Result<PreparedWorkspace, WorkspaceSwitchError>,
@@ -231,59 +228,39 @@ impl AppState {
         let mut config = load_app_config(app_config_dir)
             .map_err(|message| AppError::ConfigReadFailed { message })?;
 
-        let Some(current) = active_guard.as_ref() else {
-            validator
-                .validate(candidate)
-                .map_err(|reason| AppError::from_workspace_validation(candidate, reason))?;
-            config.workspace_path = Some(candidate.to_string_lossy().into_owned());
-            write_config(app_config_dir, &config)
-                .map_err(|message| AppError::ConfigWriteFailed { message })?;
+        let current_path = active_guard.as_ref().map(|active| active.path.clone());
+        if current_path
+            .as_ref()
+            .is_some_and(|path| paths_equivalent(path, candidate))
+        {
             return Ok(configured_workspace_status(candidate));
-        };
-
-        if paths_equivalent(&current.path, candidate) {
-            return Ok(configured_workspace_status(&current.path));
         }
 
-        let prepared = prepare(&current.path, &current.connection, candidate, validator)
+        let prepared = prepare(current_path.as_deref(), candidate, validator)
             .map_err(|error| map_workspace_switch_error(error, candidate))?;
         config.workspace_path = Some(candidate.to_string_lossy().into_owned());
 
-        let PreparedWorkspace {
-            path,
-            connection,
-            target_existed,
-        } = prepared;
+        let PreparedWorkspace { path, connection } = prepared;
         let cutoff_ms = Local::now().timestamp_millis();
         ReminderEngineService::reconcile_at_startup(&connection, cutoff_ms)?;
-        let old_active = active_guard
-            .replace(ActiveWorkspace {
-                path,
-                connection,
-                startup_warning: None,
-                reminder_cutoff_ms: cutoff_ms,
-            })
-            .expect("active workspace was checked before replacement");
+
+        let previous = active_guard.replace(ActiveWorkspace {
+            path,
+            connection,
+            startup_warning: None,
+            reminder_cutoff_ms: cutoff_ms,
+        });
 
         if let Err(message) = write_config(app_config_dir, &config) {
-            let failed_new = active_guard
-                .replace(old_active)
-                .expect("new workspace was installed before config commit");
-            let failed_path = failed_new.path.clone();
-            drop(failed_new.connection);
-            let message = match cleanup_prepared_target(&failed_path, target_existed) {
-                Ok(()) => message,
-                Err(cleanup_error) => {
-                    format!(
-                        "{message}; cleanup failed for {}: {cleanup_error}",
-                        failed_path.display()
-                    )
-                }
-            };
+            let _failed_new = active_guard.take();
+            *active_guard = previous;
             return Err(AppError::ConfigWriteFailed { message });
         }
 
-        drop(old_active);
+        if let Some(old_active) = previous {
+            drop(old_active);
+        }
+
         Ok(configured_workspace_status(candidate))
     }
 }
@@ -323,6 +300,17 @@ fn map_workspace_switch_error(error: WorkspaceSwitchError, candidate: &Path) -> 
         WorkspaceSwitchError::Validation(reason) => {
             AppError::from_workspace_validation(candidate, reason)
         }
+        WorkspaceSwitchError::Database(DbError::Sqlite(_)) => AppError::DatabaseOpenFailed {
+            message: error.to_string(),
+        },
+        WorkspaceSwitchError::Database(error) => AppError::DatabaseOpenFailed {
+            message: error.to_string(),
+        },
+        WorkspaceSwitchError::Verification(message)
+            if message.contains("migration") || message.contains("schema") =>
+        {
+            AppError::DatabaseMigrationFailed { message }
+        }
         other => AppError::WorkspaceSwitchFailed {
             message: other.to_string(),
         },
@@ -332,89 +320,131 @@ fn map_workspace_switch_error(error: WorkspaceSwitchError, candidate: &Path) -> 
 pub struct PreparedWorkspace {
     pub path: PathBuf,
     pub connection: Connection,
-    target_existed: bool,
 }
 
-pub fn prepare_workspace_switch(
-    old_workspace: &Path,
-    old_connection: &Connection,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TargetWorkspaceKind {
+    Missing,
+    Empty,
+    ExistingWorkShackle,
+    InvalidNonEmpty,
+}
+
+pub fn prepare_workspace_target(
+    current_workspace: Option<&Path>,
     target_workspace: &Path,
     validator: &WorkspaceValidator,
 ) -> Result<PreparedWorkspace, WorkspaceSwitchError> {
-    let resolved_old = resolve_path_without_creating(old_workspace)?;
-    let resolved_target = resolve_path_without_creating(target_workspace)?;
-    if resolved_target.starts_with(&resolved_old) || resolved_old.starts_with(&resolved_target) {
-        return Err(WorkspaceSwitchError::InvalidTargetRelation {
-            path: target_workspace.to_path_buf(),
-        });
+    if let Some(current) = current_workspace {
+        let resolved_current = resolve_path_without_creating(current)?;
+        let resolved_target = resolve_path_without_creating(target_workspace)?;
+        if resolved_target.starts_with(&resolved_current)
+            || resolved_current.starts_with(&resolved_target)
+        {
+            return Err(WorkspaceSwitchError::InvalidTargetRelation {
+                path: target_workspace.to_path_buf(),
+            });
+        }
     }
 
     validator.validate_location(target_workspace)?;
     let target_parent = target_workspace.parent().ok_or_else(|| {
         WorkspaceSwitchError::Verification("workspace target has no parent directory".to_string())
     })?;
-    fs::create_dir_all(target_parent)?;
+    if !target_parent.exists() {
+        fs::create_dir_all(target_parent)?;
+    }
     validator.validate_existing(target_parent)?;
 
-    let target_existed = target_workspace.exists();
-    if target_existed {
-        validator.validate_existing(target_workspace)?;
-        if directory_has_entries(target_workspace)? {
+    let connection = match classify_target_workspace(target_workspace)? {
+        TargetWorkspaceKind::Missing => {
+            validator.validate(target_workspace)?;
+            open_fresh_workspace(target_workspace)?
+        }
+        TargetWorkspaceKind::Empty => {
+            validator.validate_existing(target_workspace)?;
+            open_fresh_workspace(target_workspace)?
+        }
+        TargetWorkspaceKind::ExistingWorkShackle => {
+            validator.validate_existing(target_workspace)?;
+            open_existing_workspace(target_workspace)?
+        }
+        TargetWorkspaceKind::InvalidNonEmpty => {
             return Err(WorkspaceSwitchError::TargetNotEmpty {
                 path: target_workspace.to_path_buf(),
             });
-        }
-    }
-
-    let staging = tempfile::Builder::new()
-        .prefix(".work-shackle-switch-")
-        .tempdir_in(target_parent)?;
-    validator.validate_existing(staging.path())?;
-    let staging_connection =
-        prepare_workspace_contents(old_workspace, old_connection, staging.path())?;
-    drop(staging_connection);
-
-    if target_workspace.exists() {
-        if directory_has_entries(target_workspace)? {
-            return Err(WorkspaceSwitchError::TargetNotEmpty {
-                path: target_workspace.to_path_buf(),
-            });
-        }
-        fs::remove_dir(target_workspace)?;
-    }
-    if let Err(error) = fs::rename(staging.path(), target_workspace) {
-        if target_existed && !target_workspace.exists() {
-            let _ = fs::create_dir(target_workspace);
-        }
-        return Err(WorkspaceSwitchError::Io(error));
-    }
-
-    let connection = match open_connection(target_workspace) {
-        Ok(connection) => connection,
-        Err(error) => {
-            cleanup_prepared_target(target_workspace, target_existed)?;
-            return Err(error.into());
         }
     };
-    if let Err(error) = verify_database_consistency(old_connection, &connection) {
-        drop(connection);
-        cleanup_prepared_target(target_workspace, target_existed)?;
-        return Err(error);
-    }
+
     Ok(PreparedWorkspace {
         path: target_workspace.to_path_buf(),
         connection,
-        target_existed,
     })
 }
 
-fn cleanup_prepared_target(path: &Path, restore_empty_directory: bool) -> Result<(), io::Error> {
-    if path.exists() {
-        fs::remove_dir_all(path)?;
+fn classify_target_workspace(path: &Path) -> Result<TargetWorkspaceKind, io::Error> {
+    if !path.exists() {
+        return Ok(TargetWorkspaceKind::Missing);
     }
-    if restore_empty_directory {
-        fs::create_dir(path)?;
+    if !path.is_dir() {
+        return Ok(TargetWorkspaceKind::InvalidNonEmpty);
     }
+    if database_path(path).is_file() {
+        return Ok(TargetWorkspaceKind::ExistingWorkShackle);
+    }
+    if directory_has_entries(path)? {
+        return Ok(TargetWorkspaceKind::InvalidNonEmpty);
+    }
+    Ok(TargetWorkspaceKind::Empty)
+}
+
+fn open_fresh_workspace(workspace: &Path) -> Result<Connection, WorkspaceSwitchError> {
+    initialize_workspace_directories(workspace, Local::now().date_naive())
+        .map_err(|message| WorkspaceSwitchError::Verification(message))?;
+    let mut connection = open_connection(workspace)?;
+    run_migrations(&mut connection).map_err(|error| {
+        WorkspaceSwitchError::Verification(format!("migration failed: {error}"))
+    })?;
+    verify_target_database_health(&connection)?;
+    Ok(connection)
+}
+
+fn open_existing_workspace(workspace: &Path) -> Result<Connection, WorkspaceSwitchError> {
+    let mut connection = open_connection(workspace)?;
+    run_migrations(&mut connection).map_err(|error| {
+        WorkspaceSwitchError::Verification(format!("migration failed: {error}"))
+    })?;
+    verify_target_database_health(&connection)?;
+    Ok(connection)
+}
+
+fn verify_target_database_health(connection: &Connection) -> Result<(), WorkspaceSwitchError> {
+    connection.query_row("SELECT COUNT(*) FROM schema_migrations", [], |row| {
+        row.get::<_, i64>(0)
+    })?;
+
+    let foreign_keys: i64 =
+        connection.pragma_query_value(None, "foreign_keys", |row| row.get(0))?;
+    if foreign_keys != 1 {
+        return Err(WorkspaceSwitchError::Verification(
+            "foreign keys are disabled".to_string(),
+        ));
+    }
+
+    let integrity: String = connection.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
+    if integrity.to_ascii_lowercase() != "ok" {
+        return Err(WorkspaceSwitchError::Verification(format!(
+            "integrity_check returned {integrity}"
+        )));
+    }
+
+    let mut foreign_key_check = connection.prepare("PRAGMA foreign_key_check")?;
+    if foreign_key_check.query([])?.next()?.is_some() {
+        return Err(WorkspaceSwitchError::Verification(
+            "foreign_key_check reported violations".to_string(),
+        ));
+    }
+
     Ok(())
 }
 
@@ -453,165 +483,11 @@ fn resolve_path_without_creating(path: &Path) -> Result<PathBuf, io::Error> {
     Ok(resolved)
 }
 
-fn prepare_workspace_contents(
-    old_workspace: &Path,
-    old_connection: &Connection,
-    target_workspace: &Path,
-) -> Result<Connection, WorkspaceSwitchError> {
-    copy_workspace_files(old_workspace, target_workspace)?;
-    initialize_workspace_directories(target_workspace, Local::now().date_naive())
-        .map_err(|message| WorkspaceSwitchError::Verification(message))?;
-
-    let mut target_connection = open_connection(target_workspace)?;
-    {
-        let backup = Backup::new(old_connection, &mut target_connection)?;
-        backup.run_to_completion(5, Duration::from_millis(10), None)?;
-    }
-    run_migrations(&mut target_connection)?;
-    verify_database_consistency(old_connection, &target_connection)?;
-
-    Ok(target_connection)
-}
-
-fn verify_database_consistency(
-    old_connection: &Connection,
-    new_connection: &Connection,
-) -> Result<(), WorkspaceSwitchError> {
-    let integrity: String =
-        new_connection.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
-    if integrity.to_ascii_lowercase() != "ok" {
-        return Err(WorkspaceSwitchError::Verification(format!(
-            "integrity_check returned {integrity}"
-        )));
-    }
-
-    let mut foreign_key_check = new_connection.prepare("PRAGMA foreign_key_check")?;
-    if foreign_key_check.query([])?.next()?.is_some() {
-        return Err(WorkspaceSwitchError::Verification(
-            "foreign_key_check reported violations".to_string(),
-        ));
-    }
-
-    let old_migrations = migration_versions(old_connection)?;
-    let new_migrations = migration_versions(new_connection)?;
-    if old_migrations != new_migrations {
-        return Err(WorkspaceSwitchError::Verification(
-            "schema_migrations differ between workspaces".to_string(),
-        ));
-    }
-
-    let old_counts = table_counts(old_connection)?;
-    let new_counts = table_counts(new_connection)?;
-    if old_counts != new_counts {
-        return Err(WorkspaceSwitchError::Verification(
-            "table sets or row counts differ between workspaces".to_string(),
-        ));
-    }
-
-    Ok(())
-}
-
-fn migration_versions(connection: &Connection) -> Result<Vec<i64>, rusqlite::Error> {
-    let mut statement =
-        connection.prepare("SELECT version FROM schema_migrations ORDER BY version")?;
-    let versions = statement
-        .query_map([], |row| row.get(0))?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
-    Ok(versions)
-}
-
-fn table_counts(connection: &Connection) -> Result<BTreeMap<String, i64>, WorkspaceSwitchError> {
-    let table_names = {
-        let mut statement = connection.prepare(
-            "SELECT name FROM sqlite_master
-             WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
-             ORDER BY name",
-        )?;
-        let names = statement
-            .query_map([], |row| row.get::<_, String>(0))?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        names
-    };
-
-    let mut counts = BTreeMap::new();
-    for table_name in table_names {
-        let quoted_name = table_name.replace('"', "\"\"");
-        let count = connection.query_row(
-            &format!("SELECT COUNT(*) FROM \"{quoted_name}\""),
-            [],
-            |row| row.get(0),
-        )?;
-        counts.insert(table_name, count);
-    }
-    Ok(counts)
-}
-
 fn directory_has_entries(path: &Path) -> Result<bool, io::Error> {
     if !path.is_dir() {
         return Ok(true);
     }
     Ok(fs::read_dir(path)?.next().transpose()?.is_some())
-}
-
-fn copy_workspace_files(source: &Path, target: &Path) -> Result<(), io::Error> {
-    for entry in fs::read_dir(source)? {
-        let entry = entry?;
-        copy_workspace_entry(&entry.path(), &target.join(entry.file_name()), false)?;
-    }
-    Ok(())
-}
-
-fn copy_workspace_entry(source: &Path, target: &Path, inside_data: bool) -> Result<(), io::Error> {
-    let metadata = fs::symlink_metadata(source)?;
-    if metadata.file_type().is_symlink() {
-        return Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            format!("workspace symlinks are not supported: {}", source.display()),
-        ));
-    }
-
-    if metadata.is_dir() {
-        fs::create_dir(target)?;
-        let next_inside_data =
-            inside_data || source.file_name().is_some_and(|name| name == ".data");
-        for entry in fs::read_dir(source)? {
-            let entry = entry?;
-            copy_workspace_entry(
-                &entry.path(),
-                &target.join(entry.file_name()),
-                next_inside_data,
-            )?;
-        }
-        return Ok(());
-    }
-
-    if !metadata.is_file() {
-        return Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            format!("unsupported workspace entry: {}", source.display()),
-        ));
-    }
-    if inside_data && is_database_or_sidecar(source) {
-        return Ok(());
-    }
-
-    let mut input = fs::File::open(source)?;
-    let mut output = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(target)?;
-    io::copy(&mut input, &mut output)?;
-    Ok(())
-}
-
-fn is_database_or_sidecar(path: &Path) -> bool {
-    let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
-        return false;
-    };
-    name == DATABASE_FILE_NAME
-        || name == format!("{DATABASE_FILE_NAME}-journal")
-        || name == format!("{DATABASE_FILE_NAME}-wal")
-        || name == format!("{DATABASE_FILE_NAME}-shm")
 }
 
 #[cfg(test)]
@@ -647,7 +523,7 @@ mod tests {
     }
 
     #[test]
-    fn prepares_new_workspace_with_database_and_business_files() {
+    fn prepares_empty_target_without_copying_old_workspace_data() {
         let temp = tempfile::tempdir().expect("tempdir");
         let old_workspace = temp.path().join("old");
         let new_workspace = temp.path().join("new");
@@ -657,34 +533,81 @@ mod tests {
                 "INSERT INTO tasks (
                     id, title, note, planned_at_ms, priority, status,
                     created_at_ms, updated_at_ms
-                 ) VALUES ('task-1', 'Preserved', 'note', 1000, 2, 'not_started', 1000, 1000)",
+                 ) VALUES ('task-1', 'Only In A', 'note', 1000, 2, 'not_started', 1000, 1000)",
                 [],
             )
             .expect("insert old task");
-        let business_file = old_workspace.join("2026/08/report.txt");
-        fs::create_dir_all(business_file.parent().expect("business parent"))
-            .expect("create business directory");
-        fs::write(&business_file, "preserved file").expect("write business file");
 
-        let prepared = prepare_workspace_switch(
-            &old_workspace,
-            &old_connection,
+        let prepared = prepare_workspace_target(
+            Some(&old_workspace),
             &new_workspace,
             &WorkspaceValidator::real(),
         )
         .expect("prepare workspace");
 
-        let task_title: String = prepared
+        let task_count: i64 = prepared
             .connection
+            .query_row("SELECT COUNT(*) FROM tasks", [], |row| row.get(0))
+            .expect("count tasks");
+        assert_eq!(task_count, 0);
+        assert!(new_workspace.join(".data/work-shackle.db").is_file());
+        let old_reopened = initialize_database(&old_workspace).expect("reopen old");
+        let title: String = old_reopened
             .query_row("SELECT title FROM tasks WHERE id = 'task-1'", [], |row| {
                 row.get(0)
             })
-            .expect("read copied task");
-        assert_eq!(task_title, "Preserved");
-        assert_eq!(
-            fs::read_to_string(new_workspace.join("2026/08/report.txt")).expect("read copied file"),
-            "preserved file"
-        );
+            .expect("old task remains");
+        assert_eq!(title, "Only In A");
+    }
+
+    #[test]
+    fn opens_existing_target_workspace_without_copying_old_data() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let old_workspace = temp.path().join("old");
+        let existing_workspace = temp.path().join("existing");
+        let old_connection = initialize_database(&old_workspace).expect("old database");
+        let existing_connection = initialize_database(&existing_workspace).expect("existing db");
+        old_connection
+            .execute(
+                "INSERT INTO tasks (
+                    id, title, planned_at_ms, priority, status, created_at_ms, updated_at_ms
+                 ) VALUES ('task-a', 'Task A', 1, 2, 'not_started', 1, 1)",
+                [],
+            )
+            .expect("insert old task");
+        existing_connection
+            .execute(
+                "INSERT INTO tasks (
+                    id, title, planned_at_ms, priority, status, created_at_ms, updated_at_ms
+                 ) VALUES ('task-b', 'Task B', 2, 2, 'not_started', 2, 2)",
+                [],
+            )
+            .expect("insert existing task");
+        drop(old_connection);
+        drop(existing_connection);
+
+        let prepared = prepare_workspace_target(
+            Some(&old_workspace),
+            &existing_workspace,
+            &WorkspaceValidator::real(),
+        )
+        .expect("prepare existing target");
+
+        let title: String = prepared
+            .connection
+            .query_row("SELECT title FROM tasks WHERE id = 'task-b'", [], |row| {
+                row.get(0)
+            })
+            .expect("read existing task");
+        assert_eq!(title, "Task B");
+        let missing: Option<String> = prepared
+            .connection
+            .query_row("SELECT id FROM tasks WHERE id = 'task-a'", [], |row| {
+                row.get(0)
+            })
+            .optional()
+            .expect("query");
+        assert!(missing.is_none());
     }
 
     #[test]
@@ -692,14 +615,13 @@ mod tests {
         let temp = tempfile::tempdir().expect("tempdir");
         let old_workspace = temp.path().join("old");
         let target_workspace = temp.path().join("target");
-        let old_connection = initialize_database(&old_workspace).expect("old database");
+        initialize_database(&old_workspace).expect("old database");
         fs::create_dir_all(&target_workspace).expect("create target");
         let existing_file = target_workspace.join("existing.txt");
         fs::write(&existing_file, "do not change").expect("write existing target file");
 
-        let result = prepare_workspace_switch(
-            &old_workspace,
-            &old_connection,
+        let result = prepare_workspace_target(
+            Some(&old_workspace),
             &target_workspace,
             &WorkspaceValidator::real(),
         );
@@ -719,12 +641,11 @@ mod tests {
         let temp = tempfile::tempdir().expect("tempdir");
         let old_workspace = temp.path().join("old");
         let target_workspace = temp.path().join("target");
-        let old_connection = initialize_database(&old_workspace).expect("old database");
+        initialize_database(&old_workspace).expect("old database");
         fs::create_dir_all(&target_workspace).expect("create empty target");
 
-        let prepared = prepare_workspace_switch(
-            &old_workspace,
-            &old_connection,
+        let prepared = prepare_workspace_target(
+            Some(&old_workspace),
             &target_workspace,
             &WorkspaceValidator::real(),
         )
@@ -739,11 +660,10 @@ mod tests {
         let temp = tempfile::tempdir().expect("tempdir");
         let old_workspace = temp.path().join("old");
         let nested_target = old_workspace.join("nested-target");
-        let old_connection = initialize_database(&old_workspace).expect("old database");
+        initialize_database(&old_workspace).expect("old database");
 
-        let result = prepare_workspace_switch(
-            &old_workspace,
-            &old_connection,
+        let result = prepare_workspace_target(
+            Some(&old_workspace),
             &nested_target,
             &WorkspaceValidator::real(),
         );
@@ -755,58 +675,31 @@ mod tests {
         assert!(!nested_target.exists());
     }
 
-    #[cfg(unix)]
     #[test]
-    fn copy_failure_leaves_existing_empty_target_untouched() {
-        use std::os::unix::fs::symlink;
-
+    fn migration_failure_on_target_keeps_existing_empty_directory() {
         let temp = tempfile::tempdir().expect("tempdir");
         let old_workspace = temp.path().join("old");
         let target_workspace = temp.path().join("target");
-        let old_connection = initialize_database(&old_workspace).expect("old database");
-        symlink(temp.path(), old_workspace.join("unsupported-link")).expect("create symlink");
-        fs::create_dir_all(&target_workspace).expect("create empty target");
+        initialize_database(&old_workspace).expect("old database");
+        fs::create_dir_all(target_workspace.join(".data")).expect("create data dir");
+        fs::write(
+            target_workspace.join(".data/work-shackle.db"),
+            "not a sqlite database",
+        )
+        .expect("write malformed db");
 
-        let result = prepare_workspace_switch(
-            &old_workspace,
-            &old_connection,
+        let result = prepare_workspace_target(
+            Some(&old_workspace),
             &target_workspace,
             &WorkspaceValidator::real(),
         );
 
         assert!(result.is_err());
         assert!(target_workspace.is_dir());
-        assert_eq!(
-            fs::read_dir(&target_workspace)
-                .expect("read empty target")
-                .count(),
-            0
-        );
     }
 
     #[test]
-    fn consistency_verification_rejects_different_table_counts() {
-        let temp = tempfile::tempdir().expect("tempdir");
-        let old_workspace = temp.path().join("old");
-        let new_workspace = temp.path().join("new");
-        let old_connection = initialize_database(&old_workspace).expect("old database");
-        let new_connection = initialize_database(&new_workspace).expect("new database");
-        old_connection
-            .execute(
-                "INSERT INTO contacts
-                 (id, name, is_active, created_at_ms, updated_at_ms)
-                 VALUES ('contact-1', 'Only Old', 1, 1, 1)",
-                [],
-            )
-            .expect("insert old contact");
-
-        let result = verify_database_consistency(&old_connection, &new_connection);
-
-        assert!(matches!(result, Err(WorkspaceSwitchError::Verification(_))));
-    }
-
-    #[test]
-    fn successful_switch_moves_live_reads_and_writes_and_keeps_old_workspace() {
+    fn successful_switch_uses_target_database_and_preserves_old_workspace() {
         let temp = tempfile::tempdir().expect("tempdir");
         let old_workspace = temp.path().join("old");
         let new_workspace = temp.path().join("new");
@@ -831,12 +724,12 @@ mod tests {
 
         state
             .with_db(|connection| {
-                let title: String = connection.query_row(
-                    "SELECT title FROM tasks WHERE id = 'old-task'",
-                    [],
-                    |row| row.get(0),
-                )?;
-                assert_eq!(title, "Old Task");
+                let old_task: Option<String> = connection
+                    .query_row("SELECT id FROM tasks WHERE id = 'old-task'", [], |row| {
+                        row.get(0)
+                    })
+                    .optional()?;
+                assert!(old_task.is_none());
                 connection.execute(
                     "INSERT INTO tasks (
                         id, title, planned_at_ms, priority, status, created_at_ms, updated_at_ms
@@ -845,7 +738,7 @@ mod tests {
                 )?;
                 Ok(())
             })
-            .expect("read and write live new database");
+            .expect("write into switched database");
 
         assert_eq!(
             load_app_config(&config_dir)
@@ -855,6 +748,12 @@ mod tests {
         );
         assert!(old_workspace.join(".data/work-shackle.db").is_file());
         let old_reopened = initialize_database(&old_workspace).expect("reopen old database");
+        let old_task_title: String = old_reopened
+            .query_row("SELECT title FROM tasks WHERE id = 'old-task'", [], |row| {
+                row.get(0)
+            })
+            .expect("old task preserved");
+        assert_eq!(old_task_title, "Old Task");
         let new_task_in_old: Option<String> = old_reopened
             .query_row("SELECT id FROM tasks WHERE id = 'new-task'", [], |row| {
                 row.get(0)
@@ -944,7 +843,7 @@ mod tests {
             &config_dir,
             &new_workspace,
             &WorkspaceValidator::real(),
-            |_old_path, _old_connection, _target, _validator| {
+            |_current, _target, _validator| {
                 Err(WorkspaceSwitchError::Verification(
                     "simulated NEW database validation failure".to_string(),
                 ))
@@ -988,6 +887,10 @@ mod tests {
         let new_workspace = temp.path().join("new");
         let config_dir = temp.path().join("config");
         let state = active_state(&old_workspace);
+        save_active_config(&config_dir, &old_workspace);
+        state
+            .switch_workspace(&config_dir, &new_workspace, &WorkspaceValidator::real())
+            .expect("switch workspace");
         state
             .with_db(|connection| {
                 connection.execute(
@@ -998,11 +901,7 @@ mod tests {
                 )?;
                 Ok(())
             })
-            .expect("insert task");
-        save_active_config(&config_dir, &old_workspace);
-        state
-            .switch_workspace(&config_dir, &new_workspace, &WorkspaceValidator::real())
-            .expect("switch workspace");
+            .expect("insert task after switch");
         drop(state);
 
         let restarted = AppState::new();
@@ -1045,7 +944,7 @@ mod tests {
             &config_dir,
             &new_workspace,
             &WorkspaceValidator::real(),
-            prepare_workspace_switch,
+            prepare_workspace_target,
             |_dir, _config| Err("simulated config failure".to_string()),
         );
 
@@ -1105,6 +1004,114 @@ mod tests {
             .recv_timeout(Duration::from_secs(1))
             .expect("writer completed after lock release");
         writer.join().expect("writer thread");
+    }
+
+    #[test]
+    fn switch_between_existing_workspaces_isolates_data() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let workspace_a = temp.path().join("a");
+        let workspace_b = temp.path().join("b");
+        let config_dir = temp.path().join("config");
+        let connection_a = initialize_database(&workspace_a).expect("db a");
+        let connection_b = initialize_database(&workspace_b).expect("db b");
+        connection_a
+            .execute(
+                "INSERT INTO tasks (
+                    id, title, planned_at_ms, priority, status, created_at_ms, updated_at_ms
+                 ) VALUES ('task-a', 'Task A', 1, 2, 'not_started', 1, 1)",
+                [],
+            )
+            .expect("insert a");
+        connection_b
+            .execute(
+                "INSERT INTO tasks (
+                    id, title, planned_at_ms, priority, status, created_at_ms, updated_at_ms
+                 ) VALUES ('task-b', 'Task B', 2, 2, 'not_started', 2, 2)",
+                [],
+            )
+            .expect("insert b");
+        drop(connection_a);
+        drop(connection_b);
+
+        let state = active_state(&workspace_a);
+        save_active_config(&config_dir, &workspace_a);
+        state
+            .switch_workspace(&config_dir, &workspace_b, &WorkspaceValidator::real())
+            .expect("switch to b");
+
+        state
+            .with_db(|connection| {
+                let title: String = connection
+                    .query_row("SELECT title FROM tasks WHERE id = 'task-b'", [], |row| {
+                        row.get(0)
+                    })
+                    .expect("read b");
+                assert_eq!(title, "Task B");
+                let missing: Option<String> = connection
+                    .query_row("SELECT id FROM tasks WHERE id = 'task-a'", [], |row| {
+                        row.get(0)
+                    })
+                    .optional()?;
+                assert!(missing.is_none());
+                Ok(())
+            })
+            .expect("active db is b");
+
+        state
+            .switch_workspace(&config_dir, &workspace_a, &WorkspaceValidator::real())
+            .expect("switch back to a");
+
+        state
+            .with_db(|connection| {
+                let title: String = connection
+                    .query_row("SELECT title FROM tasks WHERE id = 'task-a'", [], |row| {
+                        row.get(0)
+                    })
+                    .expect("read a");
+                assert_eq!(title, "Task A");
+                let missing: Option<String> = connection
+                    .query_row("SELECT id FROM tasks WHERE id = 'task-b'", [], |row| {
+                        row.get(0)
+                    })
+                    .optional()?;
+                assert!(missing.is_none());
+                Ok(())
+            })
+            .expect("active db is a again");
+    }
+
+    #[test]
+    fn missing_workspace_recovery_via_uninitialized_switch() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let missing = temp.path().join("missing");
+        let recovery = temp.path().join("recovery");
+        let config_dir = temp.path().join("config");
+        save_active_config(&config_dir, &missing);
+        assert!(!missing.exists());
+
+        let state = AppState::new();
+        state
+            .switch_workspace(&config_dir, &recovery, &WorkspaceValidator::real())
+            .expect("switch from missing to recovery");
+
+        assert_eq!(
+            load_app_config(&config_dir)
+                .expect("load config")
+                .workspace_path,
+            Some(recovery.to_string_lossy().into_owned())
+        );
+        assert!(!missing.exists());
+        state
+            .with_db(|connection| {
+                connection.execute(
+                    "INSERT INTO tasks (
+                        id, title, planned_at_ms, priority, status, created_at_ms, updated_at_ms
+                     ) VALUES ('recovery-task', 'Recovery Task', 1, 2, 'not_started', 1, 1)",
+                    [],
+                )?;
+                Ok(())
+            })
+            .expect("write after recovery");
     }
 
     #[test]

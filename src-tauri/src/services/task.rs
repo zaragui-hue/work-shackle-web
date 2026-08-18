@@ -7,6 +7,7 @@ use crate::db::repositories::postponement_repository::{
 };
 use crate::db::repositories::reminder_repository::{
     CreateReminderInput, ReminderRepository, ReminderRepositoryError, TaskReminder,
+    MAX_USER_REMINDERS,
 };
 use crate::db::repositories::task_repository::{
     CreateTaskInput, Task, TaskQuery, TaskRepository, TaskRepositoryError, TaskStatus,
@@ -15,8 +16,6 @@ use crate::db::repositories::task_repository::{
 use crate::errors::AppError;
 use crate::services::contact::ContactService;
 use crate::time::calendar_day;
-
-const MAX_USER_REMINDERS: i32 = 3;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -62,6 +61,8 @@ pub struct ReminderDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
     pub enabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fired_at_ms: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -353,6 +354,39 @@ impl TaskService {
         let task = TaskRepository::cancel(connection, id, now_ms()).map_err(map_task_error)?;
         Ok(task_to_dto(task))
     }
+
+    pub fn mark_custom_reminder_fired(
+        connection: &Connection,
+        reminder_id: &str,
+        fired_at_ms: i64,
+    ) -> Result<ReminderDto, AppError> {
+        let reminder =
+            ReminderRepository::get_by_id(connection, reminder_id).map_err(map_reminder_error)?;
+
+        if reminder.fired_at_ms.is_some() {
+            return Ok(reminder_to_dto(reminder));
+        }
+
+        let task =
+            TaskRepository::get_by_id(connection, &reminder.task_id).map_err(map_task_error)?;
+        if task.status == TaskStatus::Completed {
+            return Err(AppError::InvalidTaskInput {
+                message: "completed tasks cannot fire custom reminders".to_string(),
+            });
+        }
+
+        let updated = ReminderRepository::mark_fired(connection, reminder_id, fired_at_ms)
+            .map_err(map_reminder_error)?;
+        Ok(reminder_to_dto(updated))
+    }
+
+    pub fn list_triggerable_custom_reminders(
+        connection: &Connection,
+    ) -> Result<Vec<ReminderDto>, AppError> {
+        let reminders =
+            ReminderRepository::list_triggerable(connection).map_err(map_reminder_error)?;
+        Ok(reminders.into_iter().map(reminder_to_dto).collect())
+    }
 }
 
 fn classify_today_tasks(connection: &Connection, as_of_ms: i64) -> Result<TodayTasksDto, AppError> {
@@ -553,6 +587,7 @@ fn reminder_to_dto(reminder: TaskReminder) -> ReminderDto {
         remind_at_ms: reminder.remind_at_ms,
         message: reminder.message,
         enabled: reminder.enabled,
+        fired_at_ms: reminder.fired_at_ms,
     }
 }
 
@@ -621,6 +656,10 @@ fn task_status_from_dto(status: TaskStatusDto) -> TaskStatus {
 fn map_reminder_error(error: ReminderRepositoryError) -> AppError {
     match error {
         ReminderRepositoryError::InvalidInput { message } => AppError::InvalidTaskInput { message },
+        ReminderRepositoryError::NotFound { id } => AppError::InvalidTaskInput {
+            message: format!("reminder not found: {id}"),
+        },
+        ReminderRepositoryError::LimitReached { limit } => AppError::ReminderLimitReached { limit },
         ReminderRepositoryError::Db(db_error) => AppError::DatabaseError {
             message: db_error.to_string(),
         },
@@ -657,6 +696,25 @@ mod tests {
         }
     }
 
+    fn system_reminder_log_count(connection: &Connection) -> i64 {
+        connection
+            .query_row("SELECT COUNT(*) FROM system_reminder_log", [], |row| {
+                row.get(0)
+            })
+            .expect("system reminder log count")
+    }
+
+    fn system_reminder_kinds(connection: &Connection) -> Vec<String> {
+        let mut statement = connection
+            .prepare("SELECT kind FROM system_reminder_log ORDER BY kind ASC")
+            .expect("prepare kinds");
+        statement
+            .query_map([], |row| row.get(0))
+            .expect("query kinds")
+            .collect::<Result<Vec<String>, _>>()
+            .expect("collect kinds")
+    }
+
     #[test]
     fn get_detail_returns_task_and_reminders() {
         let db = open_test_database();
@@ -682,6 +740,7 @@ mod tests {
         assert_eq!(detail.task.title, "Detail task");
         assert_eq!(detail.reminders.len(), 1);
         assert_eq!(detail.reminders[0].message.as_deref(), Some("ping"));
+        assert!(detail.reminders[0].fired_at_ms.is_none());
         assert!(detail.postponements.is_empty());
     }
 
@@ -987,6 +1046,196 @@ mod tests {
         let json = serde_json::to_value(error).expect("serialize error");
         assert_eq!(json["code"], "REMINDER_LIMIT_REACHED");
         assert_eq!(json["details"]["limit"], 3);
+        assert_eq!(system_reminder_log_count(&db.connection), 0);
+        let task_count: i64 = db
+            .connection
+            .query_row("SELECT COUNT(*) FROM tasks", [], |row| row.get(0))
+            .expect("task count");
+        assert_eq!(task_count, 0);
+    }
+
+    #[test]
+    fn create_task_allows_three_custom_reminders() {
+        let db = open_test_database();
+        let task = TaskService::create(
+            &db.connection,
+            CreateTaskRequest {
+                title: "Three reminders".to_string(),
+                note: None,
+                planned_at_ms: 1_000,
+                deadline_at_ms: None,
+                priority: None,
+                contact_id: None,
+                contact_snapshot: None,
+                reminders: vec![
+                    CreateTaskReminderRequest {
+                        remind_at_ms: 1_100,
+                        message: None,
+                    },
+                    CreateTaskReminderRequest {
+                        remind_at_ms: 1_200,
+                        message: None,
+                    },
+                    CreateTaskReminderRequest {
+                        remind_at_ms: 1_300,
+                        message: None,
+                    },
+                ],
+            },
+        )
+        .expect("create with three reminders");
+
+        let count = ReminderRepository::count_for_task(&db.connection, &task.id).expect("count");
+        assert_eq!(count, 3);
+        assert_eq!(system_reminder_log_count(&db.connection), 0);
+        let kinds = system_reminder_kinds(&db.connection);
+        assert!(kinds.is_empty());
+    }
+
+    #[test]
+    fn mark_custom_reminder_fired_is_idempotent_and_does_not_write_system_log() {
+        let db = open_test_database();
+        let task = TaskService::create(
+            &db.connection,
+            CreateTaskRequest {
+                title: "Fire reminder".to_string(),
+                note: None,
+                planned_at_ms: 1_000,
+                deadline_at_ms: None,
+                priority: None,
+                contact_id: None,
+                contact_snapshot: None,
+                reminders: vec![CreateTaskReminderRequest {
+                    remind_at_ms: 2_000,
+                    message: Some("check".to_string()),
+                }],
+            },
+        )
+        .expect("create");
+        let reminder_id = TaskService::get_detail(&db.connection, &task.id)
+            .expect("detail")
+            .reminders[0]
+            .id
+            .clone();
+
+        let first = TaskService::mark_custom_reminder_fired(&db.connection, &reminder_id, 3_000)
+            .expect("first fire");
+        assert_eq!(first.fired_at_ms, Some(3_000));
+
+        let second = TaskService::mark_custom_reminder_fired(&db.connection, &reminder_id, 9_000)
+            .expect("second fire");
+        assert_eq!(second.fired_at_ms, Some(3_000));
+
+        let stored = TaskRepository::get_by_id(&db.connection, &task.id).expect("task unchanged");
+        assert_eq!(stored.title, "Fire reminder");
+        assert_eq!(stored.status, TaskStatus::NotStarted);
+        assert_eq!(
+            ReminderRepository::count_for_task(&db.connection, &task.id).expect("count"),
+            1
+        );
+        assert_eq!(system_reminder_log_count(&db.connection), 0);
+        assert!(system_reminder_kinds(&db.connection).is_empty());
+    }
+
+    #[test]
+    fn completed_task_unfired_custom_reminder_is_not_triggerable() {
+        let db = open_test_database();
+        let open_task = TaskService::create(
+            &db.connection,
+            CreateTaskRequest {
+                title: "Still open".to_string(),
+                note: None,
+                planned_at_ms: 1_000,
+                deadline_at_ms: None,
+                priority: None,
+                contact_id: None,
+                contact_snapshot: None,
+                reminders: vec![CreateTaskReminderRequest {
+                    remind_at_ms: 2_000,
+                    message: None,
+                }],
+            },
+        )
+        .expect("create open");
+        let done_task = TaskService::create(
+            &db.connection,
+            CreateTaskRequest {
+                title: "Already done".to_string(),
+                note: None,
+                planned_at_ms: 1_000,
+                deadline_at_ms: None,
+                priority: None,
+                contact_id: None,
+                contact_snapshot: None,
+                reminders: vec![CreateTaskReminderRequest {
+                    remind_at_ms: 2_100,
+                    message: None,
+                }],
+            },
+        )
+        .expect("create done");
+        let done_reminder_id = TaskService::get_detail(&db.connection, &done_task.id)
+            .expect("detail")
+            .reminders[0]
+            .id
+            .clone();
+
+        let completed = TaskService::complete(&db.connection, &done_task.id).expect("complete");
+        assert_eq!(completed.status, TaskStatusDto::Completed);
+
+        let triggerable =
+            TaskService::list_triggerable_custom_reminders(&db.connection).expect("list");
+        assert_eq!(triggerable.len(), 1);
+        assert_eq!(triggerable[0].task_id, open_task.id);
+
+        let error =
+            TaskService::mark_custom_reminder_fired(&db.connection, &done_reminder_id, 4_000)
+                .expect_err("completed cannot fire");
+        assert!(matches!(error, AppError::InvalidTaskInput { .. }));
+        assert_eq!(system_reminder_log_count(&db.connection), 0);
+    }
+
+    #[test]
+    fn update_and_complete_do_not_create_system_ddl_reminders() {
+        let db = open_test_database();
+        let task = TaskService::create(
+            &db.connection,
+            CreateTaskRequest {
+                title: "No system reminders".to_string(),
+                note: None,
+                planned_at_ms: 1_000,
+                deadline_at_ms: Some(5_000),
+                priority: None,
+                contact_id: None,
+                contact_snapshot: None,
+                reminders: vec![CreateTaskReminderRequest {
+                    remind_at_ms: 2_000,
+                    message: None,
+                }],
+            },
+        )
+        .expect("create");
+
+        TaskService::update(
+            &db.connection,
+            UpdateTaskRequest {
+                id: task.id.clone(),
+                title: Some("Updated title".to_string()),
+                ..Default::default()
+            },
+        )
+        .expect("update");
+        TaskService::complete(&db.connection, &task.id).expect("complete");
+
+        assert_eq!(
+            ReminderRepository::count_for_task(&db.connection, &task.id).expect("count"),
+            1
+        );
+        assert_eq!(system_reminder_log_count(&db.connection), 0);
+        assert!(system_reminder_kinds(&db.connection).is_empty());
+        let updated = TaskService::get_by_id(&db.connection, &task.id).expect("get");
+        assert_eq!(updated.title, "Updated title");
+        assert_eq!(updated.status, TaskStatusDto::Completed);
     }
 
     #[test]
@@ -1012,6 +1261,10 @@ mod tests {
         assert_eq!(task.note.as_deref(), Some("details"));
         assert_eq!(task.priority, 2);
         assert_eq!(task.status, TaskStatusDto::NotStarted);
+        assert_eq!(
+            ReminderRepository::count_for_task(&db.connection, &task.id).expect("count"),
+            0
+        );
     }
 
     #[test]

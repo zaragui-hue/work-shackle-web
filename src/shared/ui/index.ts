@@ -4,4 +4,5 @@ export { Card } from "./Card";
 export { Modal } from "./Modal";
 export { Drawer } from "./Drawer";
 export { EmptyState } from "./EmptyState";
+export { Mascot } from "./Mascot";
 export { Field, Input, Select, Textarea } from "./Input";

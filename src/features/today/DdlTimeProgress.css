@@ -1,0 +1,73 @@
+.ddl-time-progress {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ddl-time-progress__track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(61, 43, 31, 0.08);
+  overflow: hidden;
+}
+
+.ddl-time-progress__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-green);
+  min-width: 0;
+}
+
+.ddl-time-progress__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ddl-time-progress__copy,
+.ddl-time-progress__emotion,
+.ddl-time-progress__remaining {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  line-height: 1.3;
+}
+
+.ddl-time-progress__copy {
+  color: var(--color-ink);
+  font-weight: var(--font-weight-medium);
+}
+
+.ddl-time-progress__emotion {
+  color: var(--color-ink-muted);
+}
+
+.ddl-time-progress__remaining {
+  color: var(--color-green);
+  font-weight: var(--font-weight-medium);
+}
+
+.ddl-time-progress--notice .ddl-time-progress__fill {
+  background: var(--color-wheat);
+}
+
+.ddl-time-progress--anxious .ddl-time-progress__fill {
+  background: #e8a24a;
+}
+
+.ddl-time-progress--panic .ddl-time-progress__fill,
+.ddl-time-progress--burning .ddl-time-progress__fill,
+.ddl-time-progress--overdue .ddl-time-progress__fill {
+  background: var(--color-danger);
+}
+
+.ddl-time-progress--overdue .ddl-time-progress__remaining,
+.ddl-time-progress--burning .ddl-time-progress__emotion,
+.ddl-time-progress--overdue .ddl-time-progress__emotion {
+  color: var(--color-danger);
+}
+
+.ddl-time-progress--anxious .ddl-time-progress__emotion,
+.ddl-time-progress--panic .ddl-time-progress__emotion {
+  color: #b86a3a;
+}

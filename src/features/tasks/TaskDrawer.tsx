@@ -22,6 +22,7 @@ import {
   priorityLabel,
   priorityToneClass,
 } from "./taskDisplay";
+import { DdlTimeProgress } from "../today/DdlTimeProgress";
 import { PostponeTaskModal } from "./PostponeTaskModal";
 import {
   TASK_STATUS_OPTIONS,
@@ -211,6 +212,13 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
                 </Button>
               ) : null}
             </section>
+
+            {!terminal ? (
+              <DdlTimeProgress
+                plannedAtMs={detail.task.plannedAtMs}
+                deadlineAtMs={detail.task.deadlineAtMs}
+              />
+            ) : null}
 
             <Select
               label="主状态"

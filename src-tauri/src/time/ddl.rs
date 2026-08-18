@@ -1,4 +1,7 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+use serde::Serialize;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum DdlEmotion {
     Calm,
     Notice,
@@ -8,7 +11,8 @@ pub enum DdlEmotion {
     Overdue,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DdlProgress {
     pub progress_ratio: f64,
     pub remaining_ms: i64,

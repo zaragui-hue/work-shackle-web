@@ -13,6 +13,7 @@ import {
   formatRemainingUntilDeadline,
   isDeadlineOverdueToday,
 } from "./todayDisplay";
+import { DdlTimeProgress } from "./DdlTimeProgress";
 import "../tasks/priorityTone.css";
 import "./TodayTaskCard.css";
 
@@ -79,6 +80,14 @@ export function TodayTaskCard({ task, variant, onSelect }: TodayTaskCardProps) {
                 {formatOverdueDuration(task.deadlineAtMs)}
               </span>
             </div>
+          ) : null}
+
+          {variant !== "completed" ? (
+            <DdlTimeProgress
+              plannedAtMs={task.plannedAtMs}
+              deadlineAtMs={task.deadlineAtMs}
+              showRemaining={variant === "formal" && !overdueToday}
+            />
           ) : null}
 
           <div className="today-task-card__foot">

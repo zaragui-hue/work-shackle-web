@@ -131,6 +131,10 @@
   align-items: center;
 }
 
+.today-task-card .ddl-time-progress {
+  padding-top: 2px;
+}
+
 .today-task-card__foot {
   display: flex;
   flex-wrap: wrap;

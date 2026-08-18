@@ -15,10 +15,13 @@ export const DEFAULT_BUSY_LEVELS: readonly BusyLevel[] = [
   { minTasks: 13, maxTasks: null, emoji: "🤯", name: "爆满" },
 ] as const;
 
-export function resolveBusyLevel(taskCount: number): BusyLevel {
+export function resolveBusyLevel(
+  taskCount: number,
+  levels: readonly BusyLevel[] = DEFAULT_BUSY_LEVELS,
+): BusyLevel {
   const normalized = Math.max(0, Math.floor(taskCount));
 
-  for (const level of DEFAULT_BUSY_LEVELS) {
+  for (const level of levels) {
     if (
       normalized >= level.minTasks &&
       (level.maxTasks === null || normalized <= level.maxTasks)
@@ -27,7 +30,7 @@ export function resolveBusyLevel(taskCount: number): BusyLevel {
     }
   }
 
-  return DEFAULT_BUSY_LEVELS[DEFAULT_BUSY_LEVELS.length - 1];
+  return levels[levels.length - 1] ?? DEFAULT_BUSY_LEVELS[DEFAULT_BUSY_LEVELS.length - 1];
 }
 
 export function formatTaskCountLabel(taskCount: number): string {

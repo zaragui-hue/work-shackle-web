@@ -7,6 +7,7 @@ import {
   formatTaskCountLabel,
   resolveBusyLevel,
 } from "./busyLevel";
+import { useBusyRules } from "./useBusyRules";
 import {
   buildCalendarGrid,
   formatCalendarDayLabel,
@@ -46,6 +47,7 @@ export function TaskCalendar({
     gridRange?.startDate ?? null,
     gridRange?.endDate ?? null,
   );
+  const { levels: busyLevels } = useBusyRules();
 
   const isCurrentMonthView = visibleMonth.getTime() === startOfMonth(today).getTime();
   const showBusyDetails = !countsLoading && !countsError;
@@ -106,7 +108,7 @@ export function TaskCalendar({
       <div className="task-calendar__grid" role="grid" aria-label={monthTitle}>
         {cells.map((cell) => {
           const taskCount = countsByDate[cell.dateKey] ?? 0;
-          const busyLevel = resolveBusyLevel(taskCount);
+          const busyLevel = resolveBusyLevel(taskCount, busyLevels);
           const dayLabel = cell.isCurrentMonth
             ? `${formatCalendarDayLabel(cell.date)}，${formatTaskCountLabel(taskCount)}，${formatBusyStateLabel(busyLevel)}`
             : formatCalendarDayLabel(cell.date);

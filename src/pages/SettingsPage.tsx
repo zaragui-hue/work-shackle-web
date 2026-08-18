@@ -8,6 +8,7 @@ import {
   type WorkTimeFormValues,
 } from "../features/settings/workTimeForm";
 import { StatusCopySection } from "../features/settings/StatusCopySection";
+import { BusyRuleSection } from "../features/settings/BusyRuleSection";
 import {
   clearTodayWorkOverride,
   formatWorkTimeRange,
@@ -277,6 +278,7 @@ export function SettingsPage() {
         ) : null}
 
         {!loading && !loadError ? <StatusCopySection /> : null}
+        {!loading && !loadError ? <BusyRuleSection /> : null}
       </Card>
 
       <Modal

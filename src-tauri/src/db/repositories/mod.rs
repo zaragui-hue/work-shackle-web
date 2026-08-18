@@ -1,3 +1,4 @@
+pub mod busy_rule_repository;
 pub mod contact_repository;
 pub mod lunch_reminder_repository;
 pub mod overtime_repository;

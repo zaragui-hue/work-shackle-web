@@ -4,9 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TaskCalendar } from "./TaskCalendar";
 
 const mockUseCalendarTaskCounts = vi.fn();
+const mockUseBusyRules = vi.fn();
 
 vi.mock("./useCalendarTaskCounts", () => ({
   useCalendarTaskCounts: (...args: unknown[]) => mockUseCalendarTaskCounts(...args),
+}));
+
+vi.mock("./useBusyRules", () => ({
+  useBusyRules: (...args: unknown[]) => mockUseBusyRules(...args),
 }));
 
 const mockCalendarDayDrawer = vi.fn();
@@ -53,6 +58,19 @@ afterEach(() => {
 
 beforeEach(() => {
   mockCounts({});
+  mockUseBusyRules.mockReturnValue({
+    levels: [
+      { minTasks: 0, maxTasks: 0, emoji: "🫧", name: "空闲" },
+      { minTasks: 1, maxTasks: 2, emoji: "🌿", name: "松弛" },
+      { minTasks: 3, maxTasks: 5, emoji: "🙂", name: "正常" },
+      { minTasks: 6, maxTasks: 8, emoji: "😵", name: "有点忙" },
+      { minTasks: 9, maxTasks: 12, emoji: "🥵", name: "很忙" },
+      { minTasks: 13, maxTasks: null, emoji: "🤯", name: "爆满" },
+    ],
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  });
 });
 
 describe("TaskCalendar", () => {

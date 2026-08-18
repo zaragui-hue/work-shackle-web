@@ -1,3 +1,4 @@
+mod busy_rule;
 mod calendar;
 mod contact;
 mod ddl;
@@ -8,6 +9,7 @@ mod work_end_decision;
 mod work_status;
 mod workspace;
 
+pub use busy_rule::*;
 pub use calendar::*;
 pub use contact::*;
 pub use ddl::*;

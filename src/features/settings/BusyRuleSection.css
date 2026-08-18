@@ -1,0 +1,107 @@
+.settings-busy-rules {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.settings-busy-rules__form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.settings-busy-rules__card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-ticket);
+  border: var(--border-ink-soft);
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.settings-busy-rules__card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.settings-busy-rules__card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-medium);
+}
+
+.settings-busy-rules__range-preview {
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-caption);
+}
+
+.settings-busy-rules__fields {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.settings-busy-rules__range-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.settings-busy-rules__open-ended {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.settings-busy-rules__open-ended-value {
+  margin: 0;
+  padding: calc(var(--space-2) + 2px) var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+}
+
+.settings-busy-rules__messages {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.settings-busy-rules__message-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-busy-rules__message-item {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.settings-busy-rules__message-actions,
+.settings-busy-rules__card-actions,
+.settings-busy-rules__toolbar,
+.settings-busy-rules__save-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.settings-busy-rules__card-actions {
+  justify-content: flex-end;
+}
+
+.settings-busy-rules__success {
+  margin: 0;
+  color: var(--color-green);
+  font-size: var(--font-size-caption);
+}
+
+@media (max-width: 640px) {
+  .settings-busy-rules__range-row {
+    grid-template-columns: 1fr;
+  }
+}

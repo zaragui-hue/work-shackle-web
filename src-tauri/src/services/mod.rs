@@ -1,3 +1,4 @@
+pub mod busy_rule;
 pub mod calendar;
 pub mod contact;
 pub mod lunch_reminder;

@@ -111,6 +111,21 @@ export type TaskQueryInput = {
   priority?: number;
 };
 
+export type HistoryTimeMode =
+  | "day"
+  | "week"
+  | "month"
+  | "quarter"
+  | "year"
+  | "custom";
+
+export type HistoryTasksQueryInput = {
+  mode: HistoryTimeMode;
+  anchorDate?: string;
+  startDate?: string;
+  endDate?: string;
+};
+
 export type TodayTasks = {
   formalTasks: Task[];
   upcomingDeadlineTasks: Task[];
@@ -174,6 +189,12 @@ export async function getTaskById(id: string): Promise<Task> {
 
 export async function queryTasks(query: TaskQueryInput = {}): Promise<Task[]> {
   return invoke<Task[]>("query_tasks", { query });
+}
+
+export async function queryHistoryTasks(
+  query: HistoryTasksQueryInput,
+): Promise<Task[]> {
+  return invoke<Task[]>("query_history_tasks", { query });
 }
 
 export async function queryTodayTasks(): Promise<TodayTasks> {

@@ -10,12 +10,13 @@ use crate::db::repositories::reminder_repository::{
     MAX_USER_REMINDERS,
 };
 use crate::db::repositories::task_repository::{
-    CreateTaskInput, Task, TaskQuery, TaskRepository, TaskRepositoryError, TaskStatus,
-    UpdateTaskInput,
+    CreateTaskInput, HistoryTaskQuery, Task, TaskQuery, TaskRepository, TaskRepositoryError,
+    TaskStatus, UpdateTaskInput,
 };
 use crate::errors::AppError;
 use crate::services::contact::ContactService;
 use crate::time::calendar_day;
+use crate::time::history_range::{self, HistoryRangeInput, HistoryTimeMode};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -148,6 +149,29 @@ pub struct TaskQueryRequest {
     pub status: Option<TaskStatusDto>,
     #[serde(default)]
     pub priority: Option<i32>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HistoryTimeModeDto {
+    Day,
+    Week,
+    Month,
+    Quarter,
+    Year,
+    Custom,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryTasksQueryRequest {
+    pub mode: HistoryTimeModeDto,
+    #[serde(default)]
+    pub anchor_date: Option<String>,
+    #[serde(default)]
+    pub start_date: Option<String>,
+    #[serde(default)]
+    pub end_date: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -326,6 +350,23 @@ impl TaskService {
             TaskQuery {
                 status: query.status.map(task_status_from_dto),
                 priority: query.priority,
+            },
+        )
+        .map_err(map_task_error)?;
+
+        Ok(tasks.into_iter().map(task_to_dto).collect())
+    }
+
+    pub fn query_history_tasks(
+        connection: &Connection,
+        query: HistoryTasksQueryRequest,
+    ) -> Result<Vec<TaskDto>, AppError> {
+        let range = resolve_history_range(&query)?;
+        let tasks = TaskRepository::query_history(
+            connection,
+            HistoryTaskQuery {
+                start_ms: range.start_ms,
+                end_ms: range.end_ms,
             },
         )
         .map_err(map_task_error)?;
@@ -652,6 +693,29 @@ fn task_status_from_dto(status: TaskStatusDto) -> TaskStatus {
         TaskStatusDto::Completed => TaskStatus::Completed,
         TaskStatusDto::Cancelled => TaskStatus::Cancelled,
     }
+}
+
+fn history_mode_from_dto(mode: HistoryTimeModeDto) -> HistoryTimeMode {
+    match mode {
+        HistoryTimeModeDto::Day => HistoryTimeMode::Day,
+        HistoryTimeModeDto::Week => HistoryTimeMode::Week,
+        HistoryTimeModeDto::Month => HistoryTimeMode::Month,
+        HistoryTimeModeDto::Quarter => HistoryTimeMode::Quarter,
+        HistoryTimeModeDto::Year => HistoryTimeMode::Year,
+        HistoryTimeModeDto::Custom => HistoryTimeMode::Custom,
+    }
+}
+
+fn resolve_history_range(
+    query: &HistoryTasksQueryRequest,
+) -> Result<history_range::HistoryTimeRange, AppError> {
+    history_range::resolve_history_range(HistoryRangeInput {
+        mode: history_mode_from_dto(query.mode),
+        anchor_date: query.anchor_date.clone(),
+        start_date: query.start_date.clone(),
+        end_date: query.end_date.clone(),
+    })
+    .map_err(|message| AppError::InvalidTaskInput { message })
 }
 
 fn map_reminder_error(error: ReminderRepositoryError) -> AppError {
@@ -1736,6 +1800,162 @@ mod tests {
             let after = query_at(&reopened, local_ms(TODAY, "15:00"));
 
             assert_eq!(before, after);
+        }
+    }
+
+    mod history_tasks {
+        use super::*;
+        use crate::db::repositories::task_repository::TaskRepository;
+        use chrono::TimeZone;
+
+        const TODAY: &str = "2026-08-18";
+        const YESTERDAY: &str = "2026-08-17";
+        const TOMORROW: &str = "2026-08-19";
+
+        fn local_ms(date: &str, time: &str) -> i64 {
+            let naive =
+                chrono::NaiveDateTime::parse_from_str(&format!("{date} {time}"), "%Y-%m-%d %H:%M")
+                    .expect("valid");
+            chrono::Local
+                .from_local_datetime(&naive)
+                .single()
+                .expect("valid local datetime")
+                .timestamp_millis()
+        }
+
+        fn insert_task(
+            connection: &Connection,
+            id: &str,
+            planned_at_ms: i64,
+            deadline_at_ms: Option<i64>,
+        ) {
+            TaskRepository::create(
+                connection,
+                CreateTaskInput {
+                    id: id.to_string(),
+                    title: format!("Task {id}"),
+                    note: None,
+                    planned_at_ms,
+                    deadline_at_ms,
+                    priority: None,
+                    contact_id: None,
+                    contact_snapshot: None,
+                    created_at_ms: planned_at_ms,
+                    updated_at_ms: planned_at_ms,
+                },
+            )
+            .expect("create task");
+        }
+
+        #[test]
+        fn day_filter_includes_completed_on_anchor_day_only() {
+            let db = open_test_database();
+            insert_task(&db.connection, "today-done", local_ms(TODAY, "09:00"), None);
+            TaskRepository::complete(&db.connection, "today-done", local_ms(TODAY, "16:00"))
+                .expect("complete today");
+            insert_task(
+                &db.connection,
+                "yesterday-done",
+                local_ms(YESTERDAY, "09:00"),
+                None,
+            );
+            TaskRepository::complete(
+                &db.connection,
+                "yesterday-done",
+                local_ms(YESTERDAY, "16:00"),
+            )
+            .expect("complete yesterday");
+            insert_task(&db.connection, "active", local_ms(TODAY, "09:00"), None);
+
+            let tasks = TaskService::query_history_tasks(
+                &db.connection,
+                HistoryTasksQueryRequest {
+                    mode: HistoryTimeModeDto::Day,
+                    anchor_date: Some(TODAY.to_string()),
+                    start_date: None,
+                    end_date: None,
+                },
+            )
+            .expect("query day history");
+
+            assert_eq!(tasks.len(), 1);
+            assert_eq!(tasks[0].id, "today-done");
+        }
+
+        #[test]
+        fn custom_range_rejects_start_after_end() {
+            let db = open_test_database();
+            let error = TaskService::query_history_tasks(
+                &db.connection,
+                HistoryTasksQueryRequest {
+                    mode: HistoryTimeModeDto::Custom,
+                    anchor_date: None,
+                    start_date: Some(TOMORROW.to_string()),
+                    end_date: Some(TODAY.to_string()),
+                },
+            )
+            .expect_err("invalid custom range");
+
+            assert!(matches!(error, AppError::InvalidTaskInput { .. }));
+        }
+
+        #[test]
+        fn history_query_survives_database_reopen() {
+            let temp = tempfile::tempdir().expect("tempdir");
+            let first = initialize_database(temp.path()).expect("initialize database");
+            insert_task(&first, "persist-history", local_ms(TODAY, "09:00"), None);
+            TaskRepository::complete(&first, "persist-history", local_ms(TODAY, "11:00"))
+                .expect("complete");
+
+            let before = TaskService::query_history_tasks(
+                &first,
+                HistoryTasksQueryRequest {
+                    mode: HistoryTimeModeDto::Day,
+                    anchor_date: Some(TODAY.to_string()),
+                    start_date: None,
+                    end_date: None,
+                },
+            )
+            .expect("query before reopen");
+            drop(first);
+
+            let reopened = initialize_database(temp.path()).expect("reopen database");
+            let after = TaskService::query_history_tasks(
+                &reopened,
+                HistoryTasksQueryRequest {
+                    mode: HistoryTimeModeDto::Day,
+                    anchor_date: Some(TODAY.to_string()),
+                    start_date: None,
+                    end_date: None,
+                },
+            )
+            .expect("query after reopen");
+
+            assert_eq!(before, after);
+        }
+
+        #[test]
+        fn planned_and_deadline_do_not_place_active_tasks_in_history() {
+            let db = open_test_database();
+            insert_task(
+                &db.connection,
+                "planned-today",
+                local_ms(TODAY, "09:00"),
+                Some(local_ms(TODAY, "18:00")),
+            );
+
+            let tasks = TaskService::query_history_tasks(
+                &db.connection,
+                HistoryTasksQueryRequest {
+                    mode: HistoryTimeModeDto::Day,
+                    anchor_date: Some(TODAY.to_string()),
+                    start_date: None,
+                    end_date: None,
+                },
+            )
+            .expect("query day history");
+
+            assert!(tasks.is_empty());
         }
     }
 }

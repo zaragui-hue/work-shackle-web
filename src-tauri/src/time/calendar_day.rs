@@ -1,4 +1,4 @@
-use chrono::{Duration, Local, NaiveDate, TimeZone};
+use chrono::{Duration, Local, NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
 
 pub fn format_work_date(date: NaiveDate) -> String {
     date.format("%Y-%m-%d").to_string()
@@ -34,6 +34,35 @@ pub fn is_same_local_calendar_day(timestamp_ms: i64, day: NaiveDate) -> bool {
 
 pub fn is_local_calendar_day_before(timestamp_ms: i64, day: NaiveDate) -> bool {
     local_date_from_ms(timestamp_ms) < day
+}
+
+/// Local midnight for a calendar date (ms). Uses normal calendar days, not 05:00 cutoff.
+pub fn local_start_of_day_ms(date: NaiveDate) -> i64 {
+    let naive = NaiveDateTime::new(
+        date,
+        NaiveTime::from_hms_opt(0, 0, 0).expect("midnight must be valid"),
+    );
+    Local
+        .from_local_datetime(&naive)
+        .single()
+        .expect("timestamp must map to a valid local datetime")
+        .timestamp_millis()
+}
+
+/// Half-open range `[start_date 00:00 local, day_after(end_date) 00:00 local)`.
+pub fn local_half_open_range_ms(
+    start_date: NaiveDate,
+    end_date_inclusive: NaiveDate,
+) -> Result<(i64, i64), String> {
+    if start_date > end_date_inclusive {
+        return Err("start date must not be after end date".to_string());
+    }
+    let start_ms = local_start_of_day_ms(start_date);
+    let end_exclusive_date = end_date_inclusive
+        .succ_opt()
+        .ok_or_else(|| "end date overflow".to_string())?;
+    let end_ms = local_start_of_day_ms(end_exclusive_date);
+    Ok((start_ms, end_ms))
 }
 
 #[cfg(test)]

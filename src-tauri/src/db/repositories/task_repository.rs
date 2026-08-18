@@ -95,6 +95,12 @@ pub struct TaskQuery {
     pub priority: Option<i32>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HistoryTaskQuery {
+    pub start_ms: i64,
+    pub end_ms: i64,
+}
+
 #[derive(Debug)]
 pub enum TaskRepositoryError {
     NotFound { id: String },
@@ -318,6 +324,45 @@ impl TaskRepository {
         let params = rusqlite::params_from_iter(bind_values.iter().map(|value| value.as_ref()));
         let tasks = statement
             .query_map(params, map_task_row)?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(tasks)
+    }
+
+    pub fn query_history(
+        connection: &Connection,
+        query: HistoryTaskQuery,
+    ) -> Result<Vec<Task>, TaskRepositoryError> {
+        if query.start_ms >= query.end_ms {
+            return Err(TaskRepositoryError::InvalidInput {
+                message: "history range start must be before end".to_string(),
+            });
+        }
+
+        let mut statement = connection.prepare(
+            "SELECT id, title, note, planned_at_ms, deadline_at_ms, priority, status,
+                    contact_id, contact_snapshot, created_at_ms, completed_at_ms,
+                    cancelled_at_ms, updated_at_ms
+             FROM tasks
+             WHERE (
+                 status = 'completed'
+                 AND completed_at_ms IS NOT NULL
+                 AND completed_at_ms >= ?1
+                 AND completed_at_ms < ?2
+             ) OR (
+                 status = 'cancelled'
+                 AND cancelled_at_ms IS NOT NULL
+                 AND cancelled_at_ms >= ?1
+                 AND cancelled_at_ms < ?2
+             )
+             ORDER BY
+                 CASE
+                     WHEN status = 'completed' THEN completed_at_ms
+                     ELSE cancelled_at_ms
+                 END DESC,
+                 id ASC",
+        )?;
+        let tasks = statement
+            .query_map(params![query.start_ms, query.end_ms], map_task_row)?
             .collect::<Result<Vec<_>, _>>()?;
         Ok(tasks)
     }
@@ -650,6 +695,68 @@ mod tests {
 
         let error = TaskRepository::cancel(&db.connection, "task-finished", 7_200)
             .expect_err("cancel completed task must fail");
+        assert!(matches!(error, TaskRepositoryError::InvalidInput { .. }));
+    }
+
+    #[test]
+    fn query_history_filters_by_terminal_timestamps_only() {
+        let db = open_test_database();
+        TaskRepository::create(
+            &db.connection,
+            sample_create_input("active-task", "Active", 1_000_000),
+        )
+        .expect("create active");
+        TaskRepository::create(
+            &db.connection,
+            sample_create_input("completed-in-range", "Done", 1_000_000),
+        )
+        .expect("create completed");
+        TaskRepository::complete(&db.connection, "completed-in-range", 1_500_000)
+            .expect("complete");
+        TaskRepository::create(
+            &db.connection,
+            sample_create_input("completed-out-range", "Old done", 1_000_000),
+        )
+        .expect("create old completed");
+        TaskRepository::complete(&db.connection, "completed-out-range", 500_000)
+            .expect("complete old");
+        TaskRepository::create(
+            &db.connection,
+            sample_create_input("cancelled-in-range", "Cancelled", 1_000_000),
+        )
+        .expect("create cancelled");
+        TaskRepository::cancel(&db.connection, "cancelled-in-range", 1_600_000).expect("cancel");
+
+        let tasks = TaskRepository::query_history(
+            &db.connection,
+            HistoryTaskQuery {
+                start_ms: 1_400_000,
+                end_ms: 1_700_000,
+            },
+        )
+        .expect("query history");
+
+        assert_eq!(
+            tasks
+                .iter()
+                .map(|task| task.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["cancelled-in-range", "completed-in-range"]
+        );
+    }
+
+    #[test]
+    fn query_history_rejects_invalid_range() {
+        let db = open_test_database();
+        let error = TaskRepository::query_history(
+            &db.connection,
+            HistoryTaskQuery {
+                start_ms: 2_000,
+                end_ms: 2_000,
+            },
+        )
+        .expect_err("invalid range");
+
         assert!(matches!(error, TaskRepositoryError::InvalidInput { .. }));
     }
 }

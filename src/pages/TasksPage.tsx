@@ -1,7 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { TaskCalendar } from "../features/tasks/calendar/TaskCalendar";
 import { CreateTaskModal } from "../features/tasks/CreateTaskModal";
+import { HistoryTimeFilter } from "../features/tasks/history/HistoryTimeFilter";
+import {
+  createDefaultHistoryFilter,
+  toHistoryTasksQuery,
+  validateCustomRange,
+} from "../features/tasks/history/historyFilterModel";
+import { useHistoryTasks } from "../features/tasks/history/useHistoryTasks";
 import { TaskDrawer } from "../features/tasks/TaskDrawer";
 import { TaskList } from "../features/tasks/TaskList";
 import {
@@ -13,7 +20,7 @@ import {
 import { Button, Card, EmptyState } from "../shared/ui";
 import "./TasksPage.css";
 
-type TasksViewMode = "list" | "calendar";
+type TasksViewMode = "list" | "calendar" | "history";
 
 type TasksPageProps = {
   openTaskRequest?: string | null;
@@ -31,6 +38,25 @@ export function TasksPage({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [historyFilter, setHistoryFilter] = useState(createDefaultHistoryFilter);
+
+  const customValidationError =
+    historyFilter.mode === "custom"
+      ? validateCustomRange(historyFilter.customStartDate, historyFilter.customEndDate)
+      : null;
+
+  const historyQuery = useMemo(() => {
+    if (viewMode !== "history" || customValidationError) {
+      return null;
+    }
+    return toHistoryTasksQuery(historyFilter);
+  }, [customValidationError, historyFilter, viewMode]);
+
+  const {
+    tasks: historyTasks,
+    loading: historyLoading,
+    error: historyError,
+  } = useHistoryTasks(historyQuery, viewMode === "history" && historyQuery != null);
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
@@ -46,8 +72,11 @@ export function TasksPage({
   }, []);
 
   useEffect(() => {
+    if (viewMode !== "list") {
+      return;
+    }
     void loadTasks();
-  }, [loadTasks]);
+  }, [loadTasks, viewMode]);
 
   useEffect(() => {
     if (!openTaskRequest) {
@@ -58,7 +87,13 @@ export function TasksPage({
     onOpenTaskHandled?.();
   }, [openTaskRequest, onOpenTaskHandled]);
 
-  const showEmpty = !loading && !error && tasks.length === 0;
+  const showListEmpty = viewMode === "list" && !loading && !error && tasks.length === 0;
+  const showHistoryEmpty =
+    viewMode === "history" &&
+    !historyLoading &&
+    !historyError &&
+    !customValidationError &&
+    historyTasks.length === 0;
 
   return (
     <>
@@ -83,6 +118,15 @@ export function TasksPage({
             >
               日历
             </Button>
+            <Button
+              variant={viewMode === "history" ? "primary" : "secondary"}
+              className="tasks-page__view-button"
+              role="tab"
+              aria-selected={viewMode === "history"}
+              onClick={() => setViewMode("history")}
+            >
+              历史
+            </Button>
           </div>
           <Button onClick={() => setCreateOpen(true)}>新建任务</Button>
         </div>
@@ -94,6 +138,43 @@ export function TasksPage({
               setDrawerOpen(true);
             }}
           />
+        ) : null}
+
+        {viewMode === "history" ? (
+          <>
+            <HistoryTimeFilter filter={historyFilter} onChange={setHistoryFilter} />
+            {customValidationError ? (
+              <p className="tasks-page__status" role="alert">
+                {customValidationError}
+              </p>
+            ) : null}
+            {!customValidationError && historyLoading ? (
+              <p className="tasks-page__status">加载历史任务中…</p>
+            ) : null}
+            {!customValidationError && historyError ? (
+              <div className="tasks-page__status">
+                <p role="alert">{historyError}</p>
+              </div>
+            ) : null}
+            {!customValidationError &&
+            !historyLoading &&
+            !historyError &&
+            historyTasks.length > 0 ? (
+              <TaskList
+                tasks={historyTasks}
+                onSelect={(taskId) => {
+                  setSelectedTaskId(taskId);
+                  setDrawerOpen(true);
+                }}
+              />
+            ) : null}
+            {showHistoryEmpty ? (
+              <EmptyState
+                title="这段时间没有记录"
+                description="换个时间范围看看，或者先把今天的事搞定。"
+              />
+            ) : null}
+          </>
         ) : null}
 
         {viewMode === "list" && loading ? (
@@ -119,7 +200,7 @@ export function TasksPage({
           />
         ) : null}
 
-        {viewMode === "list" && showEmpty ? (
+        {showListEmpty ? (
           <EmptyState
             title="任务清单空空"
             description="点「新建任务」开始记录第一块砖。"
@@ -130,14 +211,22 @@ export function TasksPage({
       <CreateTaskModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreated={() => void loadTasks()}
+        onCreated={() => {
+          if (viewMode === "list") {
+            void loadTasks();
+          }
+        }}
       />
 
       <TaskDrawer
         taskId={selectedTaskId}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        onChanged={() => void loadTasks()}
+        onChanged={() => {
+          if (viewMode === "list") {
+            void loadTasks();
+          }
+        }}
       />
     </>
   );

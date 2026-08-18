@@ -2,8 +2,8 @@ use tauri::State;
 
 use crate::errors::AppError;
 use crate::services::task::{
-    CreateTaskRequest, PostponeTaskRequest, TaskDetailDto, TaskDto, TaskQueryRequest, TaskService,
-    TodayTasksDto, UpdateTaskRequest,
+    CreateTaskRequest, HistoryTasksQueryRequest, PostponeTaskRequest, TaskDetailDto, TaskDto,
+    TaskQueryRequest, TaskService, TodayTasksDto, UpdateTaskRequest,
 };
 use crate::services::workspace_switch::AppState;
 
@@ -39,6 +39,14 @@ pub fn query_tasks(
     query: TaskQueryRequest,
 ) -> Result<Vec<TaskDto>, AppError> {
     state.with_db_app(|connection| TaskService::query(connection, query))
+}
+
+#[tauri::command]
+pub fn query_history_tasks(
+    state: State<'_, AppState>,
+    query: HistoryTasksQueryRequest,
+) -> Result<Vec<TaskDto>, AppError> {
+    state.with_db_app(|connection| TaskService::query_history_tasks(connection, query))
 }
 
 #[tauri::command]

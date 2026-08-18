@@ -1,4 +1,4 @@
-use chrono::Local;
+use crate::id::new_entity_id;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
@@ -209,7 +209,7 @@ impl WorkStatusService {
         let work_date = format_work_date(work_day::work_date_from_timestamp_ms(now_ms));
         let display_copy = pick_display_copy(connection, status_def.id, now_ms)?;
 
-        let record_id = new_record_id();
+        let record_id = new_entity_id("work-status");
         let record = (|| -> Result<WorkStatusRecord, AppError> {
             connection
                 .execute("BEGIN IMMEDIATE", [])
@@ -271,7 +271,7 @@ impl WorkStatusService {
         WorkStatusRepository::insert_record(
             connection,
             CreateWorkStatusRecordInput {
-                id: new_record_id(),
+                id: new_entity_id("work-status"),
                 work_date,
                 status_type: status_def.id.to_string(),
                 display_copy,
@@ -314,7 +314,7 @@ impl WorkStatusService {
         let row = WorkStatusRepository::insert_copy(
             connection,
             CreateStatusCopyInput {
-                id: new_copy_id(),
+                id: new_entity_id("status-copy"),
                 status_type: input.status_type,
                 content,
                 created_at_ms: now_ms,
@@ -409,16 +409,8 @@ fn default_copy_id(status_type: &str) -> String {
     format!("default-copy-{status_type}")
 }
 
-fn new_record_id() -> String {
-    format!("work-status-{}", now_ms())
-}
-
-fn new_copy_id() -> String {
-    format!("status-copy-{}", now_ms())
-}
-
 fn now_ms() -> i64 {
-    Local::now().timestamp_millis()
+    chrono::Local::now().timestamp_millis()
 }
 
 fn map_error(error: WorkStatusRepositoryError) -> AppError {

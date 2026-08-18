@@ -1,6 +1,7 @@
 mod commands;
 mod db;
 mod errors;
+mod id;
 mod services;
 mod time;
 

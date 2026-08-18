@@ -1,4 +1,4 @@
-use chrono::Local;
+use crate::id::new_entity_id;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
@@ -165,7 +165,7 @@ impl TaskService {
         validate_create_request(&input)?;
 
         let now_ms = now_ms();
-        let task_id = new_task_id();
+        let task_id = new_entity_id("task");
         let reminder_inputs = build_reminder_inputs(&task_id, &input.reminders)?;
 
         let tx = connection
@@ -283,7 +283,7 @@ impl TaskService {
         PostponementRepository::create(
             &tx,
             CreatePostponementInput {
-                id: new_postponement_id(),
+                id: new_entity_id("postponement"),
                 task_id: input.task_id.clone(),
                 old_deadline_at_ms,
                 new_deadline_at_ms: input.new_deadline_at_ms,
@@ -531,10 +531,9 @@ fn build_reminder_inputs(
 ) -> Result<Vec<CreateReminderInput>, AppError> {
     reminders
         .iter()
-        .enumerate()
-        .map(|(index, reminder)| {
+        .map(|reminder| {
             Ok(CreateReminderInput {
-                id: new_reminder_id(index),
+                id: new_entity_id("reminder"),
                 task_id: task_id.to_string(),
                 remind_at_ms: reminder.remind_at_ms,
                 message: normalize_optional_text(reminder.message.clone()),
@@ -543,16 +542,8 @@ fn build_reminder_inputs(
         .collect()
 }
 
-fn new_reminder_id(index: usize) -> String {
-    format!("reminder-{}-{}", now_ms(), index)
-}
-
 fn now_ms() -> i64 {
-    Local::now().timestamp_millis()
-}
-
-fn new_postponement_id() -> String {
-    format!("postponement-{}", now_ms())
+    chrono::Local::now().timestamp_millis()
 }
 
 fn reminder_to_dto(reminder: TaskReminder) -> ReminderDto {
@@ -634,10 +625,6 @@ fn map_reminder_error(error: ReminderRepositoryError) -> AppError {
             message: db_error.to_string(),
         },
     }
-}
-
-fn new_task_id() -> String {
-    format!("task-{}", now_ms())
 }
 
 fn map_task_error(error: TaskRepositoryError) -> AppError {

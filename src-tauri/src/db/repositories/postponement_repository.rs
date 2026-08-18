@@ -100,7 +100,7 @@ impl PostponementRepository {
             "SELECT id, task_id, old_deadline_at_ms, new_deadline_at_ms, reason, created_at_ms
              FROM task_postponements
              WHERE task_id = ?1
-             ORDER BY created_at_ms ASC, id ASC",
+             ORDER BY created_at_ms ASC, rowid ASC",
         )?;
         let rows = statement
             .query_map([task_id], map_postponement_row)?

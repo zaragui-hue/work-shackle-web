@@ -1,4 +1,4 @@
-use chrono::Local;
+use crate::id::new_entity_id;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
@@ -63,7 +63,7 @@ impl ContactService {
         let contact = ContactRepository::create(
             connection,
             CreateContactInput {
-                id: new_contact_id(),
+                id: new_entity_id("contact"),
                 name,
                 created_at_ms: now_ms,
                 updated_at_ms: now_ms,
@@ -160,7 +160,7 @@ fn find_or_create_by_name(
     ContactRepository::create(
         connection,
         CreateContactInput {
-            id: new_contact_id(),
+            id: new_entity_id("contact"),
             name: name.to_string(),
             created_at_ms: now_ms,
             updated_at_ms: now_ms,
@@ -190,12 +190,8 @@ fn contact_to_dto(contact: Contact) -> ContactDto {
     }
 }
 
-fn new_contact_id() -> String {
-    format!("contact-{}", now_ms())
-}
-
 fn now_ms() -> i64 {
-    Local::now().timestamp_millis()
+    chrono::Local::now().timestamp_millis()
 }
 
 fn map_contact_error(error: ContactRepositoryError) -> AppError {

@@ -8,6 +8,7 @@ use crate::db::repositories::work_end_decision_repository::{
     WorkEndDecisionRepository, WorkEndDecisionRepositoryError,
 };
 use crate::errors::AppError;
+use crate::id::new_entity_id;
 use crate::services::settings::SettingsService;
 use crate::services::work_status::WorkStatusService;
 use crate::time::calendar_day::{format_work_date, local_date_from_ms};
@@ -74,7 +75,7 @@ impl OvertimeService {
         }
 
         let auto_end_at_ms = auto_end_at_ms_for_work_date(work_date);
-        let record_id = new_overtime_id(now_ms);
+        let record_id = new_entity_id("overtime");
 
         connection
             .execute("BEGIN IMMEDIATE", [])
@@ -228,10 +229,6 @@ fn record_to_dto(record: OvertimeRecord) -> ActiveOvertimeDto {
         start_at_ms: record.start_at_ms,
         auto_end_at_ms: record.auto_end_at_ms,
     }
-}
-
-fn new_overtime_id(now_ms: i64) -> String {
-    format!("overtime-{now_ms}")
 }
 
 fn map_clock_time_error(error: ClockTimeError) -> AppError {

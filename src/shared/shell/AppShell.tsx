@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { TodayPage } from "../../pages/TodayPage";
 import { TasksPage } from "../../pages/TasksPage";
 import { SettingsPage } from "../../pages/SettingsPage";
+import { useReminderOpenTaskBridge } from "../../features/reminder/reminderWindowActions";
 import "./AppShell.css";
 
 type TabId = "today" | "tasks" | "settings";
@@ -14,6 +15,14 @@ const TABS: { id: TabId; label: string }[] = [
 
 export function AppShell() {
   const [tab, setTab] = useState<TabId>("today");
+  const [openTaskRequest, setOpenTaskRequest] = useState<string | null>(null);
+
+  useReminderOpenTaskBridge(
+    useCallback((taskId: string) => {
+      setTab("tasks");
+      setOpenTaskRequest(taskId);
+    }, []),
+  );
 
   return (
     <div className="ws-shell">
@@ -29,7 +38,12 @@ export function AppShell() {
 
       <main className="ws-shell__content" aria-live="polite">
         {tab === "today" ? <TodayPage /> : null}
-        {tab === "tasks" ? <TasksPage /> : null}
+        {tab === "tasks" ? (
+          <TasksPage
+            openTaskRequest={openTaskRequest}
+            onOpenTaskHandled={() => setOpenTaskRequest(null)}
+          />
+        ) : null}
         {tab === "settings" ? <SettingsPage /> : null}
       </main>
 

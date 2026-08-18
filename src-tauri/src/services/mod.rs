@@ -5,6 +5,7 @@ pub mod overtime_runtime;
 pub mod reminder_attention;
 pub mod reminder_engine;
 pub mod reminder_notifier;
+pub mod reminder_window;
 pub mod settings;
 pub mod startup;
 pub mod system_reminder;

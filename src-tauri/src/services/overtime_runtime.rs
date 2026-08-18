@@ -10,6 +10,9 @@ use crate::services::overtime::OvertimeService;
 use crate::services::reminder_attention::{deliver_triggered_attention, TauriReminderAttention};
 use crate::services::reminder_engine::REMINDER_TRIGGERED_EVENT;
 use crate::services::reminder_notifier::{deliver_triggered_reminders, TauriReminderNotifier};
+use crate::services::reminder_window::{
+    deliver_triggered_reminder_window, TauriReminderWindowPresenter,
+};
 use crate::services::workspace_switch::AppState;
 
 pub const RUNTIME_CHECK_INTERVAL: Duration = Duration::from_secs(30);
@@ -30,11 +33,13 @@ pub fn reminder_runtime_tick(app: &AppHandle, now_ms: i64) -> Result<(), AppErro
     let tick = state.run_reminder_tick(now_ms)?;
     let notifier = TauriReminderNotifier::new(app.clone());
     let attention = TauriReminderAttention::new(app.clone());
+    let window = TauriReminderWindowPresenter::new(app.clone());
     for payload in &tick.triggered {
         let _ = app.emit(REMINDER_TRIGGERED_EVENT, payload);
     }
     deliver_triggered_reminders(&notifier, &tick.triggered);
     deliver_triggered_attention(&attention, &tick.triggered);
+    deliver_triggered_reminder_window(&window, &tick.triggered);
     Ok(())
 }
 

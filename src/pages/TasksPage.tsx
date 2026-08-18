@@ -12,7 +12,15 @@ import {
 import { Button, Card, EmptyState } from "../shared/ui";
 import "./TasksPage.css";
 
-export function TasksPage() {
+type TasksPageProps = {
+  openTaskRequest?: string | null;
+  onOpenTaskHandled?: () => void;
+};
+
+export function TasksPage({
+  openTaskRequest = null,
+  onOpenTaskHandled,
+}: TasksPageProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -36,6 +44,15 @@ export function TasksPage() {
   useEffect(() => {
     void loadTasks();
   }, [loadTasks]);
+
+  useEffect(() => {
+    if (!openTaskRequest) {
+      return;
+    }
+    setSelectedTaskId(openTaskRequest);
+    setDrawerOpen(true);
+    onOpenTaskHandled?.();
+  }, [openTaskRequest, onOpenTaskHandled]);
 
   const showEmpty = !loading && !error && tasks.length === 0;
 

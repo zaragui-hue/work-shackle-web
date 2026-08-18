@@ -27,6 +27,7 @@ pub enum ReminderTriggeredPayload {
     Custom {
         reminder_id: String,
         task_id: String,
+        task_title: String,
         remind_at_ms: i64,
         fired_at_ms: i64,
         message: Option<String>,
@@ -34,6 +35,7 @@ pub enum ReminderTriggeredPayload {
     #[serde(rename = "system")]
     System {
         task_id: String,
+        task_title: String,
         reminder_kind: String,
         deadline_snapshot_ms: i64,
         trigger_at_ms: i64,
@@ -93,10 +95,14 @@ impl ReminderEngineService {
         let custom_due = ReminderRepository::list_due_for_engine(connection, now_ms, cutoff_ms)
             .map_err(map_reminder_error)?;
         for reminder in custom_due {
+            let task_title = TaskRepository::get_by_id(connection, &reminder.task_id)
+                .map(|task| task.title)
+                .unwrap_or_else(|_| "任务".to_string());
             match TaskService::mark_custom_reminder_fired(connection, &reminder.id, now_ms) {
                 Ok(updated) => triggered.push(ReminderTriggeredPayload::Custom {
                     reminder_id: updated.id,
                     task_id: updated.task_id,
+                    task_title,
                     remind_at_ms: updated.remind_at_ms,
                     fired_at_ms: updated.fired_at_ms.unwrap_or(now_ms),
                     message: updated.message,
@@ -137,6 +143,7 @@ impl ReminderEngineService {
                 ) {
                     Ok(entry) => triggered.push(ReminderTriggeredPayload::System {
                         task_id: entry.task_id,
+                        task_title: task.title.clone(),
                         reminder_kind: node.kind.as_str().to_string(),
                         deadline_snapshot_ms: entry.deadline_snapshot_ms,
                         trigger_at_ms: entry.scheduled_at_ms,

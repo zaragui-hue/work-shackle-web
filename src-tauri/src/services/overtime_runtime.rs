@@ -8,6 +8,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use crate::errors::AppError;
 use crate::services::overtime::OvertimeService;
 use crate::services::reminder_engine::REMINDER_TRIGGERED_EVENT;
+use crate::services::reminder_notifier::{deliver_triggered_reminders, TauriReminderNotifier};
 use crate::services::workspace_switch::AppState;
 
 pub const RUNTIME_CHECK_INTERVAL: Duration = Duration::from_secs(30);
@@ -26,9 +27,11 @@ pub fn reconcile_runtime_tick(app: &AppHandle, now_ms: i64) -> Result<bool, AppE
 pub fn reminder_runtime_tick(app: &AppHandle, now_ms: i64) -> Result<(), AppError> {
     let state = app.state::<AppState>();
     let tick = state.run_reminder_tick(now_ms)?;
-    for payload in tick.triggered {
+    let notifier = TauriReminderNotifier::new(app.clone());
+    for payload in &tick.triggered {
         let _ = app.emit(REMINDER_TRIGGERED_EVENT, payload);
     }
+    deliver_triggered_reminders(&notifier, &tick.triggered);
     Ok(())
 }
 

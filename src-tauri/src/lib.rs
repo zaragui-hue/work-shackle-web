@@ -17,10 +17,14 @@ use commands::{
     save_today_work_override, set_workspace_path_command, start_overtime, switch_work_status,
     update_task, validate_workspace_candidate, AppState,
 };
+use services::single_instance::handle_second_instance;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            handle_second_instance(app);
+        }))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::new())

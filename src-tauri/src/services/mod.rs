@@ -10,6 +10,7 @@ pub mod reminder_engine;
 pub mod reminder_notifier;
 pub mod reminder_window;
 pub mod settings;
+pub mod single_instance;
 pub mod startup;
 pub mod system_reminder;
 pub mod task;

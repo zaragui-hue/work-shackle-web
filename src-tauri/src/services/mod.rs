@@ -4,6 +4,7 @@ pub mod overtime;
 pub mod overtime_runtime;
 pub mod settings;
 pub mod startup;
+pub mod system_reminder;
 pub mod task;
 pub mod work_end_decision;
 pub mod work_status;

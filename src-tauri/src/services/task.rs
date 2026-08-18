@@ -305,14 +305,6 @@ impl TaskService {
         )
         .map_err(map_task_error)?;
 
-        tx.execute(
-            "DELETE FROM system_reminder_log WHERE task_id = ?1",
-            [&input.task_id],
-        )
-        .map_err(|error| AppError::DatabaseError {
-            message: error.to_string(),
-        })?;
-
         tx.commit().map_err(|error| AppError::DatabaseError {
             message: error.to_string(),
         })?;

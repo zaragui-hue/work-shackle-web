@@ -70,3 +70,17 @@ export function areCalendarCellsContiguous(cells: CalendarDayCell[]): boolean {
   }
   return true;
 }
+
+export function getCalendarGridDateRange(cells: CalendarDayCell[]): {
+  startDate: string;
+  endDate: string;
+} | null {
+  if (cells.length === 0) {
+    return null;
+  }
+
+  return {
+    startDate: cells[0].dateKey,
+    endDate: cells[cells.length - 1].dateKey,
+  };
+}

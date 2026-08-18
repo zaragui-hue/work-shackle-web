@@ -5,6 +5,7 @@ import {
   areCalendarCellsContiguous,
   buildCalendarGrid,
   formatCalendarMonthTitle,
+  getCalendarGridDateRange,
   isMondayFirstGrid,
   toLocalDateKey,
 } from "./calendarGrid";
@@ -101,6 +102,16 @@ describe("buildCalendarGrid", () => {
 describe("formatCalendarMonthTitle", () => {
   it("formats the visible month title", () => {
     expect(formatCalendarMonthTitle(month(2026, 7))).toBe("2026 年 8 月");
+  });
+});
+
+describe("getCalendarGridDateRange", () => {
+  it("returns the first and last visible grid dates", () => {
+    const cells = buildCalendarGrid(month(2026, 7), new Date(2026, 7, 18));
+    expect(getCalendarGridDateRange(cells)).toEqual({
+      startDate: "2026-07-27",
+      endDate: "2026-09-06",
+    });
   });
 });
 

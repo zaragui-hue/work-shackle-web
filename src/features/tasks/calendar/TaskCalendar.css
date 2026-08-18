@@ -39,6 +39,12 @@
   padding-inline: var(--space-3);
 }
 
+.task-calendar__status {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-caption);
+}
+
 .task-calendar__weekdays,
 .task-calendar__grid {
   display: grid;
@@ -110,4 +116,11 @@
   font-weight: var(--font-weight-medium);
   color: var(--color-green);
   line-height: 1;
+}
+
+.task-calendar__task-count {
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ink-muted);
+  line-height: 1.1;
 }

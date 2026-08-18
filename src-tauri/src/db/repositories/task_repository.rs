@@ -126,6 +126,13 @@ impl From<rusqlite::Error> for TaskRepositoryError {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CalendarCountCandidate {
+    pub id: String,
+    pub planned_at_ms: i64,
+    pub deadline_at_ms: Option<i64>,
+}
+
 pub struct TaskRepository;
 
 impl TaskRepository {
@@ -260,6 +267,27 @@ impl TaskRepository {
             .query_map([], map_task_row)?
             .collect::<Result<Vec<_>, _>>()?;
         Ok(tasks)
+    }
+
+    pub fn list_calendar_count_candidates(
+        connection: &Connection,
+    ) -> Result<Vec<CalendarCountCandidate>, TaskRepositoryError> {
+        let mut statement = connection.prepare(
+            "SELECT id, planned_at_ms, deadline_at_ms
+             FROM tasks
+             WHERE status NOT IN ('completed', 'cancelled')
+             ORDER BY id ASC",
+        )?;
+        let candidates = statement
+            .query_map([], |row| {
+                Ok(CalendarCountCandidate {
+                    id: row.get(0)?,
+                    planned_at_ms: row.get(1)?,
+                    deadline_at_ms: row.get(2)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(candidates)
     }
 
     pub fn query(

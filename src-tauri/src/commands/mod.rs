@@ -1,3 +1,4 @@
+mod calendar;
 mod contact;
 mod ddl;
 mod overtime;
@@ -7,6 +8,7 @@ mod work_end_decision;
 mod work_status;
 mod workspace;
 
+pub use calendar::*;
 pub use contact::*;
 pub use ddl::*;
 pub use overtime::*;

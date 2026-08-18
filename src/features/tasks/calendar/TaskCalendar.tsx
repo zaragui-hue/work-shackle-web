@@ -6,8 +6,10 @@ import {
   buildCalendarGrid,
   formatCalendarDayLabel,
   formatCalendarMonthTitle,
+  getCalendarGridDateRange,
   WEEKDAY_LABELS,
 } from "./calendarGrid";
+import { useCalendarTaskCounts } from "./useCalendarTaskCounts";
 import "./TaskCalendar.css";
 
 type TaskCalendarProps = {
@@ -29,6 +31,11 @@ export function TaskCalendar({
   const cells = useMemo(
     () => buildCalendarGrid(visibleMonth, today),
     [visibleMonth, today],
+  );
+  const gridRange = useMemo(() => getCalendarGridDateRange(cells), [cells]);
+  const { countsByDate, loading: countsLoading, error: countsError } = useCalendarTaskCounts(
+    gridRange?.startDate ?? null,
+    gridRange?.endDate ?? null,
   );
 
   const isCurrentMonthView = visibleMonth.getTime() === startOfMonth(today).getTime();
@@ -66,6 +73,18 @@ export function TaskCalendar({
         </Button>
       </header>
 
+      {countsError ? (
+        <p className="task-calendar__status" role="alert">
+          {countsError}
+        </p>
+      ) : null}
+
+      {countsLoading ? (
+        <p className="task-calendar__status" aria-live="polite">
+          加载任务数量中…
+        </p>
+      ) : null}
+
       <div className="task-calendar__weekdays" role="row">
         {WEEKDAY_LABELS.map((label) => (
           <div key={label} className="task-calendar__weekday" role="columnheader">
@@ -76,6 +95,11 @@ export function TaskCalendar({
 
       <div className="task-calendar__grid" role="grid" aria-label={monthTitle}>
         {cells.map((cell) => {
+          const taskCount = countsByDate[cell.dateKey] ?? 0;
+          const dayLabel =
+            taskCount > 0
+              ? `${formatCalendarDayLabel(cell.date)}，${taskCount} 项任务`
+              : formatCalendarDayLabel(cell.date);
           const classNames = [
             "task-calendar__day",
             cell.isCurrentMonth ? "task-calendar__day--current-month" : "task-calendar__day--outside",
@@ -90,10 +114,15 @@ export function TaskCalendar({
               type="button"
               className={classNames}
               role="gridcell"
-              aria-label={formatCalendarDayLabel(cell.date)}
+              aria-label={dayLabel}
               aria-current={cell.isToday ? "date" : undefined}
             >
               <span className="task-calendar__day-number">{cell.dayNumber}</span>
+              {taskCount > 0 ? (
+                <span className="task-calendar__task-count" aria-hidden="true">
+                  {taskCount} 项
+                </span>
+              ) : null}
               {cell.isToday ? (
                 <span className="task-calendar__today-badge" aria-hidden="true">
                   今

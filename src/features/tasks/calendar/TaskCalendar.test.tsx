@@ -1,7 +1,15 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TaskCalendar } from "./TaskCalendar";
+
+vi.mock("./useCalendarTaskCounts", () => ({
+  useCalendarTaskCounts: () => ({
+    countsByDate: {},
+    loading: false,
+    error: null,
+  }),
+}));
 
 const FIXED_TODAY = new Date(2026, 7, 18);
 const AUGUST_2026 = new Date(2026, 7, 1);

@@ -12,6 +12,7 @@ use crate::db::connection::{open_connection, DbError, DATABASE_FILE_NAME};
 use crate::db::migrations::run_migrations;
 use crate::errors::AppError;
 
+use super::reminder_engine::ReminderEngineService;
 use super::startup::{run_startup, StartupReady, StartupWarning};
 use super::workspace::{
     initialize_workspace_directories, load_app_config, save_app_config, AppConfig,
@@ -86,6 +87,7 @@ pub struct ActiveWorkspace {
     path: PathBuf,
     connection: Connection,
     startup_warning: Option<StartupWarning>,
+    reminder_cutoff_ms: i64,
 }
 
 pub struct AppState {
@@ -116,12 +118,48 @@ impl AppState {
         }
 
         let (ready, connection) = run_startup(app_config_dir, ctx, validator)?;
+        let cutoff_ms = Local::now().timestamp_millis();
+        ReminderEngineService::reconcile_at_startup(&connection, cutoff_ms)?;
         *active = Some(ActiveWorkspace {
             path: PathBuf::from(&ready.workspace_path),
             connection,
             startup_warning: ready.warning.clone(),
+            reminder_cutoff_ms: cutoff_ms,
         });
         Ok(ready)
+    }
+
+    pub fn run_reminder_tick(
+        &self,
+        now_ms: i64,
+    ) -> Result<crate::services::reminder_engine::ReminderEngineTickResult, AppError> {
+        let guard = self.active.lock().map_err(|_| AppError::AppNotReady {
+            message: "failed to lock database state".to_string(),
+        })?;
+        let active = guard.as_ref().ok_or_else(|| AppError::AppNotReady {
+            message: "database is not initialized".to_string(),
+        })?;
+        ReminderEngineService::tick(&active.connection, now_ms, active.reminder_cutoff_ms)
+    }
+
+    #[cfg(test)]
+    pub fn set_active_for_test(&self, workspace: &Path, cutoff_ms: i64) -> Result<(), AppError> {
+        use crate::db::connection::initialize_database;
+
+        let mut active = self.active.lock().map_err(|_| AppError::AppNotReady {
+            message: "failed to lock startup state".to_string(),
+        })?;
+        *active = Some(ActiveWorkspace {
+            path: workspace.to_path_buf(),
+            connection: initialize_database(workspace).map_err(|error| {
+                AppError::DatabaseError {
+                    message: error.to_string(),
+                }
+            })?,
+            startup_warning: None,
+            reminder_cutoff_ms: cutoff_ms,
+        });
+        Ok(())
     }
 
     pub fn with_db<T>(
@@ -213,11 +251,14 @@ impl AppState {
             connection,
             target_existed,
         } = prepared;
+        let cutoff_ms = Local::now().timestamp_millis();
+        ReminderEngineService::reconcile_at_startup(&connection, cutoff_ms)?;
         let old_active = active_guard
             .replace(ActiveWorkspace {
                 path,
                 connection,
                 startup_warning: None,
+                reminder_cutoff_ms: cutoff_ms,
             })
             .expect("active workspace was checked before replacement");
 
@@ -587,6 +628,7 @@ mod tests {
                 path: workspace.to_path_buf(),
                 connection: initialize_database(workspace).expect("initialize active database"),
                 startup_warning: None,
+                reminder_cutoff_ms: 1,
             })),
         }
     }

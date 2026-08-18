@@ -244,6 +244,24 @@ impl TaskRepository {
             .ok_or_else(|| TaskRepositoryError::NotFound { id: id.to_string() })
     }
 
+    pub fn list_ddl_reminder_candidates(
+        connection: &Connection,
+    ) -> Result<Vec<Task>, TaskRepositoryError> {
+        let mut statement = connection.prepare(
+            "SELECT id, title, note, planned_at_ms, deadline_at_ms, priority, status,
+                    contact_id, contact_snapshot, created_at_ms, completed_at_ms,
+                    cancelled_at_ms, updated_at_ms
+             FROM tasks
+             WHERE deadline_at_ms IS NOT NULL
+               AND status NOT IN ('completed', 'cancelled')
+             ORDER BY deadline_at_ms ASC, id ASC",
+        )?;
+        let tasks = statement
+            .query_map([], map_task_row)?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(tasks)
+    }
+
     pub fn query(
         connection: &Connection,
         query: TaskQuery,

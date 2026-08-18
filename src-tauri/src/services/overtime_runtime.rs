@@ -3,10 +3,11 @@ use std::thread;
 use std::time::Duration;
 
 use chrono::Local;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::errors::AppError;
 use crate::services::overtime::OvertimeService;
+use crate::services::reminder_engine::REMINDER_TRIGGERED_EVENT;
 use crate::services::workspace_switch::AppState;
 
 pub const RUNTIME_CHECK_INTERVAL: Duration = Duration::from_secs(30);
@@ -22,6 +23,20 @@ pub fn reconcile_runtime_tick(app: &AppHandle, now_ms: i64) -> Result<bool, AppE
     state.with_db_app(|connection| OvertimeService::reconcile_at(connection, now_ms))
 }
 
+pub fn reminder_runtime_tick(app: &AppHandle, now_ms: i64) -> Result<(), AppError> {
+    let state = app.state::<AppState>();
+    let tick = state.run_reminder_tick(now_ms)?;
+    for payload in tick.triggered {
+        let _ = app.emit(REMINDER_TRIGGERED_EVENT, payload);
+    }
+    Ok(())
+}
+
+pub fn runtime_tick(app: &AppHandle, now_ms: i64) {
+    let _ = reconcile_runtime_tick(app, now_ms);
+    let _ = reminder_runtime_tick(app, now_ms);
+}
+
 pub fn start_runtime_checker(app: AppHandle) {
     if !try_acquire_runtime_checker() {
         return;
@@ -30,7 +45,7 @@ pub fn start_runtime_checker(app: AppHandle) {
     thread::spawn(move || loop {
         thread::sleep(RUNTIME_CHECK_INTERVAL);
         let now_ms = Local::now().timestamp_millis();
-        let _ = reconcile_runtime_tick(&app, now_ms);
+        runtime_tick(&app, now_ms);
     });
 }
 

@@ -188,6 +188,47 @@ impl ReminderRepository {
         Self::get_by_id(connection, id)
     }
 
+    pub fn list_due_for_engine(
+        connection: &Connection,
+        now_ms: i64,
+        cutoff_ms: i64,
+    ) -> Result<Vec<TaskReminder>, ReminderRepositoryError> {
+        let mut statement = connection.prepare(
+            "SELECT r.id, r.task_id, r.remind_at_ms, r.message, r.enabled, r.fired_at_ms
+             FROM task_reminders r
+             INNER JOIN tasks t ON t.id = r.task_id
+             WHERE r.enabled = 1
+               AND r.fired_at_ms IS NULL
+               AND t.status NOT IN ('completed', 'cancelled')
+               AND r.remind_at_ms > ?1
+               AND r.remind_at_ms <= ?2
+             ORDER BY r.remind_at_ms ASC, r.id ASC",
+        )?;
+        let reminders = statement
+            .query_map(params![cutoff_ms, now_ms], map_reminder_row)?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(reminders)
+    }
+
+    pub fn count_unfired_at_or_before_cutoff(
+        connection: &Connection,
+        cutoff_ms: i64,
+    ) -> Result<i64, ReminderRepositoryError> {
+        connection
+            .query_row(
+                "SELECT COUNT(*)
+                 FROM task_reminders r
+                 INNER JOIN tasks t ON t.id = r.task_id
+                 WHERE r.enabled = 1
+                   AND r.fired_at_ms IS NULL
+                   AND t.status NOT IN ('completed', 'cancelled')
+                   AND r.remind_at_ms <= ?1",
+                [cutoff_ms],
+                |row| row.get(0),
+            )
+            .map_err(Into::into)
+    }
+
     pub fn list_triggerable(
         connection: &Connection,
     ) -> Result<Vec<TaskReminder>, ReminderRepositoryError> {
@@ -197,7 +238,7 @@ impl ReminderRepository {
              INNER JOIN tasks t ON t.id = r.task_id
              WHERE r.enabled = 1
                AND r.fired_at_ms IS NULL
-               AND t.status != 'completed'
+               AND t.status NOT IN ('completed', 'cancelled')
              ORDER BY r.remind_at_ms ASC, r.id ASC",
         )?;
         let reminders = statement
@@ -355,7 +396,7 @@ mod tests {
     }
 
     #[test]
-    fn list_triggerable_excludes_completed_tasks_and_already_fired_reminders() {
+    fn list_triggerable_excludes_terminal_tasks_and_already_fired_reminders() {
         let temp = tempfile::tempdir().expect("tempdir");
         let connection = initialize_database(temp.path()).expect("initialize database");
         seed_task(&connection, "task-open");
@@ -385,8 +426,29 @@ mod tests {
             .iter()
             .map(|reminder| reminder.id.as_str())
             .collect();
-        assert_eq!(ids, vec!["rem-open", "rem-cancelled"]);
+        assert_eq!(ids, vec!["rem-open"]);
         assert_eq!(system_reminder_log_count(&connection), 0);
+    }
+
+    #[test]
+    fn list_due_for_engine_excludes_cancelled_tasks_even_when_reminder_is_due() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let connection = initialize_database(temp.path()).expect("initialize database");
+        seed_task(&connection, "task-open");
+        seed_task(&connection, "task-cancelled");
+        create_reminder(&connection, "rem-open", "task-open", 12_000);
+        create_reminder(&connection, "rem-cancelled", "task-cancelled", 15_000);
+        connection
+            .execute(
+                "UPDATE tasks SET status = 'cancelled', cancelled_at_ms = 4000 WHERE id = 'task-cancelled'",
+                [],
+            )
+            .expect("cancel task");
+
+        let due =
+            ReminderRepository::list_due_for_engine(&connection, 20_000, 10_000).expect("list");
+        let ids: Vec<&str> = due.iter().map(|reminder| reminder.id.as_str()).collect();
+        assert_eq!(ids, vec!["rem-open"]);
     }
 
     #[test]

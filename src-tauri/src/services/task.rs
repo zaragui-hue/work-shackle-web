@@ -366,6 +366,11 @@ impl TaskService {
                 message: "completed tasks cannot fire custom reminders".to_string(),
             });
         }
+        if task.status == TaskStatus::Cancelled {
+            return Err(AppError::InvalidTaskInput {
+                message: "cancelled tasks cannot fire custom reminders".to_string(),
+            });
+        }
 
         let updated = ReminderRepository::mark_fired(connection, reminder_id, fired_at_ms)
             .map_err(map_reminder_error)?;
@@ -1185,6 +1190,68 @@ mod tests {
                 .expect_err("completed cannot fire");
         assert!(matches!(error, AppError::InvalidTaskInput { .. }));
         assert_eq!(system_reminder_log_count(&db.connection), 0);
+    }
+
+    #[test]
+    fn cancelled_task_unfired_custom_reminder_is_not_triggerable() {
+        let db = open_test_database();
+        let open_task = TaskService::create(
+            &db.connection,
+            CreateTaskRequest {
+                title: "Still open".to_string(),
+                note: None,
+                planned_at_ms: 1_000,
+                deadline_at_ms: None,
+                priority: None,
+                contact_id: None,
+                contact_snapshot: None,
+                reminders: vec![CreateTaskReminderRequest {
+                    remind_at_ms: 2_000,
+                    message: None,
+                }],
+            },
+        )
+        .expect("create open");
+        let cancelled_task = TaskService::create(
+            &db.connection,
+            CreateTaskRequest {
+                title: "Cancelled".to_string(),
+                note: None,
+                planned_at_ms: 1_000,
+                deadline_at_ms: None,
+                priority: None,
+                contact_id: None,
+                contact_snapshot: None,
+                reminders: vec![CreateTaskReminderRequest {
+                    remind_at_ms: 2_200,
+                    message: None,
+                }],
+            },
+        )
+        .expect("create cancelled");
+        let cancelled_reminder_id = TaskService::get_detail(&db.connection, &cancelled_task.id)
+            .expect("detail")
+            .reminders[0]
+            .id
+            .clone();
+
+        let cancelled = TaskService::cancel(&db.connection, &cancelled_task.id).expect("cancel");
+        assert_eq!(cancelled.status, TaskStatusDto::Cancelled);
+
+        let triggerable =
+            TaskService::list_triggerable_custom_reminders(&db.connection).expect("list");
+        assert_eq!(triggerable.len(), 1);
+        assert_eq!(triggerable[0].task_id, open_task.id);
+
+        let error =
+            TaskService::mark_custom_reminder_fired(&db.connection, &cancelled_reminder_id, 4_000)
+                .expect_err("cancelled cannot fire");
+        assert!(matches!(error, AppError::InvalidTaskInput { .. }));
+        let json = serde_json::to_value(error).expect("serialize error");
+        assert_eq!(
+            json["details"]["message"],
+            "cancelled tasks cannot fire custom reminders"
+        );
     }
 
     #[test]

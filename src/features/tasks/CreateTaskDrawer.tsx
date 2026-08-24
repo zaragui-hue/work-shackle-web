@@ -8,7 +8,7 @@ import {
   type Task,
   type TaskAppError,
 } from "../../services/tauri/tasks";
-import { Button, Input, Modal, Select, Textarea } from "../../shared/ui";
+import { Button, Drawer, Input, Select, Textarea } from "../../shared/ui";
 import {
   createDefaultFormValues,
   createTaskFormSchema,
@@ -19,15 +19,15 @@ import {
   toCreateTaskInput,
 } from "./createTaskForm";
 import { ContactPicker } from "./ContactPicker";
-import "./CreateTaskModal.css";
+import "./CreateTaskDrawer.css";
 
-type CreateTaskModalProps = {
+type CreateTaskDrawerProps = {
   open: boolean;
   onClose: () => void;
   onCreated?: (task: Task) => void;
 };
 
-export function CreateTaskModal({ open, onClose, onCreated }: CreateTaskModalProps) {
+export function CreateTaskDrawer({ open, onClose, onCreated }: CreateTaskDrawerProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     register,
@@ -67,9 +67,8 @@ export function CreateTaskModal({ open, onClose, onCreated }: CreateTaskModalPro
   const canAddReminder = fields.length < REMINDER_LIMIT;
 
   return (
-    <Modal
+    <Drawer
       open={open}
-      wide
       title="新建任务"
       onClose={onClose}
       footer={
@@ -202,6 +201,6 @@ export function CreateTaskModal({ open, onClose, onCreated }: CreateTaskModalPro
           </p>
         ) : null}
       </form>
-    </Modal>
+    </Drawer>
   );
 }

@@ -14,7 +14,6 @@ import "./TodayPage.css";
 export function DesignPreviewPage() {
   const schedule = useMemo(buildPreviewSchedule, []);
   const tasks = useMemo(buildPreviewTasks, []);
-  const taskCount = tasks.formalTasks.length + tasks.upcomingDeadlineTasks.length + tasks.overdueTasks.length;
 
   return (
     <div className="ws-shell">
@@ -67,10 +66,7 @@ export function DesignPreviewPage() {
 
           <Card title="今日待办 / 不建议补货" headerAccent className="today-page__tasks-card">
             <div className="today-page__toolbar">
-              <p>
-                <span>今日版面 {String(taskCount).padStart(2, "0")}</span>
-                活可以插，队不能乱。
-              </p>
+              <p>活可以插，队不能乱。</p>
               <Button>+ 新任务</Button>
             </div>
             <TodayTaskBoard tasks={tasks} />

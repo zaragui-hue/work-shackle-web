@@ -17,10 +17,7 @@ import { useWorkEndDecision } from "../features/today/useWorkEndDecision";
 import { StatusCockpit } from "../features/today/StatusCockpit";
 import { useWorkStatus } from "../features/today/WorkStatusContext";
 import { WorkdayStatusNotice } from "../features/today/WorkdayStatusNotice";
-import {
-  countVisibleTodayTasks,
-  isTodayFullyEmpty,
-} from "../features/today/todayDisplay";
+import { isTodayFullyEmpty } from "../features/today/todayDisplay";
 import { useWorkCountdown } from "../features/today/useWorkCountdown";
 import { WorkCountdownBanner } from "../features/today/WorkCountdownBanner";
 import { WorkScheduleEditor } from "../features/today/WorkScheduleEditor";
@@ -130,7 +127,6 @@ export function TodayPage() {
 
   const showEmpty =
     !loading && !error && isTodayFullyEmpty(todayTasks);
-  const todayTaskCount = countVisibleTodayTasks(todayTasks);
 
   const onStartOvertime = async () => {
     await startOvertime();
@@ -234,10 +230,7 @@ export function TodayPage() {
           ) : null}
 
           <div className="today-page__toolbar">
-            <p>
-              <span>今日版面 {String(todayTaskCount).padStart(2, "0")}</span>
-              活可以插，队不能乱。
-            </p>
+            <p>活可以插，队不能乱。</p>
             <Button onClick={() => setCreateOpen(true)}>+ 新任务</Button>
           </div>
 

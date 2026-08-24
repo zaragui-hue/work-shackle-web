@@ -52,4 +52,19 @@ describe("TodayTaskBoard", () => {
         .map((heading) => heading.textContent),
     ).toEqual(["先完成", "后完成"]);
   });
+
+  it("shows formal tasks without a redundant section heading or hint", () => {
+    const tasks: TodayTasks = {
+      formalTasks: [task("formal", "完成今日安排")],
+      upcomingDeadlineTasks: [],
+      overdueTasks: [],
+      completedTodayTasks: [],
+    };
+
+    render(<TodayTaskBoard tasks={tasks} />);
+
+    expect(screen.queryByText("今天要干")).toBeNull();
+    expect(screen.queryByText("今天正式安排")).toBeNull();
+    expect(screen.getByRole("list", { name: "formal" })).toBeTruthy();
+  });
 });

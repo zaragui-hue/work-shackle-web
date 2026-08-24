@@ -104,14 +104,17 @@ export function TodayTaskBoard({ tasks, onSelect }: TodayTaskBoardProps) {
   return (
     <div className="today-board">
       {formalTasks.length > 0 ? (
-        <TodaySection title="今天要干" hint="今天正式安排">
+        <section
+          className="today-board__section today-board__section--default"
+          aria-label="今日正式任务"
+        >
           <TodayTaskList
             tasks={formalTasks}
             variant="formal"
             onSelect={onSelect}
             listKey="formal"
           />
-        </TodaySection>
+        </section>
       ) : null}
 
       {overdueTasks.length > 0 ? (

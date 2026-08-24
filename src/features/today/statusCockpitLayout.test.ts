@@ -7,6 +7,7 @@ const readCss = (path: string) =>
 
 describe("status cockpit split layout", () => {
   const cockpit = readCss("src/features/today/StatusCockpit.css");
+  const countdown = readCss("src/features/today/WorkCountdownBanner.css");
   const page = readCss("src/pages/TodayPage.css");
 
   it("uses the approved desktop ratio with equal-height sibling panels", () => {
@@ -42,6 +43,24 @@ describe("status cockpit split layout", () => {
   it("stacks countdown above status at 860 pixels", () => {
     expect(cockpit).toMatch(
       /@media\s*\(max-width:\s*860px\)[\s\S]*?\.status-cockpit\s*\{[\s\S]*?grid-template-columns:\s*1fr/,
+    );
+  });
+
+  it("reduces both desktop panels by one quarter without changing mobile heights", () => {
+    expect(cockpit).toMatch(
+      /@media\s*\(min-width:\s*861px\)[\s\S]*?\.status-cockpit__work\s*\{[^}]*min-height:\s*293px/,
+    );
+    expect(cockpit).toMatch(
+      /@media\s*\(min-width:\s*861px\)[\s\S]*?\.status-cockpit__reaction\s*\{[^}]*min-height:\s*293px/,
+    );
+    expect(countdown).toMatch(
+      /@media\s*\(min-width:\s*861px\)[\s\S]*?\.work-countdown\s*\{[^}]*min-height:\s*269px/,
+    );
+    expect(cockpit).toMatch(
+      /@media\s*\(max-width:\s*860px\)[\s\S]*?\.status-cockpit__work\s*\{[^}]*min-height:\s*330px/,
+    );
+    expect(cockpit).toMatch(
+      /@media\s*\(max-width:\s*860px\)[\s\S]*?\.status-cockpit__reaction\s*\{[^}]*min-height:\s*270px/,
     );
   });
 });

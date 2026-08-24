@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { copy } from "../config/copy";
-import { CreateTaskModal } from "../features/tasks/CreateTaskModal";
+import { CreateTaskDrawer } from "../features/tasks/CreateTaskDrawer";
 import { TaskDrawer } from "../features/tasks/TaskDrawer";
 import { LunchReminderBanner } from "../features/today/LunchReminderBanner";
 import { TodayTaskBoard } from "../features/today/TodayTaskBoard";
@@ -284,7 +284,7 @@ export function TodayPage() {
         ) : null}
       </div>
 
-      <CreateTaskModal
+      <CreateTaskDrawer
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onCreated={() => void loadTodayTasks()}

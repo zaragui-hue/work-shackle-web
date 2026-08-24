@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { TaskCalendar } from "../features/tasks/calendar/TaskCalendar";
-import { CreateTaskModal } from "../features/tasks/CreateTaskModal";
 import { HistoryBusinessFilter } from "../features/tasks/history/HistoryBusinessFilter";
 import { HistoryTimeFilter } from "../features/tasks/history/HistoryTimeFilter";
 import {
@@ -34,7 +33,6 @@ export function TasksPage({
   onOpenTaskHandled,
 }: TasksPageProps) {
   const [viewMode, setViewMode] = useState<TasksViewMode>("list");
-  const [createOpen, setCreateOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -140,7 +138,6 @@ export function TasksPage({
               历史
             </Button>
           </div>
-          <Button onClick={() => setCreateOpen(true)}>新建任务</Button>
         </div>
 
         {viewMode === "calendar" ? (
@@ -228,16 +225,6 @@ export function TasksPage({
           />
         ) : null}
       </Card>
-
-      <CreateTaskModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreated={() => {
-          if (viewMode === "list") {
-            void loadTasks();
-          }
-        }}
-      />
 
       <TaskDrawer
         taskId={selectedTaskId}

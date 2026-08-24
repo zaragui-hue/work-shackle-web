@@ -180,6 +180,24 @@
   100% { box-shadow: 0 0 0 9px rgba(255, 116, 56, 0); }
 }
 
+@media (min-width: 861px) {
+  .work-countdown {
+    gap: 6px;
+    min-height: 269px;
+  }
+
+  .work-countdown__heading-row { gap: 12px; }
+  .work-countdown__kicker { margin-bottom: 3px; }
+  .work-countdown__headline { font-size: clamp(3rem, 5.175vw, 4.125rem); }
+  .work-countdown__percent { margin-top: 10px; padding: 6px 9px; }
+  .work-countdown__clock { gap: 14px; }
+  .work-countdown__stack { gap: 8px; padding-bottom: 3px; }
+  .work-countdown__digit { font-size: clamp(2.25rem, 4.05vw, 3.1875rem); }
+  .work-countdown__digit--hours { font-size: clamp(6rem, 10.35vw, 8.25rem); }
+  .work-countdown__progress { gap: 4px; }
+  .work-countdown__track { height: 46px; }
+}
+
 @media (max-width: 520px) {
   .work-countdown { min-height: 300px; }
   .work-countdown__heading-row { display: grid; gap: 6px; }

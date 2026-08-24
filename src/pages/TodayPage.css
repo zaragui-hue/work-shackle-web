@@ -124,6 +124,12 @@
   100% { background-position: -100% 0; }
 }
 
+@media (min-width: 861px) {
+  .today-page__countdown-skeleton {
+    min-height: 269px;
+  }
+}
+
 @media (max-width: 900px) {
   .today-page__dashboard {
     grid-template-columns: minmax(0, 1fr) 300px;

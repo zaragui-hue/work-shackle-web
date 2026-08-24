@@ -126,6 +126,51 @@
   to { transform: rotate(-1deg); box-shadow: 5px 5px 0 var(--color-anchor); }
 }
 
+@media (min-width: 861px) {
+  .status-cockpit__work {
+    min-height: 293px;
+    padding: 12px;
+  }
+
+  .status-cockpit__reaction {
+    gap: 8px;
+    min-height: 293px;
+    padding: 12px;
+  }
+
+  .status-cockpit__meme {
+    grid-template-columns: 96px minmax(0, 1fr);
+    min-height: 210px;
+  }
+
+  .status-cockpit__mascot {
+    width: 110px;
+    height: 138px;
+    margin-left: -8px;
+    margin-bottom: -5px;
+  }
+
+  .status-cockpit__meme-mark {
+    right: -18px;
+    top: -52px;
+    font-size: clamp(7.5rem, 12.75vw, 10.3125rem);
+  }
+
+  .status-cockpit__speech {
+    margin-left: -4px;
+    padding: 12px;
+  }
+
+  .status-cockpit__speech p {
+    margin-top: 6px;
+    font-size: clamp(1rem, 1.55vw, 1.1875rem);
+  }
+
+  .status-cockpit__reaction-skeleton {
+    min-height: 117px;
+  }
+}
+
 @media (max-width: 860px) {
   .status-cockpit {
     grid-template-columns: 1fr;

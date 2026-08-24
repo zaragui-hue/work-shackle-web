@@ -9,6 +9,7 @@ import {
   WorkOffCompleteBanner,
 } from "./WorkEndDecisionBanner";
 import { WorkStatusPanel } from "./WorkStatusPanel";
+import { WorkStatusProvider } from "./WorkStatusContext";
 
 vi.mock("../../services/tauri/workStatus", () => ({
   listWorkStatuses: vi.fn(async () => [
@@ -107,15 +108,20 @@ describe("today mascot placeholders", () => {
     expect(screen.queryByText("🍚")).toBeNull();
   });
 
-  it("uses a canonical mascot for current work status but keeps chip emoji", async () => {
-    const { container } = render(<WorkStatusPanel />);
+  it("uses a canonical mascot for current work status but keeps status emoji", async () => {
+    const { container } = render(
+      <WorkStatusProvider>
+        <WorkStatusPanel />
+      </WorkStatusProvider>,
+    );
 
     expect(
       await screen.findByText("人还在会议室，灵魂可能已经去午睡了。"),
     ).toBeTruthy();
     expect(mascotState(container)).toBe("meeting-empty");
     expect(mascotAnimation(container)).toBe("breathe");
-    expect(screen.getByText("💻")).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "当前状态" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "💻 会议中" })).toBeTruthy();
   });
 });
 

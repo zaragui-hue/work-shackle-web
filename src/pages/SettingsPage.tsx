@@ -23,7 +23,7 @@ import {
   type SettingsAppError,
   type WorkSchedule,
 } from "../services/tauri/settings";
-import { Button, Card, Input, Modal } from "../shared/ui";
+import { Button, Card, Input, Mascot, Modal } from "../shared/ui";
 import "./SettingsPage.css";
 
 export function SettingsPage() {
@@ -154,7 +154,15 @@ export function SettingsPage() {
 
   return (
     <>
-      <Card title="设置" headerAccent>
+      <Card title="工位使用说明 / 生存设置" headerAccent className="settings-page">
+        <div className="settings-page__intro">
+          <Mascot state="work-neutral" size="sm" className="settings-page__mascot" />
+          <div>
+            <p className="settings-page__eyebrow">OPERATING MANUAL / 仅供本人</p>
+            <h2>规则可以改，班还是得上</h2>
+            <p>这里负责调整时间、状态文案和忙碌程度，不负责说服老板。</p>
+          </div>
+        </div>
         {!loading && !loadError ? <WorkspaceSection /> : null}
         <section className="settings-section">
           <h3 className="settings-section__title">工作时间</h3>

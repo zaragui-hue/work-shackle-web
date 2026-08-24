@@ -25,9 +25,7 @@ describe("Mascot", () => {
     const { container } = render(<Mascot state="ddl-anxious" />);
     const image = renderedMascot(container);
 
-    expect(image.getAttribute("src")?.startsWith("data:image/svg+xml")).toBe(
-      true,
-    );
+    expect(image.getAttribute("src")).toMatch(/power-down-v1\.png$/);
     expect(renderedFrame(container).className.split(" ")).toEqual(
       expect.arrayContaining(["ws-mascot-frame", "ws-mascot-frame--md"]),
     );
@@ -81,9 +79,7 @@ describe("Mascot", () => {
     }).not.toThrow();
 
     const image = renderedMascot(document.body);
-    expect(image.getAttribute("src")?.startsWith("data:image/svg+xml")).toBe(
-      true,
-    );
+    expect(image.getAttribute("src")).toMatch(/professional-smile-v2\.png$/);
     expect(image.getAttribute("data-mascot-state")).toBe("work-neutral");
   });
 

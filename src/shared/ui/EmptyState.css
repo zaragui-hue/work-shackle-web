@@ -4,7 +4,10 @@
   align-items: center;
   text-align: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-2) var(--space-1);
+  padding: var(--space-3);
+  border: 2px dashed var(--color-anchor);
+  border-radius: var(--radius-ticket);
+  background: color-mix(in srgb, var(--color-signal) 12%, var(--color-paper-raised));
 }
 
 .ws-empty__mascot {
@@ -15,7 +18,8 @@
   font-size: 1.35rem;
   font-weight: var(--font-weight-medium);
   color: var(--color-ink);
-  letter-spacing: 0.02em;
+  font-weight: 950;
+  letter-spacing: -0.04em;
 }
 
 .ws-empty__desc {

@@ -479,7 +479,17 @@ fn classify_today_tasks(connection: &Connection, as_of_ms: i64) -> Result<TodayT
         }
     }
 
-    formal_tasks.sort_by_key(|task| (task.planned_at_ms, task.id.clone()));
+    formal_tasks.sort_by(|left, right| match (left.deadline_at_ms, right.deadline_at_ms) {
+        (Some(left_deadline), Some(right_deadline)) => left_deadline
+            .cmp(&right_deadline)
+            .then_with(|| left.id.cmp(&right.id)),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => left
+            .planned_at_ms
+            .cmp(&right.planned_at_ms)
+            .then_with(|| left.id.cmp(&right.id)),
+    });
     upcoming_deadline_tasks
         .sort_by_key(|task| (task.deadline_at_ms.unwrap_or(i64::MAX), task.id.clone()));
     overdue_tasks.sort_by_key(|task| (task.deadline_at_ms.unwrap_or(i64::MAX), task.id.clone()));
@@ -1804,6 +1814,54 @@ mod tests {
 
             let result = query_at(&db.connection, local_ms(TODAY, "15:00"));
             assert!(result.completed_today_tasks.is_empty());
+        }
+
+        #[test]
+        fn formal_tasks_put_deadlines_first_then_sort_undated_by_plan() {
+            let db = open_test_database();
+            insert_task(
+                &db.connection,
+                "undated-late",
+                local_ms(TODAY, "14:00"),
+                None,
+            );
+            insert_task(
+                &db.connection,
+                "future-late",
+                local_ms(TODAY, "09:00"),
+                Some(local_ms(TODAY, "20:00")),
+            );
+            insert_task(
+                &db.connection,
+                "past-due",
+                local_ms(TODAY, "09:00"),
+                Some(local_ms(TODAY, "14:00")),
+            );
+            insert_task(
+                &db.connection,
+                "future-soon",
+                local_ms(TODAY, "09:00"),
+                Some(local_ms(TODAY, "16:00")),
+            );
+            insert_task(
+                &db.connection,
+                "undated-early",
+                local_ms(TODAY, "10:00"),
+                None,
+            );
+
+            let result = query_at(&db.connection, local_ms(TODAY, "15:00"));
+
+            assert_eq!(
+                ids(&result.formal_tasks),
+                vec![
+                    "past-due",
+                    "future-soon",
+                    "future-late",
+                    "undated-early",
+                    "undated-late",
+                ]
+            );
         }
 
         #[test]

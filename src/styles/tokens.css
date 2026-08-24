@@ -1,22 +1,51 @@
 :root {
-  --color-paper: #f1ece0;
-  --color-green: #117c0d;
-  --color-wheat: #fac75e;
-  --color-ink: #3d2b1f;
-  --color-ink-muted: #7a6555;
-  --color-danger: #c45c4a;
-  --color-paper-raised: #f7f3ea;
-  --color-overlay: rgba(61, 43, 31, 0.35);
+  --color-canvas: #fff7df;
+  --color-stage: #2448ff;
+  --color-signal: #ffd45e;
+  --color-reaction: #ff7a52;
+  --color-danger: #ff3d57;
+  --color-anchor: #241c16;
+  --color-ink-muted: #6e5548;
+
+  --color-paper: var(--color-canvas);
+  --color-paper-raised: color-mix(in srgb, var(--color-canvas) 82%, white);
+  --color-paper-deep: color-mix(in srgb, var(--color-canvas) 78%, var(--color-signal));
+  --color-ink: var(--color-anchor);
+  --color-ink-soft: color-mix(in srgb, var(--color-anchor) 82%, white);
+  --color-blue: var(--color-stage);
+  --color-lime: var(--color-signal);
+  --color-orange: var(--color-reaction);
+  --color-overlay: color-mix(in srgb, var(--color-anchor) 72%, transparent);
+
+  /* Legacy semantic aliases kept while the rest of the app adopts the new palette. */
+  --color-green: var(--color-blue);
+  --color-wheat: var(--color-lime);
 
   --font-family: "PingFang SC", "Hiragino Sans GB", "Segoe UI", system-ui,
     sans-serif;
-  --font-size-display: 1.75rem;
+  --font-display: "PingFang SC", "Hiragino Sans GB", "Segoe UI", system-ui,
+    sans-serif;
+  --font-data: "SF Mono", "DIN Alternate", "Avenir Next Condensed", ui-monospace,
+    monospace;
+  --font-size-display: 3rem;
   --font-size-title: 1.25rem;
   --font-size-body: 1rem;
   --font-size-caption: 0.875rem;
-  --line-height-body: 1.55;
+  --font-size-hero: clamp(4rem, 6.9vw, 5.5rem);
+  --font-size-countdown: clamp(8rem, 13.8vw, 11rem);
+  --font-size-countdown-secondary: clamp(3rem, 5.4vw, 4.25rem);
+  --font-size-brand: clamp(1.375rem, 2.2vw, 1.75rem);
+  --font-size-page-title: clamp(1.75rem, 3vw, 2.375rem);
+  --font-size-section-title: clamp(1.5rem, 2.4vw, 2rem);
+  --font-size-work-time: clamp(4rem, 6.4vw, 5rem);
+  --font-size-task-title: clamp(1.125rem, 1.8vw, 1.375rem);
+  --font-size-nav: clamp(0.9375rem, 1.35vw, 1.0625rem);
+  --font-size-meta: clamp(0.8125rem, 1.15vw, 0.9375rem);
+  --line-height-body: 1.5;
+  --line-height-display: 0.88;
+  --letter-spacing-display: -0.075em;
   --font-weight-regular: 400;
-  --font-weight-medium: 600;
+  --font-weight-medium: 700;
 
   --space-1: 8px;
   --space-2: 12px;
@@ -24,15 +53,18 @@
   --space-4: 24px;
   --space-5: 32px;
 
-  /* Card / panel keep soft rounds; pills stay pill — avoid everything looking like one bubble */
-  --radius-card: 20px;
-  --radius-button: 999px;
-  --radius-panel: 22px;
-  --radius-ticket: 14px;
+  --radius-card: 8px;
+  --radius-button: 4px;
+  --radius-panel: 12px;
+  --radius-ticket: 3px;
+  --radius-stamp: 999px;
 
-  --shadow-soft: 0 10px 28px rgba(61, 43, 31, 0.07);
-  --shadow-sticker: 3px 3px 0 rgba(61, 43, 31, 0.16);
-  --border-ink: 2.5px solid rgba(61, 43, 31, 0.28);
-  --border-ink-soft: 2px solid rgba(61, 43, 31, 0.16);
-  --border-green: 2.5px solid var(--color-green);
+  --shadow-soft: 8px 8px 0 var(--color-anchor);
+  --shadow-sticker: 4px 4px 0 var(--color-ink);
+  --shadow-ticket: 3px 3px 0 var(--color-ink);
+  --shadow-stage: 7px 7px 0 var(--color-danger);
+  --border-ink: 2px solid var(--color-ink);
+  --border-ink-strong: 3px solid var(--color-anchor);
+  --border-ink-soft: 1px solid color-mix(in srgb, var(--color-anchor) 42%, transparent);
+  --border-green: 2px solid var(--color-blue);
 }

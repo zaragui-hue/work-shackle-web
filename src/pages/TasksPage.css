@@ -1,3 +1,53 @@
+.tasks-page {
+  border-color: var(--color-anchor);
+  background: var(--color-paper);
+}
+
+.tasks-page__masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin: -2px 0 14px;
+  padding: 14px;
+  border: var(--border-ink-strong);
+  border-radius: 6px;
+  color: #fff;
+  background: var(--color-anchor);
+  box-shadow: 6px 6px 0 var(--color-stage);
+}
+
+.tasks-page__eyebrow {
+  margin: 0 0 6px;
+  color: var(--color-signal);
+  font-family: var(--font-data);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.tasks-page__masthead h2 {
+  margin: 0;
+  font-size: var(--font-size-page-title);
+  font-weight: 950;
+  line-height: .95;
+  letter-spacing: -0.065em;
+}
+
+.tasks-page__count {
+  flex-shrink: 0;
+  padding: 6px 8px;
+  border: 2px solid var(--color-anchor);
+  border-radius: 2px;
+  color: var(--color-anchor);
+  background: var(--color-signal);
+  font-family: var(--font-data);
+  font-size: 0.65rem;
+  font-weight: 900;
+  box-shadow: 3px 3px 0 var(--color-danger);
+  transform: rotate(2deg);
+}
+
 .tasks-page__toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -5,16 +55,24 @@
   justify-content: space-between;
   gap: var(--space-2);
   margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 3px solid var(--color-anchor);
 }
 
 .tasks-page__view-toggle {
   display: inline-flex;
-  gap: var(--space-1);
+  gap: 4px;
+  padding: 4px;
+  border: 2px solid var(--color-anchor);
+  border-radius: 3px;
+  background: var(--color-paper-raised);
 }
 
 .tasks-page__view-button {
-  min-height: 40px;
+  min-height: 34px;
   padding-inline: var(--space-3);
+  border: 0;
+  box-shadow: none;
 }
 
 .tasks-page__status {
@@ -29,4 +87,12 @@
 .tasks-page__status p {
   margin: 0;
   color: var(--color-danger);
+}
+
+@media (max-width: 540px) {
+  .tasks-page__masthead { align-items: flex-start; }
+  .tasks-page__masthead h2 { max-width: 10em; }
+  .tasks-page__toolbar { align-items: stretch; }
+  .tasks-page__view-toggle { width: 100%; }
+  .tasks-page__view-button { flex: 1; }
 }

@@ -1,53 +1,184 @@
-# Work Shackle 今日页驾驶舱与状态自动化实施计划
+# Today Cockpit Status Automation Implementation Plan
 
-> 依据：`docs/superpowers/specs/2026-08-24-today-cockpit-status-automation-design.md`
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-## 视觉基线
+**Goal:** Rebuild the Today page around one status cockpit, synchronize the header and page status, and let workday reminders switch status automatically.
 
-- 沿用墨黑 `#111318`、纸张灰 `#efede5`、电蓝 `#345cff`、荧光绿 `#cfff24` 与警报橙 `#ff4b2e`。
-- 驾驶舱是唯一高对比主舞台；任务和工具区保持安静，避免再次形成卡片争抢。
-- 签名元素是“当前状态表情台”：原创打工马、网络梗式字幕和状态贴纸组合在同一块蓝色反应区。
-- 删除蓝色精神广播独立卡、票据尾巴和重复状态标签；不使用新的装饰编号。
+**Architecture:** A React context owns the canonical work status and exposes one switching API to the shell, cockpit, lunch action, and reminder automation. The Today page becomes a full-width cockpit followed by a task column and a compact tools column; deterministic reaction copy and local mascot assets provide the meme layer without changing Rust or SQLite.
 
-## 实施步骤
+**Tech Stack:** React 19, TypeScript, CSS, Tauri IPC, Vitest, Testing Library
 
-### 1. 建立共享状态控制器
+---
 
-- 新建 `WorkStatusProvider`，统一加载状态列表、当前状态、切换和错误恢复。
-- `AppShell` 顶部状态胶囊消费共享状态并显示真实状态。
-- 将 `WorkStatusPanel` 改为受控的紧凑状态切换器，删除重复请求和重复文案。
-- 增加 Provider 和状态切换测试。
+## File structure
 
-### 2. 闹钟自动切换
+- Create `src/features/today/WorkStatusContext.tsx`: canonical status loading and mutation.
+- Create `src/features/today/StatusCockpit.tsx` and `.css`: countdown/status composition.
+- Create `src/features/today/workStatusReaction.ts`: deterministic meme copy and mascot mapping.
+- Create `src/features/today/useWorkdayStatusAutomation.ts`: reminder-to-status orchestration.
+- Create `src/features/today/WorkdayStatusNotice.tsx` and `.css`: success/error feedback.
+- Modify `src/shared/shell/AppShell.tsx` and `.css`: provider boundary and dynamic header status.
+- Modify `src/features/today/WorkStatusPanel.tsx`: controlled compact switcher.
+- Modify `src/pages/TodayPage.tsx` and `.css`: remove duplicate cards and establish the new grid.
+- Modify `src/features/today/WorkScheduleEditor.tsx` and `.css`: compact workday tools.
+- Modify tests beside each unit; do not change Rust or database schema.
 
-- 在 `useWorkdayReminders` 中保留到点识别和单日去重。
-- 新建自动化 hook：提醒出现后立即调用共享状态切换，成功后完成提醒，失败后停止自动重试并提供手动重试。
-- 将原确认提示改为非打断式状态通知。
-- 增加成功、失败、去重和重试测试。
+### Task 1: Canonical work status
 
-### 3. 重组今日页
+**Files:**
+- Create: `src/features/today/WorkStatusContext.tsx`
+- Modify: `src/shared/shell/AppShell.tsx`
+- Modify: `src/features/today/WorkStatusPanel.tsx`
+- Test: `src/features/today/WorkStatusContext.test.tsx`
 
-- 新建 `StatusCockpit`，组合倒计时/下班状态与当前状态反应区。
-- 删除独立 `WorkdayBrief` 渲染，保留其进度计算能力供文案解析使用。
-- 今日页调整为驾驶舱横跨全宽，下方任务主栏与工位控制台窄栏。
-- `WorkScheduleEditor` 收敛为工具卡：下班时间常显，小闹钟列表紧凑，编辑区折叠。
-- 删除任务票据尾部和冗余说明。
+- [x] **Step 1: Write the provider contract**
 
-### 4. 表情与文案
+```ts
+type WorkStatusContextValue = {
+  statuses: FixedWorkStatus[];
+  current: CurrentWorkStatus | null;
+  loading: boolean;
+  error: string | null;
+  switchingId: string | null;
+  reload: () => Promise<void>;
+  switchStatus: (statusType: string) => Promise<CurrentWorkStatus>;
+  clearError: () => void;
+};
+```
 
-- 用内置图像生成生成三张透明背景反应素材：会议职业假笑、摸鱼躺平、午餐续命。
-- 保存到 `src/assets/mascot/workhorse/reactions/`，不覆盖现有素材。
-- 扩展 mascot 映射，并新增确定性的 `WorkStatusReaction` 文案解析。
-- 网络梗感由字幕、贴纸、速度线与 Emoji 辅助完成，不引入第三方图片。
+- [x] **Step 2: Make the shell and switcher consume the provider**
 
-### 5. 验证
+```tsx
+<WorkStatusProvider>
+  <AppShellContent />
+</WorkStatusProvider>
+```
 
-- 更新受 Provider 包裹和结构调整影响的测试。
-- 运行完整 Vitest、TypeScript/Vite 构建。
-- 在 Tauri 开发窗口和浏览器预览中检查宽/窄布局、自动切换提示、错误和 reduced-motion。
+- [x] **Step 3: Test loading, switching, and failure retention**
 
-## 变更边界
+Run: `npm test -- --run src/features/today/WorkStatusContext.test.tsx`
 
-- 不修改 SQLite 表结构或 Rust 固定状态定义。
-- 不覆盖工作区已有的其他未提交改动。
-- 不接入远程图片、表情包平台、路由库或新的状态管理依赖。
+Expected: provider test passes and the previous current status remains rendered after a rejected switch.
+
+### Task 2: Automatic workday reminder switching
+
+**Files:**
+- Create: `src/features/today/useWorkdayStatusAutomation.ts`
+- Create: `src/features/today/WorkdayStatusNotice.tsx`
+- Create: `src/features/today/WorkdayStatusNotice.css`
+- Test: `src/features/today/useWorkdayStatusAutomation.test.tsx`
+
+- [x] **Step 1: Implement one-attempt automation**
+
+```ts
+if (manager.activeReminder && attemptingId.current !== manager.activeReminder.id) {
+  attemptingId.current = manager.activeReminder.id;
+  void attempt(manager.activeReminder, true);
+}
+```
+
+- [x] **Step 2: Surface success and retryable failure**
+
+```ts
+type WorkdayStatusNotice = {
+  tone: "success" | "error";
+  title: string;
+  message: string;
+};
+```
+
+- [x] **Step 3: Test success, failure, retry, and no duplicate call**
+
+Run: `npm test -- --run src/features/today/useWorkdayStatusAutomation.test.tsx`
+
+Expected: one status IPC call per due reminder; retry is only exposed after failure.
+
+### Task 3: Single-line Today cockpit
+
+**Files:**
+- Create: `src/features/today/StatusCockpit.tsx`
+- Create: `src/features/today/StatusCockpit.css`
+- Create: `src/features/today/workStatusReaction.ts`
+- Modify: `src/pages/TodayPage.tsx`
+- Modify: `src/pages/TodayPage.css`
+- Test: `src/features/today/workStatusReaction.test.ts`
+
+- [x] **Step 1: Compose countdown and status reaction in one hero**
+
+```tsx
+<StatusCockpit schedule={workSchedule}>
+  <WorkCountdownBanner display={workCountdown} schedule={workSchedule} />
+</StatusCockpit>
+```
+
+- [x] **Step 2: Remove duplicate WorkdayBrief and receipt footer rendering**
+
+The page grid must be `"stage stage" "tasks schedule"`; the narrow layout must be `stage -> tasks -> schedule`.
+
+- [x] **Step 3: Test deterministic reaction selection**
+
+Run: `npm test -- --run src/features/today/workStatusReaction.test.ts`
+
+Expected: identical status/date/mood returns identical copy and the correct mascot state.
+
+### Task 4: Compact workday tools
+
+**Files:**
+- Modify: `src/features/today/WorkScheduleEditor.tsx`
+- Modify: `src/features/today/WorkScheduleEditor.css`
+- Test: `src/features/today/WorkScheduleEditor.test.tsx`
+
+- [x] **Step 1: Rename the card and expose reminder target state in summaries**
+
+```tsx
+<small>{reminder.message} · 自动切到{reminderStatusLabel(reminder.suggestedStatus)}</small>
+```
+
+- [x] **Step 2: Keep row editors collapsed and reduce always-visible help text**
+
+Run: `npm test -- --run src/features/today/WorkScheduleEditor.test.tsx`
+
+Expected: both existing schedule-save tests pass and reminder summaries remain keyboard-expandable.
+
+### Task 5: Mascot and meme layer
+
+**Files:**
+- Modify: `src/assets/mascot/index.ts`
+- Modify: `src/assets/mascot/types.ts` only if new bitmap assets are successfully generated.
+- Add: versioned PNG files under `src/assets/mascot/workhorse/reactions/` only when built-in image generation succeeds.
+
+- [x] **Step 1: Use existing assets as safe fallback**
+
+```ts
+const WORK_STATUS_TO_MASCOT: Record<string, MascotState> = {
+  meeting: "meeting-empty",
+  chased_by_requirements: "offwork-run",
+  slacking: "fish-relax",
+  lunch: "lunch-happy",
+};
+```
+
+- [x] **Step 2: Add generated assets only through the built-in image workflow**
+
+Expected: transparent local PNG files, no remote URLs, no overwritten existing assets. If the built-in service is unavailable, retain the fallback mapping and do not use CLI without explicit user approval.
+
+### Task 6: Verification
+
+**Files:**
+- Test: all files under `src/**/*.test.ts` and `src/**/*.test.tsx`
+
+- [x] **Step 1: Run focused tests**
+
+Run: `npm test -- --run src/features/today/WorkStatusContext.test.tsx src/features/today/useWorkdayStatusAutomation.test.tsx src/features/today/workStatusReaction.test.ts`
+
+Expected: all focused tests pass.
+
+- [x] **Step 2: Run full suite and build**
+
+Run: `npm test && npm run build`
+
+Expected: all tests pass and Vite emits `dist/` successfully.
+
+- [x] **Step 3: Visual QA**
+
+Run the existing Tauri dev process, inspect desktop and 390px layouts, exercise the top navigation, and verify the header, cockpit, reaction copy, tasks, and tools remain synchronized without horizontal overflow. Status switching and failure retention are covered by provider and automation tests.

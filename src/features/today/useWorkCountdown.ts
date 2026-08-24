@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   getWorkSchedule,
@@ -13,8 +13,10 @@ import {
 
 type WorkCountdownState = {
   display: WorkCountdownDisplay | null;
+  schedule: WorkSchedule | null;
   loading: boolean;
   error: string | null;
+  applySchedule: (next: WorkSchedule) => void;
 };
 
 export function useWorkCountdown(): WorkCountdownState {
@@ -22,6 +24,13 @@ export function useWorkCountdown(): WorkCountdownState {
   const [display, setDisplay] = useState<WorkCountdownDisplay | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const applySchedule = useCallback((next: WorkSchedule) => {
+    setSchedule(next);
+    setDisplay(computeWorkCountdown(next, Date.now()));
+    setError(null);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,5 +78,5 @@ export function useWorkCountdown(): WorkCountdownState {
     };
   }, [schedule]);
 
-  return { display, loading, error };
+  return { display, schedule, loading, error, applySchedule };
 }

@@ -1,5 +1,8 @@
 import type { DdlEmotion } from "../../services/tauri/ddl";
-import placeholderUrl from "./placeholder.svg";
+import professionalSmileUrl from "./workhorse/reactions/professional-smile-v2.png";
+import powerDownUrl from "./workhorse/reactions/power-down-v1.png";
+import panicUrl from "./workhorse/reactions/panic-v2.png";
+import overtimeStoneUrl from "./workhorse/reactions/overtime-stone-v2.png";
 import {
   FALLBACK_MASCOT_ANIMATION,
   FALLBACK_MASCOT_STATE,
@@ -23,23 +26,23 @@ export {
   type MascotState,
 } from "./types";
 
-const placeholderAsset: MascotAsset = {
-  src: placeholderUrl,
-  placeholder: true,
-};
+const professionalAsset: MascotAsset = { src: professionalSmileUrl, placeholder: false };
+const powerDownAsset: MascotAsset = { src: powerDownUrl, placeholder: false };
+const panicAsset: MascotAsset = { src: panicUrl, placeholder: false };
+const overtimeAsset: MascotAsset = { src: overtimeStoneUrl, placeholder: false };
 
 export const MASCOT_ASSETS: Record<MascotState, MascotAsset> = {
-  "work-neutral": placeholderAsset,
-  "meeting-empty": placeholderAsset,
-  "fish-relax": placeholderAsset,
-  "lunch-happy": placeholderAsset,
-  "ddl-calm": placeholderAsset,
-  "ddl-anxious": placeholderAsset,
-  "ddl-panic": placeholderAsset,
-  "ddl-due": placeholderAsset,
-  "ddl-overdue": placeholderAsset,
-  "overtime-dead-eyes": placeholderAsset,
-  "offwork-run": placeholderAsset,
+  "work-neutral": professionalAsset,
+  "meeting-empty": powerDownAsset,
+  "fish-relax": powerDownAsset,
+  "lunch-happy": professionalAsset,
+  "ddl-calm": professionalAsset,
+  "ddl-anxious": powerDownAsset,
+  "ddl-panic": panicAsset,
+  "ddl-due": panicAsset,
+  "ddl-overdue": overtimeAsset,
+  "overtime-dead-eyes": overtimeAsset,
+  "offwork-run": professionalAsset,
 };
 
 const DDL_EMOTION_TO_MASCOT: Record<DdlEmotion, MascotState> = {
@@ -82,7 +85,7 @@ const WORK_STATUS_TO_MASCOT: Record<string, MascotState> = {
   focus_brick: "work-neutral",
   meeting: "meeting-empty",
   urgent_insert: "work-neutral",
-  chased_by_requirements: "work-neutral",
+  chased_by_requirements: "offwork-run",
   slacking: "fish-relax",
   gossip: "fish-relax",
   drinking: "fish-relax",
@@ -119,7 +122,7 @@ const WORK_STATUS_TO_ANIMATION: Record<string, MascotAnimation> = {
   focus_brick: "breathe",
   meeting: "breathe",
   urgent_insert: "breathe",
-  chased_by_requirements: "breathe",
+  chased_by_requirements: "run",
   slacking: "breathe",
   gossip: "breathe",
   drinking: "breathe",

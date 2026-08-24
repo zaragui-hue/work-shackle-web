@@ -2,12 +2,8 @@
   margin-bottom: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-ticket);
-  border: 1px solid rgba(17, 124, 13, 0.28);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.82) 0%,
-    rgba(17, 124, 13, 0.1) 100%
-  );
+  border: 3px solid var(--color-danger);
+  background: var(--color-anchor);
 }
 
 .overtime-banner__content {
@@ -18,7 +14,10 @@
 }
 
 .overtime-banner__mascot {
-  margin: 0;
+  width: 72px;
+  height: 72px;
+  margin: -8px 0;
+  overflow: visible;
 }
 
 .overtime-banner__text {
@@ -30,13 +29,13 @@
   margin: 0;
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-medium);
-  color: var(--color-green);
+  color: var(--color-reaction);
 }
 
 .overtime-banner__label {
   margin: 0;
   font-size: var(--font-size-body);
-  color: var(--color-ink);
+  color: #fff;
 }
 
 .overtime-banner__timer {
@@ -45,7 +44,7 @@
   font-weight: var(--font-weight-medium);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
-  color: var(--color-ink);
+  color: var(--color-signal);
 }
 
 .overtime-banner__actions {

@@ -5,7 +5,7 @@ use crate::db::connection::DbError;
 use crate::time::calendar_day::format_work_date;
 
 pub const DEFAULT_WORK_START: &str = "09:30";
-pub const DEFAULT_WORK_END: &str = "18:30";
+pub const DEFAULT_WORK_END: &str = "18:00";
 pub const DEFAULT_LUNCH_START: &str = "12:00";
 pub const DEFAULT_LUNCH_END: &str = "13:00";
 

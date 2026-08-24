@@ -100,7 +100,16 @@ export function TasksPage({
 
   return (
     <>
-      <Card title="任务" headerAccent>
+      <Card title="任务现场 / 活体清单" headerAccent className="tasks-page">
+        <div className="tasks-page__masthead">
+          <div>
+            <p className="tasks-page__eyebrow">WORK RECEIPT / ALL TASKS</p>
+            <h2>活可以很多，脑子只有一个</h2>
+          </div>
+          <span className="tasks-page__count">
+            {String(viewMode === "history" ? historyTasks.length : tasks.length).padStart(2, "0")} 件在册
+          </span>
+        </div>
         <div className="tasks-page__toolbar">
           <div className="tasks-page__view-toggle" role="tablist" aria-label="任务视图">
             <Button
@@ -214,8 +223,8 @@ export function TasksPage({
 
         {showListEmpty ? (
           <EmptyState
-            title="任务清单空空"
-            description="点「新建任务」开始记录第一块砖。"
+            title="暂时没人往你工位扔活"
+            description="看起来很清闲，建议保持低调。"
           />
         ) : null}
       </Card>

@@ -48,8 +48,8 @@ describe("Mascot asset contract", () => {
     for (const state of MASCOT_STATES) {
       const asset = resolveMascotAsset(state);
       expect(asset.src.length).toBeGreaterThan(0);
-      expect(asset.src.startsWith("data:image/svg+xml")).toBe(true);
-      expect(asset.placeholder).toBe(true);
+      expect(asset.src.endsWith(".png")).toBe(true);
+      expect(asset.placeholder).toBe(false);
       expect(MASCOT_ASSETS[state]).toEqual(asset);
     }
   });
@@ -113,7 +113,7 @@ describe("work status → MascotState", () => {
     expect(mascotStateForWorkStatus("overtime")).toBe("overtime-dead-eyes");
     expect(mascotStateForWorkStatus("urgent_insert")).toBe("work-neutral");
     expect(mascotStateForWorkStatus("chased_by_requirements")).toBe(
-      "work-neutral",
+      "offwork-run",
     );
     expect(mascotStateForWorkStatus("unknown-status")).toBe(
       FALLBACK_MASCOT_STATE,
@@ -159,12 +159,13 @@ describe("MascotAnimation contract", () => {
     );
   });
 
-  it("maps work status to light motion, with run only for leaving", () => {
+  it("maps work status to light motion, with run for leaving and being chased", () => {
     expect(mascotAnimationForWorkStatus("working")).toBe("breathe");
     expect(mascotAnimationForWorkStatus("meeting")).toBe("breathe");
     expect(mascotAnimationForWorkStatus("lunch")).toBe("breathe");
     expect(mascotAnimationForWorkStatus("overtime")).toBe("none");
     expect(mascotAnimationForWorkStatus("preparing_leave")).toBe("run");
+    expect(mascotAnimationForWorkStatus("chased_by_requirements")).toBe("run");
     expect(mascotAnimationForWorkStatus("unknown-status")).toBe(
       FALLBACK_MASCOT_ANIMATION,
     );

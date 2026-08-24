@@ -41,6 +41,13 @@ export function formatCompletedTime(completedAtMs: number): string {
   return format(new Date(completedAtMs), "HH:mm 完成");
 }
 
+export function countVisibleTodayTasks(tasks: {
+  formalTasks: unknown[];
+  overdueTasks: unknown[];
+}): number {
+  return tasks.formalTasks.length + tasks.overdueTasks.length;
+}
+
 export function isTodayFullyEmpty(tasks: {
   formalTasks: unknown[];
   upcomingDeadlineTasks: unknown[];
@@ -49,7 +56,6 @@ export function isTodayFullyEmpty(tasks: {
 }): boolean {
   return (
     tasks.formalTasks.length === 0 &&
-    tasks.upcomingDeadlineTasks.length === 0 &&
     tasks.overdueTasks.length === 0 &&
     tasks.completedTodayTasks.length === 0
   );

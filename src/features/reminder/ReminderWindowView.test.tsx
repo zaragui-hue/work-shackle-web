@@ -82,4 +82,33 @@ describe("ReminderWindowView mascot", () => {
         ?.getAttribute("data-mascot-animation"),
     ).toBe("breathe");
   });
+
+  it("keeps the task title as the dialog heading and wraps long titles", () => {
+    const longTitle =
+      "这是一个特别特别特别长的任务标题，用来确认提醒窗不会把按钮和文案挤出窗口";
+    const { container } = render(
+      <ReminderWindowView
+        payload={{
+          primary: {
+            kind: "custom",
+            reminderId: "r-long",
+            taskId: "t-long",
+            taskTitle: longTitle,
+            remindAtMs: 1000,
+            firedAtMs: 1000,
+            message: "别忘了把这段特别长的自定义提醒也看一眼",
+          },
+          additionalCount: 2,
+        }}
+        onDismiss={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain(longTitle);
+    expect(screen.getByText("还有 2 个任务也在催")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "打开任务" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "知道了" })).toBeTruthy();
+    expect(container.querySelector(".ws-mascot-frame--md")).toBeTruthy();
+    expect(container.querySelector(".ws-mascot-frame--lg")).toBeNull();
+  });
 });

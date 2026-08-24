@@ -13,8 +13,20 @@ import {
 } from "./services/tauri/workspace";
 import { AppShell } from "./shared/shell/AppShell";
 import { StartupPanel } from "./pages/StartupPanel";
+import { DesignPreviewPage } from "./pages/DesignPreviewPage";
 
 function App() {
+  if (
+    import.meta.env.DEV &&
+    new URLSearchParams(window.location.search).get("preview") === "today"
+  ) {
+    return <DesignPreviewPage />;
+  }
+
+  return <WorkShackleApp />;
+}
+
+function WorkShackleApp() {
   const [viewState, setViewState] = useState<StartupViewState>("preparing");
   const [message, setMessage] = useState("正在准备工作目录");
   const [workspacePath, setWorkspacePath] = useState<string | null>(null);

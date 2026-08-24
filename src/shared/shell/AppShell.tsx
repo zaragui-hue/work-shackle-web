@@ -3,19 +3,25 @@ import { TodayPage } from "../../pages/TodayPage";
 import { TasksPage } from "../../pages/TasksPage";
 import { SettingsPage } from "../../pages/SettingsPage";
 import { useReminderOpenTaskBridge } from "../../features/reminder/reminderWindowActions";
+import {
+  WorkStatusProvider,
+  useWorkStatus,
+} from "../../features/today/WorkStatusContext";
+import { AppNavigation, type AppTabId } from "./AppNavigation";
 import "./AppShell.css";
 
-type TabId = "today" | "tasks" | "settings";
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: "today", label: "今日" },
-  { id: "tasks", label: "任务" },
-  { id: "settings", label: "设置" },
-];
-
 export function AppShell() {
-  const [tab, setTab] = useState<TabId>("today");
+  return (
+    <WorkStatusProvider>
+      <AppShellContent />
+    </WorkStatusProvider>
+  );
+}
+
+function AppShellContent() {
+  const [tab, setTab] = useState<AppTabId>("today");
   const [openTaskRequest, setOpenTaskRequest] = useState<string | null>(null);
+  const { current, loading } = useWorkStatus();
 
   useReminderOpenTaskBridge(
     useCallback((taskId: string) => {
@@ -27,13 +33,25 @@ export function AppShell() {
   return (
     <div className="ws-shell">
       <header className="ws-shell__brand">
-        <div className="ws-shell__brand-copy">
-          <p className="ws-shell__eyebrow">Work Shackle</p>
-          <h1 className="ws-shell__heading">慢慢搬砖，也要好好喘气</h1>
+        <div className="ws-shell__brand-lockup">
+          <span className="ws-shell__logo" aria-hidden="true">WS</span>
+          <div className="ws-shell__brand-copy">
+            <h1 className="ws-shell__heading">精神状态事务所</h1>
+            <p className="ws-shell__eyebrow">Office survival system</p>
+          </div>
         </div>
-        <span className="ws-shell__chip" aria-hidden="true">
-          班味加载中…
-        </span>
+        <div className="ws-shell__header-actions">
+          <p
+            className={`ws-shell__live${loading ? " ws-shell__live--loading" : ""}`}
+            aria-label={`当前工作状态：${current?.name ?? "正在读取"}`}
+          >
+            <span className="ws-shell__live-emoji" aria-hidden="true">
+              {current?.emoji ?? "·"}
+            </span>
+            <span className="ws-shell__live-label">{current?.name ?? "读取状态"}</span>
+          </p>
+          <AppNavigation currentTab={tab} onChange={setTab} />
+        </div>
       </header>
 
       <main className="ws-shell__content" aria-live="polite">
@@ -47,19 +65,6 @@ export function AppShell() {
         {tab === "settings" ? <SettingsPage /> : null}
       </main>
 
-      <nav className="ws-shell__nav" aria-label="主导航">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`ws-shell__tab${tab === item.id ? " ws-shell__tab--active" : ""}`}
-            aria-current={tab === item.id ? "page" : undefined}
-            onClick={() => setTab(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
     </div>
   );
 }

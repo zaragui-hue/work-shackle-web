@@ -1,21 +1,69 @@
+.today-page__dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-areas:
+    "stage stage"
+    "tasks schedule";
+  gap: 12px;
+  align-items: start;
+}
+
+.today-page__stage {
+  grid-area: stage;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  background: transparent;
+  box-shadow: none;
+}
+
+.today-page__stage > * { position: relative; z-index: 1; }
+.today-page__dashboard > .work-schedule-editor { grid-area: schedule; }
+
+.today-page__tasks-card {
+  grid-area: tasks;
+  min-height: 390px;
+  border-color: var(--color-ink);
+}
+
+.today-page__tasks-card > .ws-card__body {
+  min-height: 330px;
+}
+
+.today-page__stage .overtime-banner,
+.today-page__stage .work-end-decision {
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+
 .today-page__countdown-skeleton {
-  height: 3.25rem;
-  margin-bottom: var(--space-3);
-  border-radius: var(--radius-ticket);
-  border: var(--border-ink-soft);
+  min-height: 210px;
+  border: var(--border-ink);
+  border-radius: var(--radius-card);
   background: linear-gradient(
     110deg,
-    rgba(255, 255, 255, 0.35) 0%,
-    rgba(250, 199, 94, 0.12) 45%,
-    rgba(255, 255, 255, 0.35) 90%
+    var(--color-paper-raised) 0%,
+    color-mix(in srgb, var(--color-signal) 22%, transparent) 45%,
+    var(--color-paper-raised) 90%
   );
   background-size: 200% 100%;
   animation: today-page-shimmer 1.4s ease-in-out infinite;
 }
 
+.today-page__countdown-skeleton {
+  min-height: 360px;
+  border: 0;
+}
+
+
 .today-page__countdown-status {
-  margin: 0 0 var(--space-3);
-  color: var(--color-ink-muted);
+  margin: 0;
+  color: color-mix(in srgb, white 82%, var(--color-stage));
   font-size: var(--font-size-caption);
 }
 
@@ -25,52 +73,83 @@
 }
 
 .today-page__toolbar {
-  margin-bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--color-ink);
+}
+
+.today-page__toolbar p {
+  display: grid;
+  gap: 2px;
+  color: var(--color-ink-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.today-page__toolbar p span {
+  color: var(--color-ink);
+  font-family: var(--font-data);
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
 }
 
 .today-page__status {
-  margin: 0;
   display: grid;
-  gap: var(--space-2);
+  gap: 12px;
   justify-items: start;
   color: var(--color-ink-muted);
   font-size: var(--font-size-caption);
 }
 
-.today-page__status p {
-  margin: 0;
-  color: var(--color-danger);
-}
+.today-page__status p { color: var(--color-danger); }
 
-.today-page__skeleton {
-  display: grid;
-  gap: var(--space-2);
-}
-
+.today-page__skeleton { display: grid; gap: 12px; }
 .today-page__skeleton-block {
   height: 4.5rem;
-  border-radius: var(--radius-ticket);
-  border: var(--border-ink-soft);
-  background: linear-gradient(
-    110deg,
-    rgba(255, 255, 255, 0.35) 0%,
-    rgba(250, 199, 94, 0.12) 45%,
-    rgba(255, 255, 255, 0.35) 90%
-  );
+  border: 1.5px solid color-mix(in srgb, var(--color-ink) 18%, transparent);
+  border-radius: 4px;
+  background: linear-gradient(110deg, var(--color-paper-raised) 0%, color-mix(in srgb, var(--color-signal) 30%, var(--color-paper-raised)) 45%, var(--color-paper-raised) 90%);
   background-size: 200% 100%;
   animation: today-page-shimmer 1.4s ease-in-out infinite;
 }
-
-.today-page__skeleton-block--short {
-  height: 3.25rem;
-  width: 72%;
-}
+.today-page__skeleton-block--short { width: 72%; height: 3.25rem; }
 
 @keyframes today-page-shimmer {
-  0% {
-    background-position: 100% 0;
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@media (max-width: 900px) {
+  .today-page__dashboard {
+    grid-template-columns: minmax(0, 1fr) 300px;
   }
-  100% {
-    background-position: -100% 0;
+}
+
+@media (max-width: 760px) {
+  .today-page__dashboard {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "stage"
+      "tasks"
+      "schedule";
   }
+
+  .today-page__stage { min-height: 0; }
+  .today-page__tasks-card { min-height: 390px; }
+  .today-page__tasks-card > .ws-card__body { min-height: 330px; }
+}
+
+@media (max-width: 480px) {
+  .today-page__toolbar { align-items: flex-start; }
+  .today-page__toolbar p { max-width: 12em; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .today-page__countdown-skeleton,
+  .today-page__skeleton-block { animation: none; }
 }

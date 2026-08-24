@@ -5,7 +5,7 @@
 }
 
 .calendar-day-drawer__status--error {
-  color: var(--color-danger, #9a3b12);
+  color: var(--color-danger);
 }
 
 .calendar-day-drawer__sections {
@@ -13,9 +13,22 @@
   gap: var(--space-3);
 }
 
+.calendar-day-drawer__section {
+  padding: var(--space-3);
+  border: 2px solid var(--color-anchor);
+  border-radius: 4px;
+  color: var(--color-anchor);
+  background: var(--color-paper-raised);
+}
+
 .calendar-day-drawer__section-title {
+  width: fit-content;
   margin: 0 0 var(--space-2);
+  padding: 3px 6px;
+  border: 2px solid var(--color-anchor);
+  border-radius: 2px;
   font-size: var(--font-size-caption);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-ink-muted);
+  font-weight: 900;
+  color: var(--color-anchor);
+  background: var(--color-signal);
 }

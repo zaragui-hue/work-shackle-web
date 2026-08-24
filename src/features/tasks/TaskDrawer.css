@@ -22,16 +22,20 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  padding: 2px 0;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-anchor);
+  border-radius: 3px;
+  background: var(--color-signal);
 }
 
 .task-drawer__priority-dot {
   width: 10px;
   height: 10px;
   margin-top: 5px;
-  border-radius: 999px;
+  border: 2px solid var(--color-anchor);
+  border-radius: 1px;
   flex-shrink: 0;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7);
+  box-shadow: 2px 2px 0 var(--color-anchor);
 }
 
 .task-drawer__hero-copy {
@@ -58,9 +62,10 @@
   gap: var(--space-2);
   padding: var(--space-3);
   border-radius: var(--radius-ticket);
-  border: var(--border-ink-soft);
-  background:
-    linear-gradient(135deg, rgba(250, 199, 94, 0.22), rgba(241, 236, 224, 0.4));
+  border: 2px solid var(--color-anchor);
+  color: var(--color-anchor);
+  background: var(--color-paper-raised);
+  box-shadow: 4px 4px 0 var(--color-stage);
 }
 
 .task-drawer__deadline-fields {
@@ -76,16 +81,23 @@
 .task-drawer__section {
   display: grid;
   gap: var(--space-1);
-  padding: 0;
-  border: 0;
-  background: transparent;
+  padding: var(--space-3);
+  border: 2px solid var(--color-anchor);
+  border-radius: 3px;
+  color: var(--color-anchor);
+  background: var(--color-paper-raised);
 }
 
 .task-drawer__section h3 {
-  margin: 0;
+  width: fit-content;
+  margin: 0 0 2px;
+  padding: 3px 6px;
+  border: 2px solid var(--color-anchor);
+  border-radius: 2px;
   font-size: var(--font-size-caption);
   font-weight: var(--font-weight-medium);
-  color: var(--color-ink-muted);
+  color: var(--color-anchor);
+  background: var(--color-signal);
   letter-spacing: 0.02em;
 }
 

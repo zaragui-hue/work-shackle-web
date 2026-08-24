@@ -1,0 +1,31 @@
+.workday-reminder-prompt {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 15px 16px;
+  border: var(--border-ink);
+  border-radius: 16px;
+  color: #fff;
+  background: var(--color-ink);
+  box-shadow: 4px 5px 0 var(--color-ink);
+}
+
+.workday-reminder-prompt__icon {
+  width: 64px;
+  height: 64px;
+  overflow: visible;
+  filter: drop-shadow(2px 3px 0 var(--color-orange));
+}
+
+.workday-reminder-prompt__copy { min-width: 0; }
+.workday-reminder-prompt__kicker { color: var(--color-lime); font-family: var(--font-data); font-size: 0.7rem; font-weight: 900; letter-spacing: 0.1em; }
+.workday-reminder-prompt h2 { margin: 3px 0 2px; font-size: 1.05rem; line-height: 1.2; }
+.workday-reminder-prompt__copy > p:last-child { color: #aeb0b8; font-size: 0.78rem; }
+.workday-reminder-prompt__actions { display: flex; gap: 8px; }
+
+@media (max-width: 720px) {
+  .workday-reminder-prompt { grid-template-columns: auto minmax(0, 1fr); }
+  .workday-reminder-prompt__actions { grid-column: 1 / -1; }
+}

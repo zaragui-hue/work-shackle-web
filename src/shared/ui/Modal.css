@@ -21,8 +21,8 @@
   max-height: min(92vh, 640px);
   background: var(--color-paper-raised);
   border: var(--border-ink);
-  border-radius: var(--radius-panel);
-  box-shadow: var(--shadow-sticker);
+  border-radius: var(--radius-card);
+  box-shadow: 7px 7px 0 var(--color-anchor);
   padding: var(--space-3) var(--space-4) var(--space-4);
   display: flex;
   flex-direction: column;
@@ -40,6 +40,8 @@
 .ws-modal__header h2 {
   margin: 0;
   font-size: var(--font-size-title);
+  font-weight: 950;
+  letter-spacing: -0.04em;
   color: var(--color-ink);
 }
 
@@ -56,7 +58,7 @@
   flex-shrink: 0;
   margin-top: var(--space-3);
   padding-top: var(--space-3);
-  border-top: var(--border-ink-soft);
+  border-top: 1px dashed var(--color-ink);
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);

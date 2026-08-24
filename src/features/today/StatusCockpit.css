@@ -1,0 +1,143 @@
+.status-cockpit {
+  display: grid;
+  grid-template-columns: minmax(0, 2.15fr) minmax(285px, 1fr);
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--color-anchor);
+  box-shadow: var(--shadow-stage);
+}
+
+.status-cockpit__work {
+  position: relative;
+  display: grid;
+  align-content: stretch;
+  min-width: 0;
+  min-height: 390px;
+  padding: 16px;
+  overflow: hidden;
+  color: #fff;
+  background: var(--color-stage);
+}
+
+.status-cockpit__reaction {
+  position: relative;
+  display: grid;
+  align-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  min-height: 390px;
+  padding: 16px;
+  overflow: hidden;
+  color: var(--color-anchor);
+  background: var(--color-reaction);
+}
+
+.status-cockpit__status-row {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.status-cockpit__status-row > span {
+  color: var(--color-anchor);
+  font-family: var(--font-data);
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.status-cockpit__meme {
+  position: relative;
+  display: grid;
+  grid-template-columns: 128px minmax(0,1fr);
+  align-items: end;
+  min-height: 280px;
+}
+
+.status-cockpit__mascot {
+  position: relative;
+  z-index: 2;
+  width: 146px;
+  height: 184px;
+  margin-left: -10px;
+  margin-bottom: -7px;
+  filter: drop-shadow(3px 4px 0 color-mix(in srgb, var(--color-anchor) 42%, transparent));
+}
+
+.status-cockpit__meme-mark {
+  position: absolute;
+  right: -24px;
+  top: -70px;
+  color: var(--color-danger);
+  opacity: .5;
+  font-size: clamp(10rem, 17vw, 13.75rem);
+  font-weight: 1000;
+  line-height: 1;
+  transform: rotate(-9deg);
+  -webkit-text-stroke: 2px var(--color-anchor);
+}
+
+.status-cockpit__speech {
+  position: relative;
+  z-index: 3;
+  align-self: center;
+  margin-left: -5px;
+  padding: 16px;
+  border: 3px solid var(--color-anchor);
+  border-radius: 6px 6px 6px 1px;
+  color: var(--color-anchor);
+  background: var(--color-signal);
+  box-shadow: 5px 5px 0 var(--color-anchor);
+  transform: rotate(-1deg);
+  animation: status-cockpit-snap 220ms cubic-bezier(.2,.9,.25,1);
+}
+
+.status-cockpit__speech strong { font-size: clamp(.9375rem, 1.5vw, 1.125rem); }
+.status-cockpit__speech p {
+  display: -webkit-box;
+  margin-top: 8px;
+  overflow: hidden;
+  font-size: clamp(1.125rem, 1.9vw, 1.375rem);
+  font-weight: 900;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.status-cockpit__reaction-skeleton { min-height: 156px; border-radius: 3px; background: color-mix(in srgb, var(--color-canvas) 25%, transparent); }
+
+.status-cockpit .work-status-panel--stage .ws-input {
+  max-width: 10rem;
+  min-height: 32px;
+  padding-block: 4px;
+  font-size: .68rem;
+}
+
+@keyframes status-cockpit-snap {
+  from { transform: translate(5px, 5px) rotate(1deg); box-shadow: 0 0 0 var(--color-anchor); }
+  to { transform: rotate(-1deg); box-shadow: 5px 5px 0 var(--color-anchor); }
+}
+
+@media (max-width: 860px) {
+  .status-cockpit {
+    grid-template-columns: 1fr;
+  }
+
+  .status-cockpit__work { min-height: 330px; }
+  .status-cockpit__reaction { min-height: 270px; }
+  .status-cockpit__meme { min-height: 210px; }
+  .status-cockpit__meme-mark { font-size: clamp(7.5rem, 38vw, 10rem); }
+  .status-cockpit__speech p { font-size: clamp(1.0625rem, 4.8vw, 1.1875rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-cockpit__speech { animation: none; transform: none; }
+}

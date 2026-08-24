@@ -2,12 +2,8 @@
   margin-bottom: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-ticket);
-  border: 1px solid rgba(250, 199, 94, 0.55);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.72) 0%,
-    rgba(250, 199, 94, 0.18) 100%
-  );
+  border: 1.5px solid var(--color-ink);
+  background: color-mix(in srgb, var(--color-lime) 22%, var(--color-paper-raised));
 }
 
 .lunch-reminder__content {
@@ -18,7 +14,10 @@
 }
 
 .lunch-reminder__mascot {
-  margin: 0;
+  width: 62px;
+  height: 62px;
+  margin: -6px 0;
+  overflow: visible;
 }
 
 .lunch-reminder__text {
@@ -30,7 +29,8 @@
   margin: 0;
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-medium);
-  color: var(--color-green);
+  color: var(--color-blue);
+  font-weight: 950;
 }
 
 .lunch-reminder__message {

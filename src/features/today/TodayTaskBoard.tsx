@@ -99,26 +99,10 @@ function TodayCompletedSection({
 }
 
 export function TodayTaskBoard({ tasks, onSelect }: TodayTaskBoardProps) {
-  const {
-    upcomingDeadlineTasks,
-    formalTasks,
-    overdueTasks,
-    completedTodayTasks,
-  } = tasks;
+  const { formalTasks, overdueTasks, completedTodayTasks } = tasks;
 
   return (
     <div className="today-board">
-      {upcomingDeadlineTasks.length > 0 ? (
-        <TodaySection title="即将到点" tone="upcoming" hint="近期最需要注意的 DDL">
-          <TodayTaskList
-            tasks={upcomingDeadlineTasks}
-            variant="upcoming"
-            onSelect={onSelect}
-            listKey="upcoming"
-          />
-        </TodaySection>
-      ) : null}
-
       {formalTasks.length > 0 ? (
         <TodaySection title="今天要干" hint="今天正式安排">
           <TodayTaskList

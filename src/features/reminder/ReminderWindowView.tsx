@@ -30,22 +30,31 @@ export function ReminderWindowView({ payload, onDismiss }: ReminderWindowViewPro
 
   return (
     <div className="reminder-window">
-      <div className="reminder-window__card" role="dialog" aria-labelledby="reminder-window-title">
+      <div
+        className="reminder-window__card"
+        data-reminder-kind={reminderKind}
+        role="dialog"
+        aria-labelledby="reminder-window-title"
+      >
+        <div className="reminder-window__ticket-head">
+          <span>WORK ALERT / 工位警报</span>
+          <span>#{primary.taskId.slice(-4).toUpperCase()}</span>
+        </div>
         <div className="reminder-window__hero">
           <Mascot
             state={mascotState}
             animation={mascotAnimation}
-            size="lg"
+            size="md"
             className="reminder-window__mascot"
           />
         </div>
 
         <div className="reminder-window__body">
           <p className="reminder-window__eyebrow">{reminderKindLabel(primary)}</p>
-          <h1 id="reminder-window-title" className="reminder-window__headline">
-            {reminderHeadline(primary)}
+          <p className="reminder-window__headline">{reminderHeadline(primary)}</p>
+          <h1 id="reminder-window-title" className="reminder-window__task">
+            「{primary.taskTitle}」
           </h1>
-          <p className="reminder-window__task">「{primary.taskTitle}」</p>
           <p className="reminder-window__remaining">{reminderRemainingLabel(primary)}</p>
           <p className="reminder-window__emotion">{emotion.label}</p>
           {extraLabel ? (
@@ -70,6 +79,7 @@ export function ReminderWindowView({ payload, onDismiss }: ReminderWindowViewPro
             知道了
           </Button>
         </div>
+        <div className="reminder-window__barcode" aria-hidden="true" />
       </div>
     </div>
   );

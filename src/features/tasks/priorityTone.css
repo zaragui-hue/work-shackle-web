@@ -1,20 +1,20 @@
-/* Shared priority accent tones — soft, not alarm-red. */
+/* Priority stays readable as a labelled rail; color is supplemental. */
 .priority-tone--1 {
-  background: rgba(17, 124, 13, 0.28);
+  background: color-mix(in srgb, var(--color-stage) 14%, var(--color-paper-raised));
 }
 
 .priority-tone--2 {
-  background: rgba(17, 124, 13, 0.55);
+  background: color-mix(in srgb, var(--color-signal) 34%, var(--color-paper-raised));
 }
 
 .priority-tone--3 {
-  background: var(--color-wheat);
+  background: var(--color-signal);
 }
 
 .priority-tone--4 {
-  background: #e8a24a;
+  background: var(--color-reaction);
 }
 
 .priority-tone--5 {
-  background: #d97862;
+  background: var(--color-danger);
 }

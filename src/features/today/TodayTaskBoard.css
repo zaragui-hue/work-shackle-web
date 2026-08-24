@@ -1,12 +1,12 @@
 .today-board {
   display: grid;
-  gap: var(--space-4);
+  gap: 16px;
   min-width: 0;
 }
 
 .today-board__section {
   display: grid;
-  gap: var(--space-2);
+  gap: 4px;
   min-width: 0;
 }
 
@@ -17,14 +17,15 @@
 
 .today-board__section-title {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-section-title);
+  font-weight: 950;
   color: var(--color-ink);
-  letter-spacing: 0.02em;
+  line-height: 1;
+  letter-spacing: -0.055em;
 }
 
 .today-board__section--upcoming .today-board__section-title {
-  color: var(--color-green);
+  color: var(--color-orange);
 }
 
 .today-board__section--debt .today-board__section-title {
@@ -33,7 +34,7 @@
 
 .today-board__section-hint {
   margin: 0;
-  font-size: var(--font-size-caption);
+  font-size: var(--font-size-meta);
   color: var(--color-ink-muted);
 }
 
@@ -42,14 +43,14 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--space-2);
+  gap: 0;
   min-width: 0;
 }
 
 .today-board__section--completed {
   margin-top: var(--space-1);
   padding-top: var(--space-2);
-  border-top: 1px dashed rgba(61, 43, 31, 0.12);
+  border-top: 2px dashed color-mix(in srgb, var(--color-ink) 24%, transparent);
 }
 
 .today-board__completed-toggle {

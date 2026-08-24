@@ -131,6 +131,7 @@ export function TaskCalendar({
             "task-calendar__day",
             cell.isCurrentMonth ? "task-calendar__day--current-month" : "task-calendar__day--outside",
             cell.isToday ? "task-calendar__day--today" : "",
+            cell.dateKey === selectedDateKey ? "task-calendar__day--selected" : "",
             cell.holidayName ? "task-calendar__day--holiday" : "",
             !cell.holidayName && cell.isWeekend && cell.isCurrentMonth
               ? "task-calendar__day--weekend"
@@ -147,6 +148,7 @@ export function TaskCalendar({
               role="gridcell"
               aria-label={dayLabel}
               aria-current={cell.isToday ? "date" : undefined}
+              aria-selected={cell.dateKey === selectedDateKey}
               onClick={() => setSelectedDateKey(cell.dateKey)}
             >
               <span className="task-calendar__day-number">{cell.dayNumber}</span>

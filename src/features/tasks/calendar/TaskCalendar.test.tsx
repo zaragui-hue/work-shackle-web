@@ -204,6 +204,21 @@ describe("TaskCalendar", () => {
     );
   });
 
+  it("marks the clicked day as selected until the drawer closes", () => {
+    render(<TaskCalendar today={FIXED_TODAY} initialMonth={AUGUST_2026} />);
+
+    const todayCell = screen.getByRole("gridcell", { name: /2026年8月18日/ });
+    fireEvent.click(todayCell);
+
+    expect(todayCell.className).toContain("task-calendar__day--selected");
+    expect(todayCell.getAttribute("aria-selected")).toBe("true");
+
+    fireEvent.click(screen.getByRole("button", { name: "关闭日期抽屉" }));
+
+    expect(todayCell.className).not.toContain("task-calendar__day--selected");
+    expect(todayCell.getAttribute("aria-selected")).toBe("false");
+  });
+
   it("can open the day drawer for outside-month padding dates", () => {
     render(<TaskCalendar today={FIXED_TODAY} initialMonth={AUGUST_2026} />);
 

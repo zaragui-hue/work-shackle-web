@@ -16,23 +16,31 @@ body {
   font-size: var(--font-size-body);
   line-height: var(--line-height-body);
   color: var(--color-ink);
-  background-color: var(--color-paper);
-  background-image:
-    radial-gradient(rgba(61, 43, 31, 0.035) 0.6px, transparent 0.6px),
-    linear-gradient(180deg, #f4efe4 0%, var(--color-paper) 48%, #ebe4d6 100%);
-  background-size: 6px 6px, auto;
+  background-color: var(--color-anchor);
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-canvas) 18%, transparent) 0 1px,
+    transparent 1.2px
+  );
+  background-size: 16px 16px;
   -webkit-font-smoothing: antialiased;
 }
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
   color: inherit;
 }
 
 button {
   cursor: pointer;
+}
+
+::selection {
+  color: var(--color-anchor);
+  background: var(--color-signal);
 }
 
 h1,
@@ -43,8 +51,8 @@ p {
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-wheat);
-  outline-offset: 2px;
+  outline: 3px solid var(--color-danger);
+  outline-offset: 3px;
 }
 
 @media (prefers-reduced-motion: reduce) {

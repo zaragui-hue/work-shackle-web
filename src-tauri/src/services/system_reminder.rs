@@ -15,8 +15,11 @@ pub use crate::db::repositories::system_reminder_repository::{
 pub struct SystemReminderService;
 
 impl SystemReminderService {
-    pub fn compute_nodes(deadline_at_ms: i64) -> Result<Vec<SystemReminderNode>, AppError> {
-        compute_nodes(deadline_at_ms).map_err(map_system_reminder_error)
+    pub fn compute_nodes(
+        planned_at_ms: i64,
+        deadline_at_ms: i64,
+    ) -> Result<Vec<SystemReminderNode>, AppError> {
+        compute_nodes(planned_at_ms, deadline_at_ms).map_err(map_system_reminder_error)
     }
 
     pub fn has_fired(
@@ -34,6 +37,7 @@ impl SystemReminderService {
         task_id: &str,
         kind: SystemReminderKind,
         deadline_snapshot_ms: i64,
+        scheduled_at_ms: i64,
         fired_at_ms: i64,
     ) -> Result<SystemReminderLogEntry, AppError> {
         SystemReminderRepository::mark_fired(
@@ -43,6 +47,7 @@ impl SystemReminderService {
                 task_id: task_id.to_string(),
                 kind,
                 deadline_snapshot_ms,
+                scheduled_at_ms,
                 fired_at_ms,
             },
         )
@@ -97,15 +102,14 @@ mod tests {
     }
 
     #[test]
-    fn system_nodes_cover_all_ddl_offsets_and_due() {
-        let deadline_at_ms = 3_600_000;
-        let nodes = SystemReminderService::compute_nodes(deadline_at_ms).expect("nodes");
+    fn system_nodes_cover_progress_and_remaining_time() {
+        let deadline_at_ms = 10_800_000;
+        let nodes = SystemReminderService::compute_nodes(0, deadline_at_ms).expect("nodes");
 
-        assert_eq!(nodes.len(), 4);
-        assert_eq!(nodes[0].trigger_at_ms, deadline_at_ms - 60 * 60 * 1000);
-        assert_eq!(nodes[1].trigger_at_ms, deadline_at_ms - 30 * 60 * 1000);
-        assert_eq!(nodes[2].trigger_at_ms, deadline_at_ms - 10 * 60 * 1000);
-        assert_eq!(nodes[3].trigger_at_ms, deadline_at_ms);
+        assert_eq!(nodes.len(), 3);
+        assert!(nodes.iter().any(|node| node.kind == SystemReminderKind::ProgressHalf));
+        assert!(nodes.iter().any(|node| node.kind == SystemReminderKind::QuarterRemaining));
+        assert!(nodes.iter().any(|node| node.kind == SystemReminderKind::OneHourRemaining));
     }
 
     #[test]
@@ -129,8 +133,9 @@ mod tests {
         SystemReminderService::mark_fired(
             &db.connection,
             &task.id,
-            SystemReminderKind::Ddl60,
+            SystemReminderKind::ProgressHalf,
             10_000,
+            5_000,
             8_000,
         )
         .expect("mark system fired");
@@ -209,7 +214,8 @@ mod tests {
                 &task.id,
                 kind,
                 10_800_000,
-                kind.trigger_at_ms(10_800_000),
+                5_400_000,
+                5_400_000,
             )
             .expect("mark system");
         }
@@ -218,7 +224,7 @@ mod tests {
             custom_count(&db.connection, &task.id),
             MAX_USER_REMINDERS as i64
         );
-        assert_eq!(system_log_count(&db.connection), 4);
+        assert_eq!(system_log_count(&db.connection), 3);
     }
 
     #[test]
@@ -242,8 +248,9 @@ mod tests {
         SystemReminderService::mark_fired(
             &db.connection,
             &task.id,
-            SystemReminderKind::Ddl60,
+            SystemReminderKind::ProgressHalf,
             18_000_000,
+            14_000_000,
             14_400_000,
         )
         .expect("mark old ddl_60");
@@ -261,14 +268,14 @@ mod tests {
         assert!(SystemReminderService::has_fired(
             &db.connection,
             &task.id,
-            SystemReminderKind::Ddl60,
+            SystemReminderKind::ProgressHalf,
             18_000_000
         )
         .expect("old snapshot"));
         assert!(!SystemReminderService::has_fired(
             &db.connection,
             &task.id,
-            SystemReminderKind::Ddl60,
+            SystemReminderKind::ProgressHalf,
             20_000_000
         )
         .expect("new snapshot"));
@@ -276,8 +283,9 @@ mod tests {
         SystemReminderService::mark_fired(
             &db.connection,
             &task.id,
-            SystemReminderKind::Ddl60,
+            SystemReminderKind::ProgressHalf,
             20_000_000,
+            15_000_000,
             16_400_000,
         )
         .expect("mark new ddl_60");
@@ -286,22 +294,15 @@ mod tests {
     }
 
     #[test]
-    fn past_trigger_nodes_are_computed_without_auto_firing() {
+    fn nodes_outside_the_task_range_are_skipped() {
         let planned_at_ms = 17_700_000;
         let deadline_at_ms = 18_000_000;
-        let nodes = SystemReminderService::compute_nodes(deadline_at_ms).expect("nodes");
+        let nodes = SystemReminderService::compute_nodes(planned_at_ms, deadline_at_ms)
+            .expect("nodes");
 
-        let ddl_60 = nodes
+        assert!(nodes
             .iter()
-            .find(|node| node.kind == SystemReminderKind::Ddl60)
-            .expect("ddl_60");
-        let ddl_30 = nodes
-            .iter()
-            .find(|node| node.kind == SystemReminderKind::Ddl30)
-            .expect("ddl_30");
-
-        assert!(ddl_60.trigger_at_ms < planned_at_ms);
-        assert!(ddl_30.trigger_at_ms < planned_at_ms);
+            .all(|node| node.trigger_at_ms > planned_at_ms && node.trigger_at_ms < deadline_at_ms));
         assert_eq!(system_log_count(&open_test_database().connection), 0);
     }
 }

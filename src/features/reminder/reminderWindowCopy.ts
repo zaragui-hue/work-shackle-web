@@ -28,14 +28,12 @@ export function reminderHeadline(payload: ReminderTriggeredPayload): string {
   }
 
   switch (payload.reminderKind) {
-    case "ddl_60":
-      return SYSTEM_HEADLINES.ddl_60;
-    case "ddl_30":
-      return SYSTEM_HEADLINES.ddl_30;
-    case "ddl_10":
-      return SYSTEM_HEADLINES.ddl_10;
-    case "ddl_due":
-      return SYSTEM_HEADLINES.ddl_due;
+    case "progress_half":
+      return SYSTEM_HEADLINES.progress_half;
+    case "quarter_remaining":
+      return SYSTEM_HEADLINES.quarter_remaining;
+    case "one_hour_remaining":
+      return SYSTEM_HEADLINES.one_hour_remaining;
     default:
       return SYSTEM_HEADLINES.fallback;
   }
@@ -47,14 +45,12 @@ export function reminderRemainingLabel(payload: ReminderTriggeredPayload): strin
   }
 
   switch (payload.reminderKind) {
-    case "ddl_60":
-      return SYSTEM_REMAINING.ddl_60;
-    case "ddl_30":
-      return SYSTEM_REMAINING.ddl_30;
-    case "ddl_10":
-      return SYSTEM_REMAINING.ddl_10;
-    case "ddl_due":
-      return SYSTEM_REMAINING.ddl_due;
+    case "progress_half":
+      return SYSTEM_REMAINING.progress_half;
+    case "quarter_remaining":
+      return SYSTEM_REMAINING.quarter_remaining;
+    case "one_hour_remaining":
+      return SYSTEM_REMAINING.one_hour_remaining;
     default:
       return SYSTEM_REMAINING.fallback;
   }
@@ -66,14 +62,12 @@ export function reminderKindLabel(payload: ReminderTriggeredPayload): string {
   }
 
   switch (payload.reminderKind) {
-    case "ddl_60":
-      return SYSTEM_KINDS.ddl_60;
-    case "ddl_30":
-      return SYSTEM_KINDS.ddl_30;
-    case "ddl_10":
-      return SYSTEM_KINDS.ddl_10;
-    case "ddl_due":
-      return SYSTEM_KINDS.ddl_due;
+    case "progress_half":
+      return SYSTEM_KINDS.progress_half;
+    case "quarter_remaining":
+      return SYSTEM_KINDS.quarter_remaining;
+    case "one_hour_remaining":
+      return SYSTEM_KINDS.one_hour_remaining;
     default:
       return SYSTEM_KINDS.fallback;
   }

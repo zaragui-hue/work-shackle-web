@@ -5,7 +5,7 @@ import { copy } from "./copy";
 describe("default product copy pool", () => {
   it("exports one typed tree for brand UI copy", () => {
     expect(copy.today.emptyTitle).toBeTruthy();
-    expect(copy.reminder.headline.ddl_due).toBeTruthy();
+    expect(copy.reminder.headline.one_hour_remaining).toBeTruthy();
     expect(copy.ddl.emotions.burning).toBeTruthy();
     expect(copy.overtime.title).toBeTruthy();
     expect(copy.workEnd.completeTitle).toBeTruthy();

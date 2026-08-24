@@ -12,7 +12,7 @@ const showPayload: ReminderWindowShowPayload = {
     kind: "system",
     taskId: "task-1",
     taskTitle: "提交方案",
-    reminderKind: "ddl_30",
+    reminderKind: "quarter_remaining",
     deadlineSnapshotMs: 20_000,
     triggerAtMs: 12_000,
     firedAtMs: 12_000,

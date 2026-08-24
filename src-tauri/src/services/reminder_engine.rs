@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::db::repositories::reminder_repository::ReminderRepository;
 use crate::db::repositories::system_reminder_repository::{
-    compute_nodes, SystemReminderRepository,
+    compute_nodes, SystemReminderKind, SystemReminderLogEntry, SystemReminderRepository,
 };
 use crate::db::repositories::task_repository::TaskRepository;
 use crate::errors::AppError;
@@ -69,12 +69,10 @@ impl ReminderEngineService {
         let skipped_custom_count =
             ReminderRepository::count_unfired_at_or_before_cutoff(connection, cutoff_ms)
                 .map_err(map_reminder_error)?;
-        let skipped_system_count = count_unfired_system_at_or_before_cutoff(connection, cutoff_ms)?;
-
         Ok(ReminderStartupReconciliation {
             cutoff_ms,
             skipped_custom_count,
-            skipped_system_count,
+            skipped_system_count: 0,
         })
     }
 
@@ -117,10 +115,15 @@ impl ReminderEngineService {
             let Some(deadline_snapshot_ms) = task.deadline_at_ms else {
                 continue;
             };
+            if now_ms <= task.planned_at_ms || now_ms >= deadline_snapshot_ms {
+                continue;
+            }
 
-            let nodes = compute_nodes(deadline_snapshot_ms).map_err(map_system_reminder_error)?;
+            let nodes = compute_nodes(task.planned_at_ms, deadline_snapshot_ms)
+                .map_err(map_system_reminder_error)?;
+            let mut selected_triggered: Option<(SystemReminderLogEntry, SystemReminderKind)> = None;
             for node in nodes {
-                if !Self::is_fire_eligible(node.trigger_at_ms, now_ms, cutoff_ms) {
+                if node.trigger_at_ms > now_ms {
                     continue;
                 }
                 if SystemReminderRepository::has_fired(
@@ -139,52 +142,31 @@ impl ReminderEngineService {
                     &task.id,
                     node.kind,
                     deadline_snapshot_ms,
+                    node.trigger_at_ms,
                     now_ms,
                 ) {
-                    Ok(entry) => triggered.push(ReminderTriggeredPayload::System {
-                        task_id: entry.task_id,
-                        task_title: task.title.clone(),
-                        reminder_kind: node.kind.as_str().to_string(),
-                        deadline_snapshot_ms: entry.deadline_snapshot_ms,
-                        trigger_at_ms: entry.scheduled_at_ms,
-                        fired_at_ms: entry.fired_at_ms.unwrap_or(now_ms),
-                    }),
+                    Ok(entry) => match selected_triggered.as_ref() {
+                        Some((_, selected_kind))
+                            if selected_kind.urgency() >= node.kind.urgency() => {}
+                        _ => selected_triggered = Some((entry, node.kind)),
+                    },
                     Err(error) => errors.push(error.to_string()),
                 }
+            }
+            if let Some((entry, kind)) = selected_triggered {
+                triggered.push(ReminderTriggeredPayload::System {
+                    task_id: entry.task_id,
+                    task_title: task.title,
+                    reminder_kind: kind.as_str().to_string(),
+                    deadline_snapshot_ms: entry.deadline_snapshot_ms,
+                    trigger_at_ms: entry.scheduled_at_ms,
+                    fired_at_ms: entry.fired_at_ms.unwrap_or(now_ms),
+                });
             }
         }
 
         Ok(ReminderEngineTickResult { triggered, errors })
     }
-}
-
-fn count_unfired_system_at_or_before_cutoff(
-    connection: &Connection,
-    cutoff_ms: i64,
-) -> Result<i64, AppError> {
-    let mut count = 0_i64;
-    for task in TaskRepository::list_ddl_reminder_candidates(connection).map_err(map_task_error)? {
-        let Some(deadline_snapshot_ms) = task.deadline_at_ms else {
-            continue;
-        };
-        for node in compute_nodes(deadline_snapshot_ms).map_err(map_system_reminder_error)? {
-            if node.trigger_at_ms > cutoff_ms {
-                continue;
-            }
-            if SystemReminderRepository::has_fired(
-                connection,
-                &task.id,
-                node.kind,
-                deadline_snapshot_ms,
-            )
-            .map_err(map_system_reminder_error)?
-            {
-                continue;
-            }
-            count += 1;
-        }
-    }
-    Ok(count)
 }
 
 fn map_reminder_error(
@@ -367,7 +349,7 @@ mod tests {
     }
 
     #[test]
-    fn system_reminder_fires_when_trigger_at_reached_after_cutoff() {
+    fn system_reminder_fires_the_most_urgent_due_node() {
         let db = open_test_database();
         let cutoff = 10_000;
         let task =
@@ -382,9 +364,9 @@ mod tests {
                 reminder_kind,
                 trigger_at_ms: 7_200_000,
                 ..
-            } if task_id == &task.id && reminder_kind == "ddl_60"
+            } if task_id == &task.id && reminder_kind == "one_hour_remaining"
         ));
-        assert_eq!(system_fired_count(&db.connection), 1);
+        assert_eq!(system_fired_count(&db.connection), 2);
     }
 
     #[test]
@@ -418,7 +400,7 @@ mod tests {
         let second =
             ReminderEngineService::tick(&db.connection, 7_250_000, cutoff).expect("second");
         assert!(second.triggered.is_empty());
-        assert_eq!(system_fired_count(&db.connection), 1);
+        assert_eq!(system_fired_count(&db.connection), 2);
     }
 
     #[test]
@@ -433,7 +415,7 @@ mod tests {
             vec![],
         );
 
-        ReminderEngineService::tick(&db.connection, 14_400_000, cutoff).expect("old ddl_60 tick");
+        ReminderEngineService::tick(&db.connection, 14_400_000, cutoff).expect("old progress tick");
         TaskService::postpone(
             &db.connection,
             PostponeTaskRequest {
@@ -445,7 +427,7 @@ mod tests {
         .expect("postpone");
 
         let result =
-            ReminderEngineService::tick(&db.connection, 16_400_000, cutoff).expect("new ddl_60");
+            ReminderEngineService::tick(&db.connection, 16_400_000, cutoff).expect("new progress");
         assert_eq!(result.triggered.len(), 1);
         assert!(matches!(
             &result.triggered[0],
@@ -453,9 +435,9 @@ mod tests {
                 deadline_snapshot_ms: 20_000_000,
                 reminder_kind,
                 ..
-            } if reminder_kind == "ddl_60"
+            } if reminder_kind == "one_hour_remaining"
         ));
-        assert_eq!(system_fired_count(&db.connection), 2);
+        assert_eq!(system_fired_count(&db.connection), 4);
     }
 
     #[test]
@@ -570,7 +552,7 @@ mod tests {
         let reconciliation =
             ReminderEngineService::reconcile_at_startup(&db.connection, cutoff).expect("reconcile");
         assert_eq!(reconciliation.skipped_custom_count, 1);
-        assert_eq!(reconciliation.skipped_system_count, 4);
+        assert_eq!(reconciliation.skipped_system_count, 0);
 
         let tick = ReminderEngineService::tick(&db.connection, cutoff, cutoff).expect("tick");
         assert!(tick.triggered.is_empty());
@@ -579,33 +561,27 @@ mod tests {
     }
 
     #[test]
-    fn only_reminders_after_cutoff_fire_in_later_ticks() {
+    fn active_task_catches_up_to_the_latest_due_node_after_cutoff() {
         let db = open_test_database();
         let cutoff = 18_000_000;
         create_task_with_deadline(
             &db.connection,
             "after cutoff",
-            17_700_000,
-            18_100_000,
+            10_000_000,
+            25_200_000,
             vec![],
         );
 
         ReminderEngineService::reconcile_at_startup(&db.connection, cutoff).expect("reconcile");
-        assert!(ReminderEngineService::tick(&db.connection, cutoff, cutoff)
-            .expect("startup tick")
-            .triggered
-            .is_empty());
-
-        let result =
-            ReminderEngineService::tick(&db.connection, 18_100_000, cutoff).expect("ddl_due tick");
+        let result = ReminderEngineService::tick(&db.connection, cutoff, cutoff)
+            .expect("startup catch-up tick");
         assert_eq!(result.triggered.len(), 1);
         assert!(matches!(
             &result.triggered[0],
             ReminderTriggeredPayload::System {
                 reminder_kind,
-                trigger_at_ms: 18_100_000,
                 ..
-            } if reminder_kind == "ddl_due"
+            } if reminder_kind == "progress_half"
         ));
     }
 
@@ -631,9 +607,9 @@ mod tests {
         );
 
         let result = ReminderEngineService::tick(&db.connection, 9_000_000, cutoff).expect("tick");
-        assert_eq!(result.triggered.len(), 4);
+        assert_eq!(result.triggered.len(), 3);
         assert_eq!(custom_fired_count(&db.connection), 2);
-        assert_eq!(system_fired_count(&db.connection), 2);
+        assert_eq!(system_fired_count(&db.connection), 3);
     }
 
     #[test]

@@ -19,21 +19,23 @@ const customPayload: ReminderTriggeredPayload = {
   message: "别忘了交",
 };
 
-const ddl10Payload: ReminderTriggeredPayload = {
+const oneHourPayload: ReminderTriggeredPayload = {
   kind: "system",
   taskId: "t2",
   taskTitle: "提交方案",
-  reminderKind: "ddl_10",
+  reminderKind: "one_hour_remaining",
   deadlineSnapshotMs: 20_000,
   triggerAtMs: 10_200_000,
   firedAtMs: 10_200_000,
 };
 
 describe("reminderWindowCopy", () => {
-  it("uses frozen system ddl copy", () => {
-    expect(reminderHeadline(ddl10Payload)).toBe("距离 DDL 还有 10 分钟");
-    expect(reminderRemainingLabel(ddl10Payload)).toBe("剩余约 10 分钟");
-    expect(reminderKindLabel(ddl10Payload)).toBe("DDL 前 10 分钟");
+  it("uses the confirmed anti-work system copy", () => {
+    expect(reminderHeadline(oneHourPayload)).toBe(
+      "最后一小时。现在开始努力，至少能显得之前不是纯摸鱼。",
+    );
+    expect(reminderRemainingLabel(oneHourPayload)).toBe("距离完成时间仅剩 1 小时");
+    expect(reminderKindLabel(oneHourPayload)).toBe("最后一小时");
   });
 
   it("uses custom message when provided", () => {
@@ -51,13 +53,13 @@ describe("reminderWindowCopy", () => {
   });
 
   it("maps urgency emotions for system reminders", () => {
-    expect(reminderEmotion(ddl10Payload).emoji).toBe("😟");
+    expect(reminderEmotion(oneHourPayload).emoji).toBe("😟");
     expect(
       reminderEmotion({
-        ...ddl10Payload,
-        reminderKind: "ddl_due",
+        ...oneHourPayload,
+        reminderKind: "progress_half",
       }).emoji,
-    ).toBe("😱");
+    ).toBe("🙂");
   });
 
   it("formats additional task count copy", () => {

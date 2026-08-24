@@ -198,10 +198,8 @@ mod tests {
         assert_eq!(
             kinds,
             vec![
-                "ddl_60".to_string(),
-                "ddl_30".to_string(),
-                "ddl_10".to_string(),
-                "ddl_due".to_string(),
+                "one_hour_remaining".to_string(),
+                "quarter_remaining".to_string(),
             ]
         );
     }
@@ -380,7 +378,7 @@ mod tests {
             })
             .collect();
         assert_eq!(kinds.len(), 2);
-        assert_eq!(kinds[0], ("ddl_60".to_string(), 18_000_000));
-        assert_eq!(kinds[1], ("ddl_60".to_string(), 20_000_000));
+        assert_eq!(kinds[0], ("one_hour_remaining".to_string(), 18_000_000));
+        assert_eq!(kinds[1], ("one_hour_remaining".to_string(), 20_000_000));
     }
 }

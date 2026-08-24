@@ -35,6 +35,11 @@ const MIGRATIONS: &[Migration] = &[
         name: "0004_system_reminder_dedupe",
         sql: include_str!("../../migrations/0004_system_reminder_dedupe.sql"),
     },
+    Migration {
+        version: 5,
+        name: "0005_progress_system_reminders",
+        sql: include_str!("../../migrations/0005_progress_system_reminders.sql"),
+    },
 ];
 
 pub fn run_migrations(connection: &mut Connection) -> Result<(), DbError> {
@@ -229,7 +234,7 @@ mod tests {
             .expect("migration rows")
             .collect::<rusqlite::Result<_>>()
             .expect("migration versions");
-        assert_eq!(versions_after_upgrade, vec![1, 2, 3, 4]);
+        assert_eq!(versions_after_upgrade, vec![1, 2, 3, 4, 5]);
 
         let lunch_columns: Vec<(String, String)> = connection
             .prepare("PRAGMA table_info(\"lunch_reminder_log\")")
@@ -303,7 +308,7 @@ mod tests {
                 row.get(0)
             })
             .expect("migration count");
-        assert_eq!(migration_count, 4);
+        assert_eq!(migration_count, 5);
     }
 
     fn table_names(connection: &Connection) -> BTreeSet<String> {

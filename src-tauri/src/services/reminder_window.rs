@@ -49,6 +49,9 @@ impl<R: Runtime> ReminderWindowPresenter for TauriReminderWindowPresenter<R> {
 pub fn reminder_urgency(payload: &ReminderTriggeredPayload) -> u8 {
     match payload {
         ReminderTriggeredPayload::System { reminder_kind, .. } => match reminder_kind.as_str() {
+            "one_hour_remaining" => 100,
+            "quarter_remaining" => 90,
+            "progress_half" => 70,
             "ddl_due" => 100,
             "ddl_10" => 90,
             "ddl_30" => 80,
@@ -110,8 +113,8 @@ fn ensure_reminder_window<R: Runtime>(
         WebviewUrl::App("index.html".into()),
     )
     .title("Work Shackle 提醒")
-    .inner_size(380.0, 440.0)
-    .min_inner_size(380.0, 440.0)
+    .inner_size(520.0, 520.0)
+    .min_inner_size(520.0, 520.0)
     .resizable(false)
     .always_on_top(true)
     .center()
@@ -325,10 +328,8 @@ mod tests {
         assert_eq!(
             kinds,
             vec![
-                "ddl_60".to_string(),
-                "ddl_30".to_string(),
-                "ddl_10".to_string(),
-                "ddl_due".to_string(),
+                "one_hour_remaining".to_string(),
+                "quarter_remaining".to_string(),
             ]
         );
     }
@@ -420,10 +421,10 @@ mod tests {
         );
 
         let tick = ReminderEngineService::tick(&db.connection, 9_000_000, cutoff).expect("tick");
-        assert_eq!(tick.triggered.len(), 4);
+        assert_eq!(tick.triggered.len(), 3);
         deliver_triggered_reminder_window(&window, &tick.triggered);
         assert_eq!(window.presented_payloads().len(), 1);
-        assert_eq!(window.presented_payloads()[0].additional_count, 3);
+        assert_eq!(window.presented_payloads()[0].additional_count, 2);
     }
 
     #[test]

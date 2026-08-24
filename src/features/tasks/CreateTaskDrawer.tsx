@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 
 import {
   createTask,
@@ -12,13 +12,10 @@ import { Button, Drawer, Input, Select, Textarea } from "../../shared/ui";
 import {
   createDefaultFormValues,
   createTaskFormSchema,
-  REMINDER_LIMIT,
-  REMINDER_LIMIT_COPY,
   TASK_PRIORITIES,
   type CreateTaskFormValues,
   toCreateTaskInput,
 } from "./createTaskForm";
-import { ContactPicker } from "./ContactPicker";
 import "./CreateTaskDrawer.css";
 
 type CreateTaskDrawerProps = {
@@ -31,18 +28,12 @@ export function CreateTaskDrawer({ open, onClose, onCreated }: CreateTaskDrawerP
   const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     register,
-    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<CreateTaskFormValues>({
     resolver: zodResolver(createTaskFormSchema),
     defaultValues: createDefaultFormValues(),
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "reminders",
   });
 
   useEffect(() => {
@@ -63,8 +54,6 @@ export function CreateTaskDrawer({ open, onClose, onCreated }: CreateTaskDrawerP
       setSubmitError(mapTaskError(error as TaskAppError));
     }
   });
-
-  const canAddReminder = fields.length < REMINDER_LIMIT;
 
   return (
     <Drawer
@@ -99,21 +88,23 @@ export function CreateTaskDrawer({ open, onClose, onCreated }: CreateTaskDrawerP
           {...register("note")}
         />
 
-        <div className="create-task-form__row">
+        <section className="create-task-form__time-range" aria-labelledby="create-task-time-range">
+          <h3 id="create-task-time-range">任务时间段</h3>
           <Input
-            label="计划时间"
+            label="开始时间"
             type="datetime-local"
-            error={errors.plannedAt?.message}
-            {...register("plannedAt")}
+            step={60}
+            error={errors.startAt?.message}
+            {...register("startAt")}
           />
           <Input
-            label="DDL"
+            label="完成时间"
             type="datetime-local"
-            hint="可选，精确到分钟"
-            error={errors.deadlineAt?.message}
-            {...register("deadlineAt")}
+            step={60}
+            error={errors.endAt?.message}
+            {...register("endAt")}
           />
-        </div>
+        </section>
 
         <Select
           label="紧急程度"
@@ -127,73 +118,12 @@ export function CreateTaskDrawer({ open, onClose, onCreated }: CreateTaskDrawerP
           ))}
         </Select>
 
-        <Controller
-          control={control}
-          name="contactId"
-          render={({ field }) => (
-            <ContactPicker
-              active={open}
-              value={field.value}
-              onChange={field.onChange}
-              error={errors.contactId?.message}
-              disabled={isSubmitting}
-            />
-          )}
+        <Input
+          label="对接人"
+          placeholder="可选，输入姓名"
+          error={errors.contactName?.message}
+          {...register("contactName")}
         />
-
-        <section className="create-task-form__reminders" aria-labelledby="create-task-reminders">
-          <div className="create-task-form__reminders-header">
-            <div>
-              <h3 id="create-task-reminders">自定义提醒</h3>
-              <p>{REMINDER_LIMIT_COPY}</p>
-            </div>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!canAddReminder || isSubmitting}
-              onClick={() => append({ remindAt: "", message: "" })}
-            >
-              添加提醒
-            </Button>
-          </div>
-
-          {errors.reminders?.message ? (
-            <p className="create-task-form__error" role="alert">
-              {errors.reminders.message}
-            </p>
-          ) : null}
-
-          {fields.length === 0 ? (
-            <p className="create-task-form__empty">还没有自定义提醒。</p>
-          ) : (
-            <ul className="create-task-form__reminder-list">
-              {fields.map((field, index) => (
-                <li key={field.id} className="create-task-form__reminder-item">
-                  <Input
-                    label={`提醒 ${index + 1} 时间`}
-                    type="datetime-local"
-                    error={errors.reminders?.[index]?.remindAt?.message}
-                    {...register(`reminders.${index}.remindAt`)}
-                  />
-                  <Input
-                    label="提醒说明"
-                    placeholder="可选"
-                    error={errors.reminders?.[index]?.message?.message}
-                    {...register(`reminders.${index}.message`)}
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => remove(index)}
-                    disabled={isSubmitting}
-                  >
-                    移除
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
 
         {submitError ? (
           <p className="create-task-form__error" role="alert">

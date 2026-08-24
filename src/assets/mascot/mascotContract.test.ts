@@ -95,6 +95,9 @@ describe("DDL business level → MascotState", () => {
     expect(mascotStateForReminderKind("ddl_due")).toBe("ddl-due");
     expect(mascotStateForReminderKind("custom")).toBe(FALLBACK_MASCOT_STATE);
     expect(mascotStateForReminderKind("unknown")).toBe(FALLBACK_MASCOT_STATE);
+    expect(mascotStateForReminderKind("progress_half")).toBe("ddl-calm");
+    expect(mascotStateForReminderKind("quarter_remaining")).toBe("ddl-anxious");
+    expect(mascotStateForReminderKind("one_hour_remaining")).toBe("ddl-panic");
   });
 });
 
@@ -157,6 +160,9 @@ describe("MascotAnimation contract", () => {
     expect(mascotAnimationForReminderKind("unknown")).toBe(
       FALLBACK_MASCOT_ANIMATION,
     );
+    expect(mascotAnimationForReminderKind("progress_half")).toBe("breathe");
+    expect(mascotAnimationForReminderKind("quarter_remaining")).toBe("shake");
+    expect(mascotAnimationForReminderKind("one_hour_remaining")).toBe("panic");
   });
 
   it("maps work status to light motion, with run for leaving and being chased", () => {

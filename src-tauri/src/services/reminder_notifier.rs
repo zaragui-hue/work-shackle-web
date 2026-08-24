@@ -89,6 +89,9 @@ pub fn build_notification_content(
             ..
         } => {
             let body = match reminder_kind.as_str() {
+                "progress_half" => format!("「{task_title}」工期已烧掉一半，进度还在加载企业文化。"),
+                "quarter_remaining" => format!("「{task_title}」只剩四分之一，死线已经开始同步你。"),
+                "one_hour_remaining" => format!("「{task_title}」最后一小时，摸鱼年终总结到此结束。"),
                 "ddl_60" => format!("「{task_title}」距离 DDL 还有 1 小时"),
                 "ddl_30" => format!("「{task_title}」距离 DDL 还有 30 分钟"),
                 "ddl_10" => format!("「{task_title}」距离 DDL 还有 10 分钟"),
@@ -253,10 +256,8 @@ mod tests {
         assert_eq!(
             kinds,
             vec![
-                "ddl_60".to_string(),
-                "ddl_30".to_string(),
-                "ddl_10".to_string(),
-                "ddl_due".to_string(),
+                "one_hour_remaining".to_string(),
+                "quarter_remaining".to_string(),
             ]
         );
     }
@@ -356,8 +357,8 @@ mod tests {
             })
             .collect();
         assert_eq!(kinds.len(), 2);
-        assert_eq!(kinds[0], ("ddl_60".to_string(), 18_000_000));
-        assert_eq!(kinds[1], ("ddl_60".to_string(), 20_000_000));
+        assert_eq!(kinds[0], ("one_hour_remaining".to_string(), 18_000_000));
+        assert_eq!(kinds[1], ("one_hour_remaining".to_string(), 20_000_000));
     }
 
     #[test]

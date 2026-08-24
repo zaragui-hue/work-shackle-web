@@ -55,6 +55,9 @@ const DDL_EMOTION_TO_MASCOT: Record<DdlEmotion, MascotState> = {
 };
 
 const REMINDER_KIND_TO_MASCOT: Record<string, MascotState> = {
+  progress_half: "ddl-calm",
+  quarter_remaining: "ddl-anxious",
+  one_hour_remaining: "ddl-panic",
   ddl_60: "ddl-calm",
   ddl_30: "ddl-anxious",
   ddl_10: "ddl-panic",
@@ -110,6 +113,9 @@ const DDL_EMOTION_TO_ANIMATION: Record<DdlEmotion, MascotAnimation> = {
 };
 
 const REMINDER_KIND_TO_ANIMATION: Record<string, MascotAnimation> = {
+  progress_half: "breathe",
+  quarter_remaining: "shake",
+  one_hour_remaining: "panic",
   ddl_60: "breathe",
   ddl_30: "shake",
   ddl_10: "panic",

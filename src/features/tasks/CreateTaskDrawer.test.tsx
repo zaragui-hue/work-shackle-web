@@ -9,10 +9,6 @@ vi.mock("../../services/tauri/tasks", () => ({
   mapTaskError: () => "创建失败",
 }));
 
-vi.mock("./ContactPicker", () => ({
-  ContactPicker: () => <div data-testid="contact-picker" />,
-}));
-
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -25,6 +21,11 @@ describe("CreateTaskDrawer", () => {
     expect(screen.getByRole("dialog", { name: "新建任务" })).toBeTruthy();
     expect(document.querySelector(".ws-drawer__panel")).toBeTruthy();
     expect(document.querySelector(".ws-modal__panel")).toBeNull();
+    expect(screen.getByLabelText("开始时间").getAttribute("step")).toBe("60");
+    expect(screen.getByLabelText("完成时间").getAttribute("step")).toBe("60");
+    expect((screen.getByLabelText("紧急程度") as HTMLSelectElement).value).toBe("2");
+    expect(screen.getByLabelText("对接人")).toBeTruthy();
+    expect(screen.queryByText("自定义提醒")).toBeNull();
   });
 
   it("closes from the drawer footer", () => {

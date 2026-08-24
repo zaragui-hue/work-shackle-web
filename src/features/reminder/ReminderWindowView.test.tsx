@@ -30,7 +30,7 @@ function systemPayload(
 describe("ReminderWindowView mascot", () => {
   it("uses the 0901 reminder mapping instead of a placeholder character", () => {
     const { container } = render(
-      <ReminderWindowView payload={systemPayload("ddl_10")} onDismiss={() => {}} />,
+      <ReminderWindowView payload={systemPayload("one_hour_remaining")} onDismiss={() => {}} />,
     );
 
     const mascot = container.querySelector("img[data-mascot-state]");
@@ -38,22 +38,25 @@ describe("ReminderWindowView mascot", () => {
     expect(mascot?.getAttribute("data-mascot-animation")).toBe("panic");
     expect(screen.queryByText("占位小角色")).toBeNull();
     expect(screen.queryByText("😟")).toBeNull();
-    expect(screen.getByText("距离 DDL 还有 10 分钟")).toBeTruthy();
+    expect(
+      screen.getByText("最后一小时。现在开始努力，至少能显得之前不是纯摸鱼。"),
+    ).toBeTruthy();
+    expect(screen.getByText("01:00")).toBeTruthy();
   });
 
-  it("maps ddl_due and custom reminders through the same contract", () => {
+  it("maps progress and custom reminders through the same contract", () => {
     const { container, rerender } = render(
-      <ReminderWindowView payload={systemPayload("ddl_due")} onDismiss={() => {}} />,
+      <ReminderWindowView payload={systemPayload("progress_half")} onDismiss={() => {}} />,
     );
 
     expect(
       container.querySelector("img[data-mascot-state]")?.getAttribute("data-mascot-state"),
-    ).toBe("ddl-due");
+    ).toBe("ddl-calm");
     expect(
       container
         .querySelector("img[data-mascot-animation]")
         ?.getAttribute("data-mascot-animation"),
-    ).toBe("angry");
+    ).toBe("breathe");
 
     rerender(
       <ReminderWindowView
@@ -106,8 +109,8 @@ describe("ReminderWindowView mascot", () => {
 
     expect(screen.getByRole("heading", { level: 1 }).textContent).toContain(longTitle);
     expect(screen.getByText("还有 2 个任务也在催")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "打开任务" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "知道了" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "去把坑填上 →" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "我知道了，别催" })).toBeTruthy();
     expect(container.querySelector(".ws-mascot-frame--md")).toBeTruthy();
     expect(container.querySelector(".ws-mascot-frame--lg")).toBeNull();
   });

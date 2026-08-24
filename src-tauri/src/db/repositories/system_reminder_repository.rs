@@ -2,49 +2,44 @@ use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::db::connection::DbError;
 
-pub const DDL_60_OFFSET_MS: i64 = 60 * 60 * 1000;
-pub const DDL_30_OFFSET_MS: i64 = 30 * 60 * 1000;
-pub const DDL_10_OFFSET_MS: i64 = 10 * 60 * 1000;
+pub const MINUTE_MS: i64 = 60 * 1000;
+pub const ONE_HOUR_MS: i64 = 60 * MINUTE_MS;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SystemReminderKind {
-    Ddl60,
-    Ddl30,
-    Ddl10,
-    DdlDue,
+    ProgressHalf,
+    QuarterRemaining,
+    OneHourRemaining,
 }
 
 impl SystemReminderKind {
-    pub const ALL: [Self; 4] = [Self::Ddl60, Self::Ddl30, Self::Ddl10, Self::DdlDue];
+    pub const ALL: [Self; 3] = [
+        Self::ProgressHalf,
+        Self::QuarterRemaining,
+        Self::OneHourRemaining,
+    ];
 
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::Ddl60 => "ddl_60",
-            Self::Ddl30 => "ddl_30",
-            Self::Ddl10 => "ddl_10",
-            Self::DdlDue => "ddl_due",
+            Self::ProgressHalf => "progress_half",
+            Self::QuarterRemaining => "quarter_remaining",
+            Self::OneHourRemaining => "one_hour_remaining",
         }
     }
 
-    pub fn offset_ms(self) -> i64 {
+    pub fn urgency(self) -> u8 {
         match self {
-            Self::Ddl60 => DDL_60_OFFSET_MS,
-            Self::Ddl30 => DDL_30_OFFSET_MS,
-            Self::Ddl10 => DDL_10_OFFSET_MS,
-            Self::DdlDue => 0,
+            Self::ProgressHalf => 1,
+            Self::QuarterRemaining => 2,
+            Self::OneHourRemaining => 3,
         }
-    }
-
-    pub fn trigger_at_ms(self, deadline_at_ms: i64) -> i64 {
-        deadline_at_ms - self.offset_ms()
     }
 
     pub fn from_str(value: &str) -> Option<Self> {
         match value {
-            "ddl_60" => Some(Self::Ddl60),
-            "ddl_30" => Some(Self::Ddl30),
-            "ddl_10" => Some(Self::Ddl10),
-            "ddl_due" => Some(Self::DdlDue),
+            "progress_half" => Some(Self::ProgressHalf),
+            "quarter_remaining" => Some(Self::QuarterRemaining),
+            "one_hour_remaining" => Some(Self::OneHourRemaining),
             _ => None,
         }
     }
@@ -73,6 +68,7 @@ pub struct MarkSystemReminderFiredInput {
     pub task_id: String,
     pub kind: SystemReminderKind,
     pub deadline_snapshot_ms: i64,
+    pub scheduled_at_ms: i64,
     pub fired_at_ms: i64,
 }
 
@@ -108,22 +104,53 @@ impl From<rusqlite::Error> for SystemReminderRepositoryError {
 }
 
 pub fn compute_nodes(
+    planned_at_ms: i64,
     deadline_at_ms: i64,
 ) -> Result<Vec<SystemReminderNode>, SystemReminderRepositoryError> {
-    if deadline_at_ms <= 0 {
+    if planned_at_ms < 0 || deadline_at_ms <= planned_at_ms {
         return Err(SystemReminderRepositoryError::InvalidInput {
-            message: "deadline must be positive".to_string(),
+            message: "deadline must be later than planned time".to_string(),
         });
     }
 
-    Ok(SystemReminderKind::ALL
-        .into_iter()
-        .map(|kind| SystemReminderNode {
-            trigger_at_ms: kind.trigger_at_ms(deadline_at_ms),
+    let duration_ms = deadline_at_ms - planned_at_ms;
+    let mut candidates = vec![
+        (SystemReminderKind::ProgressHalf, planned_at_ms + duration_ms / 2),
+        (
+            SystemReminderKind::QuarterRemaining,
+            planned_at_ms + duration_ms * 3 / 4,
+        ),
+        (
+            SystemReminderKind::OneHourRemaining,
+            deadline_at_ms - ONE_HOUR_MS,
+        ),
+    ];
+    candidates.sort_by_key(|(kind, trigger_at_ms)| (*trigger_at_ms, kind.urgency()));
+
+    let mut nodes: Vec<SystemReminderNode> = Vec::new();
+    for (kind, raw_trigger_at_ms) in candidates {
+        let trigger_at_ms = raw_trigger_at_ms.div_euclid(MINUTE_MS) * MINUTE_MS;
+        if trigger_at_ms <= planned_at_ms || trigger_at_ms >= deadline_at_ms {
+            continue;
+        }
+        let node = SystemReminderNode {
+            trigger_at_ms,
             deadline_snapshot_ms: deadline_at_ms,
             kind,
-        })
-        .collect())
+        };
+        if let Some(existing) = nodes
+            .iter_mut()
+            .find(|existing| existing.trigger_at_ms == trigger_at_ms)
+        {
+            if kind.urgency() > existing.kind.urgency() {
+                *existing = node;
+            }
+        } else {
+            nodes.push(node);
+        }
+    }
+    nodes.sort_by_key(|node| (node.trigger_at_ms, node.kind.urgency()));
+    Ok(nodes)
 }
 
 pub struct SystemReminderRepository;
@@ -169,13 +196,14 @@ impl SystemReminderRepository {
         connection: &Connection,
         input: MarkSystemReminderFiredInput,
     ) -> Result<SystemReminderLogEntry, SystemReminderRepositoryError> {
-        if input.deadline_snapshot_ms <= 0 || input.fired_at_ms <= 0 {
+        if input.deadline_snapshot_ms <= 0
+            || input.scheduled_at_ms <= 0
+            || input.fired_at_ms <= 0
+        {
             return Err(SystemReminderRepositoryError::InvalidInput {
-                message: "deadline snapshot and fired_at_ms must be positive".to_string(),
+                message: "system reminder timestamps must be positive".to_string(),
             });
         }
-
-        let scheduled_at_ms = input.kind.trigger_at_ms(input.deadline_snapshot_ms);
 
         connection.execute(
             "INSERT INTO system_reminder_log (
@@ -187,7 +215,7 @@ impl SystemReminderRepository {
                 input.task_id,
                 input.deadline_snapshot_ms,
                 input.kind.as_str(),
-                scheduled_at_ms,
+                input.scheduled_at_ms,
                 input.fired_at_ms,
             ],
         )?;
@@ -254,6 +282,7 @@ mod tests {
         task_id: &str,
         kind: SystemReminderKind,
         deadline_snapshot_ms: i64,
+        scheduled_at_ms: i64,
         fired_at_ms: i64,
     ) -> SystemReminderLogEntry {
         SystemReminderRepository::mark_fired(
@@ -263,6 +292,7 @@ mod tests {
                 task_id: task_id.to_string(),
                 kind,
                 deadline_snapshot_ms,
+                scheduled_at_ms,
                 fired_at_ms,
             },
         )
@@ -271,18 +301,17 @@ mod tests {
 
     #[test]
     fn compute_nodes_sets_expected_trigger_times() {
+        let planned_at_ms = 0;
         let deadline_at_ms = 10_800_000;
-        let nodes = compute_nodes(deadline_at_ms).expect("compute nodes");
+        let nodes = compute_nodes(planned_at_ms, deadline_at_ms).expect("compute nodes");
 
-        assert_eq!(nodes.len(), 4);
-        assert_eq!(nodes[0].kind, SystemReminderKind::Ddl60);
-        assert_eq!(nodes[0].trigger_at_ms, 7_200_000);
-        assert_eq!(nodes[1].kind, SystemReminderKind::Ddl30);
-        assert_eq!(nodes[1].trigger_at_ms, 9_000_000);
-        assert_eq!(nodes[2].kind, SystemReminderKind::Ddl10);
-        assert_eq!(nodes[2].trigger_at_ms, 10_200_000);
-        assert_eq!(nodes[3].kind, SystemReminderKind::DdlDue);
-        assert_eq!(nodes[3].trigger_at_ms, deadline_at_ms);
+        assert_eq!(nodes.len(), 3);
+        assert_eq!(nodes[0].kind, SystemReminderKind::ProgressHalf);
+        assert_eq!(nodes[0].trigger_at_ms, 5_400_000);
+        assert_eq!(nodes[1].kind, SystemReminderKind::OneHourRemaining);
+        assert_eq!(nodes[1].trigger_at_ms, 7_200_000);
+        assert_eq!(nodes[2].kind, SystemReminderKind::QuarterRemaining);
+        assert_eq!(nodes[2].trigger_at_ms, 8_100_000);
         assert!(nodes
             .iter()
             .all(|node| node.deadline_snapshot_ms == deadline_at_ms));
@@ -297,15 +326,17 @@ mod tests {
         let first = mark(
             &connection,
             "task-1",
-            SystemReminderKind::Ddl60,
+            SystemReminderKind::ProgressHalf,
             10_800_000,
+            5_400_000,
             7_200_000,
         );
         let second = mark(
             &connection,
             "task-1",
-            SystemReminderKind::Ddl60,
+            SystemReminderKind::ProgressHalf,
             10_800_000,
+            5_400_000,
             9_999_999,
         );
 
@@ -326,29 +357,31 @@ mod tests {
         mark(
             &connection,
             "task-1",
-            SystemReminderKind::Ddl60,
+            SystemReminderKind::ProgressHalf,
             18_000,
+            10_000,
             16_200_000,
         );
         mark(
             &connection,
             "task-1",
-            SystemReminderKind::Ddl60,
+            SystemReminderKind::ProgressHalf,
             20_000,
+            11_000,
             18_200_000,
         );
 
         assert!(SystemReminderRepository::has_fired(
             &connection,
             "task-1",
-            SystemReminderKind::Ddl60,
+            SystemReminderKind::ProgressHalf,
             18_000
         )
         .expect("old snapshot fired"));
         assert!(SystemReminderRepository::has_fired(
             &connection,
             "task-1",
-            SystemReminderKind::Ddl60,
+            SystemReminderKind::ProgressHalf,
             20_000
         )
         .expect("new snapshot fired"));
@@ -369,8 +402,9 @@ mod tests {
             mark(
                 &connection,
                 "task-reopen",
-                SystemReminderKind::Ddl30,
+                SystemReminderKind::QuarterRemaining,
                 10_800_000,
+                8_100_000,
                 9_000_000,
             );
         }
@@ -379,13 +413,22 @@ mod tests {
         let entry = SystemReminderRepository::get_entry(
             &reopened,
             "task-reopen",
-            SystemReminderKind::Ddl30,
+            SystemReminderKind::QuarterRemaining,
             10_800_000,
         )
         .expect("get entry")
         .expect("entry exists");
 
         assert_eq!(entry.fired_at_ms, Some(9_000_000));
-        assert_eq!(entry.scheduled_at_ms, 9_000_000);
+        assert_eq!(entry.scheduled_at_ms, 8_100_000);
+    }
+
+    #[test]
+    fn same_minute_nodes_merge_to_the_most_urgent_kind() {
+        let nodes = compute_nodes(1, 120_001).expect("compute nodes");
+
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0].kind, SystemReminderKind::QuarterRemaining);
+        assert_eq!(nodes[0].trigger_at_ms, 60_000);
     }
 }

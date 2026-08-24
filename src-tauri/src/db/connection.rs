@@ -141,7 +141,7 @@ mod tests {
             .expect("migration rows")
             .collect::<rusqlite::Result<_>>()
             .expect("migration versions");
-        assert_eq!(applied_versions, vec![1, 2, 3, 4]);
+        assert_eq!(applied_versions, vec![1, 2, 3, 4, 5]);
 
         assert_eq!(
             connection
@@ -235,7 +235,7 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM contacts", [], |row| row.get(0))
             .expect("contact count");
 
-        assert_eq!(migration_count, 4);
+        assert_eq!(migration_count, 5);
         assert_eq!(contact_count, 1);
     }
 

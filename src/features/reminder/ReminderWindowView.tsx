@@ -19,6 +19,13 @@ type ReminderWindowViewProps = {
   onDismiss: () => void;
 };
 
+const STAGE_DISPLAY: Record<string, { metric: string; stamp: string }> = {
+  progress_half: { metric: "50%", stamp: "醒" },
+  quarter_remaining: { metric: "1/4", stamp: "急" },
+  one_hour_remaining: { metric: "01:00", stamp: "冲" },
+  custom: { metric: "PING", stamp: "催" },
+};
+
 export function ReminderWindowView({ payload, onDismiss }: ReminderWindowViewProps) {
   const { primary, additionalCount } = payload;
   const emotion = reminderEmotion(primary);
@@ -27,6 +34,7 @@ export function ReminderWindowView({ payload, onDismiss }: ReminderWindowViewPro
     primary.kind === "system" ? primary.reminderKind : "custom";
   const mascotState = mascotStateForReminderKind(reminderKind);
   const mascotAnimation = mascotAnimationForReminderKind(reminderKind);
+  const stage = STAGE_DISPLAY[reminderKind] ?? STAGE_DISPLAY.custom;
 
   return (
     <div className="reminder-window">
@@ -37,16 +45,22 @@ export function ReminderWindowView({ payload, onDismiss }: ReminderWindowViewPro
         aria-labelledby="reminder-window-title"
       >
         <div className="reminder-window__ticket-head">
-          <span>WORK ALERT / 工位警报</span>
+          <span>ANTI-WORK TICKET / 反骨工票</span>
           <span>#{primary.taskId.slice(-4).toUpperCase()}</span>
         </div>
         <div className="reminder-window__hero">
+          <div className="reminder-window__metric" aria-hidden="true">
+            {stage.metric}
+          </div>
           <Mascot
             state={mascotState}
             animation={mascotAnimation}
             size="md"
             className="reminder-window__mascot"
           />
+          <div className="reminder-window__stamp" aria-hidden="true">
+            {stage.stamp}
+          </div>
         </div>
 
         <div className="reminder-window__body">
@@ -73,10 +87,10 @@ export function ReminderWindowView({ payload, onDismiss }: ReminderWindowViewPro
               });
             }}
           >
-            打开任务
+            去把坑填上 →
           </Button>
           <Button variant="secondary" onClick={onDismiss}>
-            知道了
+            我知道了，别催
           </Button>
         </div>
         <div className="reminder-window__barcode" aria-hidden="true" />

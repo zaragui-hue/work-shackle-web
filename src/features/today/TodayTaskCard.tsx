@@ -16,6 +16,7 @@ import {
   isDeadlineOverdueToday,
 } from "./todayDisplay";
 import { DdlTimeProgress } from "./DdlTimeProgress";
+import { FormalTaskTiming } from "./FormalTaskTiming";
 import {
   overdueChaosLabel,
   overdueChaosLevel,
@@ -133,28 +134,7 @@ export function TodayTaskCard({
           ) : null}
 
           {variant === "formal" ? (
-            <div className="today-task-card__formal-meta" data-testid="formal-task-meta">
-              {task.deadlineAtMs != null ? (
-                <DdlTimeProgress
-                  plannedAtMs={task.plannedAtMs}
-                  deadlineAtMs={task.deadlineAtMs}
-                  presentation="remaining-only"
-                />
-              ) : null}
-              <span className="today-task-card__formal-meta-item">
-                计划 {formatPlannedTime(task.plannedAtMs)}
-              </span>
-              {task.deadlineAtMs != null ? (
-                <span className="today-task-card__formal-meta-item">
-                  DDL {formatDeadlineShort(task.deadlineAtMs)}
-                </span>
-              ) : null}
-              {task.contactSnapshot?.trim() ? (
-                <span className="today-task-card__contact">
-                  {formatContact(task)}
-                </span>
-              ) : null}
-            </div>
+            <FormalTaskTiming task={task} />
           ) : null}
 
           {variant === "upcoming" || variant === "overdue" ? (

@@ -148,6 +148,9 @@ describe("TodayTaskBoard", () => {
     const meta = screen.getByTestId("formal-task-meta");
     expect(meta.textContent).toMatch(/(还剩|已逾期).*计划.*DDL.*产品经理/);
     expect(within(meta).getByTestId("ddl-remaining-inline")).toBeTruthy();
+    expect(
+      screen.getByRole("progressbar", { name: "压缩卡片的时间进度" }),
+    ).toBeTruthy();
     expect(screen.queryByText("😵 有点急")).toBeNull();
   });
 

@@ -14,6 +14,8 @@ type TaskCoreFieldsProps<T extends FieldValues & CreateTaskFormValues> = {
   errors: FieldErrors<T>;
   disabled?: boolean;
   autoFocusTitle?: boolean;
+  onFieldBlur?: () => void;
+  onSelectChange?: () => void;
 };
 
 const path = <T extends FieldValues>(name: keyof CreateTaskFormValues) => name as Path<T>;
@@ -31,6 +33,8 @@ export function TaskCoreFields<T extends FieldValues & CreateTaskFormValues>({
   errors,
   disabled = false,
   autoFocusTitle = false,
+  onFieldBlur,
+  onSelectChange,
 }: TaskCoreFieldsProps<T>) {
   return (
     <>
@@ -40,7 +44,7 @@ export function TaskCoreFields<T extends FieldValues & CreateTaskFormValues>({
         autoFocus={autoFocusTitle}
         disabled={disabled}
         error={errorMessage(errors, "title")}
-        {...register(path<T>("title"))}
+        {...register(path<T>("title"), { onBlur: onFieldBlur })}
       />
 
       <Textarea
@@ -49,7 +53,7 @@ export function TaskCoreFields<T extends FieldValues & CreateTaskFormValues>({
         rows={2}
         disabled={disabled}
         error={errorMessage(errors, "note")}
-        {...register(path<T>("note"))}
+        {...register(path<T>("note"), { onBlur: onFieldBlur })}
       />
 
       <section className="task-core-fields__time-range" aria-labelledby="task-core-time-range">
@@ -60,7 +64,7 @@ export function TaskCoreFields<T extends FieldValues & CreateTaskFormValues>({
           step={60}
           disabled={disabled}
           error={errorMessage(errors, "startAt")}
-          {...register(path<T>("startAt"))}
+          {...register(path<T>("startAt"), { onBlur: onFieldBlur })}
         />
         <Input
           label="完成时间"
@@ -68,7 +72,7 @@ export function TaskCoreFields<T extends FieldValues & CreateTaskFormValues>({
           step={60}
           disabled={disabled}
           error={errorMessage(errors, "endAt")}
-          {...register(path<T>("endAt"))}
+          {...register(path<T>("endAt"), { onBlur: onFieldBlur })}
         />
       </section>
 
@@ -76,7 +80,10 @@ export function TaskCoreFields<T extends FieldValues & CreateTaskFormValues>({
         label="紧急程度"
         disabled={disabled}
         error={errorMessage(errors, "priority")}
-        {...register(path<T>("priority"), { valueAsNumber: true })}
+        {...register(path<T>("priority"), {
+          valueAsNumber: true,
+          onChange: onSelectChange,
+        })}
       >
         {TASK_PRIORITIES.map((priority) => (
           <option key={priority.value} value={priority.value}>
@@ -86,11 +93,11 @@ export function TaskCoreFields<T extends FieldValues & CreateTaskFormValues>({
       </Select>
 
       <Input
-        label="对接人"
-        placeholder="可选，输入姓名"
+        label="🕵️ 接头人"
+        placeholder="输入本次行动的秘密联络人"
         disabled={disabled}
         error={errorMessage(errors, "contactName")}
-        {...register(path<T>("contactName"))}
+        {...register(path<T>("contactName"), { onBlur: onFieldBlur })}
       />
     </>
   );

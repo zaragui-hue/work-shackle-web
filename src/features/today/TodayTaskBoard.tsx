@@ -7,6 +7,8 @@ import "./TodayTaskBoard.css";
 type TodayTaskBoardProps = {
   tasks: TodayTasks;
   onSelect?: (taskId: string) => void;
+  announcedTaskIds?: string[];
+  onBroadcastDismissed?: (taskId: string) => void;
 };
 
 type SectionProps = {
@@ -38,11 +40,15 @@ function TodayTaskList({
   variant,
   onSelect,
   listKey,
+  announcedTaskIds,
+  onBroadcastDismissed,
 }: {
   tasks: Task[];
   variant: "upcoming" | "formal" | "overdue" | "completed";
   onSelect?: (taskId: string) => void;
   listKey: string;
+  announcedTaskIds: Set<string>;
+  onBroadcastDismissed?: (taskId: string) => void;
 }) {
   return (
     <ul className="today-board__list" aria-label={listKey}>
@@ -52,6 +58,8 @@ function TodayTaskList({
           task={task}
           variant={variant}
           onSelect={onSelect}
+          announceAutoStart={variant === "formal" && announcedTaskIds.has(task.id)}
+          onBroadcastDismissed={onBroadcastDismissed}
         />
       ))}
     </ul>
@@ -92,14 +100,21 @@ function TodayCompletedSection({
           variant="completed"
           onSelect={onSelect}
           listKey="completed"
+          announcedTaskIds={new Set()}
         />
       ) : null}
     </section>
   );
 }
 
-export function TodayTaskBoard({ tasks, onSelect }: TodayTaskBoardProps) {
+export function TodayTaskBoard({
+  tasks,
+  onSelect,
+  announcedTaskIds = [],
+  onBroadcastDismissed,
+}: TodayTaskBoardProps) {
   const { formalTasks, overdueTasks, completedTodayTasks } = tasks;
+  const announcedTaskIdSet = new Set(announcedTaskIds);
 
   return (
     <div className="today-board">
@@ -113,6 +128,8 @@ export function TodayTaskBoard({ tasks, onSelect }: TodayTaskBoardProps) {
             variant="formal"
             onSelect={onSelect}
             listKey="formal"
+            announcedTaskIds={announcedTaskIdSet}
+            onBroadcastDismissed={onBroadcastDismissed}
           />
         </section>
       ) : null}
@@ -124,6 +141,8 @@ export function TodayTaskBoard({ tasks, onSelect }: TodayTaskBoardProps) {
             variant="overdue"
             onSelect={onSelect}
             listKey="overdue"
+            announcedTaskIds={announcedTaskIdSet}
+            onBroadcastDismissed={onBroadcastDismissed}
           />
         </TodaySection>
       ) : null}

@@ -1,0 +1,85 @@
+.task-auto-start-broadcast {
+  min-height: 48px;
+  padding: 5px 9px 5px 11px;
+  border-top: 3px solid var(--color-anchor);
+  background: var(--color-signal);
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  color: var(--color-ink);
+  animation: task-auto-start-broadcast-in 220ms cubic-bezier(.2,.9,.25,1);
+}
+
+.task-auto-start-broadcast__mascot {
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--color-anchor);
+  border-radius: 50%;
+  background: var(--color-reaction);
+}
+
+.task-auto-start-broadcast__copy {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.task-auto-start-broadcast__copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  font-weight: 950;
+}
+
+.task-auto-start-broadcast__copy span {
+  color: color-mix(in srgb, var(--color-ink) 72%, transparent);
+  font-family: var(--font-data);
+  font-size: 0.58rem;
+  font-weight: var(--font-weight-medium);
+}
+
+.task-auto-start-broadcast__copy--mobile {
+  display: none;
+}
+
+.task-auto-start-broadcast > button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 2px solid var(--color-anchor);
+  border-radius: 2px;
+  background: var(--color-paper-raised);
+  color: var(--color-ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.task-auto-start-broadcast > button:hover {
+  background: var(--color-anchor);
+  color: var(--color-paper-raised);
+}
+
+.task-auto-start-broadcast > button:focus-visible {
+  outline: 3px solid var(--color-stage);
+  outline-offset: 2px;
+}
+
+@keyframes task-auto-start-broadcast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 520px) {
+  .task-auto-start-broadcast__copy--desktop { display: none; }
+  .task-auto-start-broadcast__copy--mobile { display: block; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-auto-start-broadcast { animation: none; }
+}

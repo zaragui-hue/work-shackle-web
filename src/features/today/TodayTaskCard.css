@@ -90,6 +90,64 @@
   letter-spacing: -0.03em;
 }
 
+.today-task-card__status-stack {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  min-width: max-content;
+  padding-right: 7px;
+}
+
+.today-task-card__status-stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  padding: 5px 9px;
+  border: 3px solid var(--color-anchor);
+  border-radius: 2px;
+  background: var(--color-paper-deep);
+  box-shadow: 3px 3px 0 var(--color-anchor);
+  color: var(--color-ink);
+  font-size: 0.78rem;
+  font-weight: 1000;
+  line-height: 1;
+  transform: rotate(3deg);
+}
+
+.today-task-card__status-stamp--not_started {
+  background: color-mix(in srgb, var(--color-paper-raised) 76%, #b9afa3);
+  color: var(--color-ink-muted);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--color-anchor) 58%, transparent);
+}
+
+.today-task-card__status-stamp--in_progress {
+  background: #cfff24;
+  transform: rotate(5deg);
+}
+
+.today-task-card__status-stamp--paused {
+  background: var(--color-reaction);
+  transform: rotate(-3deg);
+}
+
+.today-task-card__status-stamp--waiting {
+  background: var(--color-signal);
+  transform: rotate(2deg);
+}
+
+.today-task-card__status-stamp--announced {
+  animation: today-task-card-stamp 210ms cubic-bezier(.15,1.25,.35,1);
+}
+
+.today-task-card__status-source {
+  color: var(--color-ink-muted);
+  font-family: var(--font-data);
+  font-size: 0.55rem;
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
 .today-task-card__deadline {
   margin: 0;
   display: grid;
@@ -189,6 +247,11 @@
   overflow-wrap: anywhere;
 }
 
+@keyframes today-task-card-stamp {
+  0% { opacity: 0; transform: rotate(-8deg) scale(1.45); }
+  100% { opacity: 1; transform: rotate(5deg) scale(1); }
+}
+
 @media (max-width: 520px) {
   .today-task-card__head {
     grid-template-columns: 1fr;
@@ -198,7 +261,22 @@
     justify-items: start;
   }
 
+  .today-task-card__status-stack {
+    justify-items: start;
+    padding: 2px 0 3px;
+  }
+
   .today-task-card__contact {
     margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .today-task-card__status-stamp,
+  .today-task-card__status-stamp--in_progress,
+  .today-task-card__status-stamp--paused,
+  .today-task-card__status-stamp--waiting {
+    animation: none;
+    transform: none;
   }
 }

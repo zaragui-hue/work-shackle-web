@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { copy } from "../config/copy";
 import { CreateTaskDrawer } from "../features/tasks/CreateTaskDrawer";
@@ -46,6 +46,8 @@ export function TodayPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [todayTasks, setTodayTasks] = useState<TodayTasks>(EMPTY_TODAY);
+  const [announcedTaskIds, setAnnouncedTaskIds] = useState<string[]>([]);
+  const hasLoadedTasks = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const {
@@ -90,6 +92,12 @@ export function TodayPage() {
     setError(null);
     try {
       const next = await queryTodayTasks();
+      if (hasLoadedTasks.current && next.autoStartedTaskIds.length > 0) {
+        setAnnouncedTaskIds((current) => [
+          ...new Set([...current, ...next.autoStartedTaskIds]),
+        ]);
+      }
+      hasLoadedTasks.current = true;
       setTodayTasks(next);
     } catch (caught) {
       setError(mapTaskError(caught as TaskAppError));
@@ -99,6 +107,10 @@ export function TodayPage() {
   }, []);
 
   useTaskAutoStart(todayTasks.formalTasks, loadTodayTasks);
+
+  const dismissTaskBroadcast = useCallback((taskId: string) => {
+    setAnnouncedTaskIds((current) => current.filter((id) => id !== taskId));
+  }, []);
 
   useEffect(() => {
     void loadTodayTasks();
@@ -258,6 +270,8 @@ export function TodayPage() {
           {!loading && !error && !showEmpty ? (
             <TodayTaskBoard
               tasks={todayTasks}
+              announcedTaskIds={announcedTaskIds}
+              onBroadcastDismissed={dismissTaskBroadcast}
               onSelect={(taskId) => {
                 setSelectedTaskId(taskId);
                 setDrawerOpen(true);

@@ -14,6 +14,7 @@ import {
   isDeadlineOverdueToday,
 } from "./todayDisplay";
 import { DdlTimeProgress } from "./DdlTimeProgress";
+import { TaskAutoStartBroadcast } from "./TaskAutoStartBroadcast";
 import "../tasks/priorityTone.css";
 import "./TodayTaskCard.css";
 
@@ -27,9 +28,17 @@ type TodayTaskCardProps = {
   task: Task;
   variant: TodayTaskCardVariant;
   onSelect?: (taskId: string) => void;
+  announceAutoStart?: boolean;
+  onBroadcastDismissed?: (taskId: string) => void;
 };
 
-export function TodayTaskCard({ task, variant, onSelect }: TodayTaskCardProps) {
+export function TodayTaskCard({
+  task,
+  variant,
+  onSelect,
+  announceAutoStart = false,
+  onBroadcastDismissed,
+}: TodayTaskCardProps) {
   const overdueToday =
     variant === "formal" && isDeadlineOverdueToday(task.deadlineAtMs);
 
@@ -49,6 +58,21 @@ export function TodayTaskCard({ task, variant, onSelect }: TodayTaskCardProps) {
         <div className="today-task-card__body">
           <div className="today-task-card__head">
             <h3 className="today-task-card__title">{task.title}</h3>
+            {variant === "formal" ? (
+              <div className="today-task-card__status-stack">
+                <span
+                  className={`today-task-card__status-stamp today-task-card__status-stamp--${task.status}${announceAutoStart ? " today-task-card__status-stamp--announced" : ""}`}
+                  aria-label={`任务状态：${statusLabel(task.status)}`}
+                >
+                  {task.status === "in_progress" ? "开工了" : statusLabel(task.status)}
+                </span>
+                {announceAutoStart ? (
+                  <span className="today-task-card__status-source">
+                    {formatPlannedTime(task.plannedAtMs)} · 自动
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
             {variant === "upcoming" && task.deadlineAtMs != null ? (
               <p className="today-task-card__deadline">
                 <span className="today-task-card__deadline-label">DDL</span>
@@ -115,9 +139,6 @@ export function TodayTaskCard({ task, variant, onSelect }: TodayTaskCardProps) {
                 <span className="today-task-card__meta-chip">
                   {priorityLabel(task.priority)}
                 </span>
-                <span className="today-task-card__meta-chip today-task-card__meta-chip--status">
-                  {statusLabel(task.status)}
-                </span>
                 <span className="today-task-card__meta-chip">
                   计划 {formatPlannedTime(task.plannedAtMs)}
                 </span>
@@ -149,6 +170,12 @@ export function TodayTaskCard({ task, variant, onSelect }: TodayTaskCardProps) {
           </div>
         </div>
       </button>
+      {variant === "formal" && announceAutoStart ? (
+        <TaskAutoStartBroadcast
+          plannedAtMs={task.plannedAtMs}
+          onDismiss={() => onBroadcastDismissed?.(task.id)}
+        />
+      ) : null}
     </li>
   );
 }

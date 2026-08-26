@@ -135,6 +135,7 @@ export type TodayTasks = {
   upcomingDeadlineTasks: Task[];
   overdueTasks: Task[];
   completedTodayTasks: Task[];
+  autoStartedTaskIds: string[];
 };
 
 export type PostponeTaskInput = {

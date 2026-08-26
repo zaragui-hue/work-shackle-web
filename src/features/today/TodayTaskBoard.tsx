@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 
-import type { TodayTasks } from "../../services/tauri/tasks";
+import type { Task, TodayTasks } from "../../services/tauri/tasks";
 import { TodayTaskCard } from "./TodayTaskCard";
 import "./TodayTaskBoard.css";
 
@@ -39,7 +39,7 @@ function TodayTaskList({
   onSelect,
   listKey,
 }: {
-  tasks: TodayTasks[keyof TodayTasks];
+  tasks: Task[];
   variant: "upcoming" | "formal" | "overdue" | "completed";
   onSelect?: (taskId: string) => void;
   listKey: string;

@@ -37,6 +37,7 @@ const EMPTY_TODAY: TodayTasks = {
   upcomingDeadlineTasks: [],
   overdueTasks: [],
   completedTodayTasks: [],
+  autoStartedTaskIds: [],
 };
 
 export function TodayPage() {

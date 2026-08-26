@@ -27,6 +27,7 @@ describe("TodayTaskBoard", () => {
       upcomingDeadlineTasks: [urgent],
       overdueTasks: [],
       completedTodayTasks: [],
+      autoStartedTaskIds: [],
     };
 
     render(<TodayTaskBoard tasks={tasks} />);
@@ -41,6 +42,7 @@ describe("TodayTaskBoard", () => {
       upcomingDeadlineTasks: [],
       overdueTasks: [],
       completedTodayTasks: [],
+      autoStartedTaskIds: [],
     };
 
     render(<TodayTaskBoard tasks={tasks} />);
@@ -59,6 +61,7 @@ describe("TodayTaskBoard", () => {
       upcomingDeadlineTasks: [],
       overdueTasks: [],
       completedTodayTasks: [],
+      autoStartedTaskIds: [],
     };
 
     render(<TodayTaskBoard tasks={tasks} />);

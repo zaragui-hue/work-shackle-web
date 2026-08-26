@@ -190,6 +190,7 @@ pub struct TodayTasksDto {
     pub upcoming_deadline_tasks: Vec<TaskDto>,
     pub overdue_tasks: Vec<TaskDto>,
     pub completed_today_tasks: Vec<TaskDto>,
+    pub auto_started_task_ids: Vec<String>,
 }
 
 pub struct TaskService;
@@ -379,7 +380,12 @@ impl TaskService {
     }
 
     pub fn query_today_tasks(connection: &Connection) -> Result<TodayTasksDto, AppError> {
-        classify_today_tasks(connection, now_ms())
+        let as_of_ms = now_ms();
+        let auto_started_task_ids =
+            TaskRepository::start_due_tasks(connection, as_of_ms).map_err(map_task_error)?;
+        let mut today = classify_today_tasks(connection, as_of_ms)?;
+        today.auto_started_task_ids = auto_started_task_ids;
+        Ok(today)
     }
 
     pub fn complete(connection: &Connection, id: &str) -> Result<TaskDto, AppError> {
@@ -505,6 +511,7 @@ fn classify_today_tasks(connection: &Connection, as_of_ms: i64) -> Result<TodayT
         upcoming_deadline_tasks,
         overdue_tasks,
         completed_today_tasks,
+        auto_started_task_ids: Vec::new(),
     })
 }
 
@@ -832,6 +839,36 @@ mod tests {
             _temp: temp,
             connection,
         }
+    }
+
+    #[test]
+    fn query_today_tasks_starts_due_tasks_and_reports_changed_ids() {
+        let db = open_test_database();
+        let current_ms = now_ms();
+        let due_at_ms = current_ms - 1;
+        TaskRepository::create(
+            &db.connection,
+            CreateTaskInput {
+                id: "due-now".to_string(),
+                title: "Due now".to_string(),
+                note: None,
+                planned_at_ms: due_at_ms,
+                deadline_at_ms: Some(current_ms + 1),
+                priority: Some(3),
+                contact_id: None,
+                contact_snapshot: None,
+                created_at_ms: due_at_ms - 60_000,
+                updated_at_ms: due_at_ms - 60_000,
+            },
+        )
+        .expect("create due task");
+
+        let first = TaskService::query_today_tasks(&db.connection).expect("first query");
+        assert_eq!(first.auto_started_task_ids, vec!["due-now"]);
+        assert_eq!(first.formal_tasks[0].status, TaskStatusDto::InProgress);
+
+        let second = TaskService::query_today_tasks(&db.connection).expect("second query");
+        assert!(second.auto_started_task_ids.is_empty());
     }
 
     fn system_reminder_log_count(connection: &Connection) -> i64 {

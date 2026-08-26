@@ -108,6 +108,7 @@ function buildPreviewTasks(): TodayTasks {
       task("debt", "客户说最后再改一版", now - 30 * hour, now - 18 * hour, 3, "paused"),
     ],
     completedTodayTasks: [],
+    autoStartedTaskIds: [],
   };
 }
 

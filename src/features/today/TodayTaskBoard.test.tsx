@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Task, TodayTasks } from "../../services/tauri/tasks";
@@ -113,6 +113,95 @@ describe("TodayTaskBoard", () => {
 
     expect(onStatusChange).toHaveBeenCalledWith(started, "paused");
     expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.queryByText("任务管理")).toBeNull();
+  });
+
+  it("shows a trimmed note and omits an empty note row", () => {
+    const withNote = {
+      ...task("note", "有备注"),
+      note: "  补上留存曲线  ",
+    };
+    const blankNote = {
+      ...task("blank", "空备注"),
+      note: "   ",
+    };
+    const tasks: TodayTasks = {
+      formalTasks: [withNote, blankNote],
+      upcomingDeadlineTasks: [],
+      overdueTasks: [],
+      completedTodayTasks: [],
+      autoStartedTaskIds: [],
+    };
+
+    render(<TodayTaskBoard tasks={tasks} />);
+
+    expect(screen.getByText("补上留存曲线")).toBeTruthy();
+    expect(document.querySelectorAll(".today-task-card__note")).toHaveLength(1);
+  });
+
+  it("changes priority from the card without opening the drawer", () => {
+    const urgent = task("urgent", "马上交稿");
+    const tasks: TodayTasks = {
+      formalTasks: [urgent],
+      upcomingDeadlineTasks: [],
+      overdueTasks: [],
+      completedTodayTasks: [],
+      autoStartedTaskIds: [],
+    };
+    const onSelect = vi.fn();
+    const onPriorityChange = vi.fn();
+
+    render(
+      <TodayTaskBoard
+        tasks={tasks}
+        onSelect={onSelect}
+        onPriorityChange={onPriorityChange}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "马上交稿 紧急程度：😵 有点急" }),
+    );
+    fireEvent.click(
+      screen.getByRole("menuitemradio", { name: "🚨 现在立刻马上要" }),
+    );
+
+    expect(onPriorityChange).toHaveBeenCalledWith(urgent, 5);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("rolls priority back when saving fails", async () => {
+    const urgent = task("rollback", "保存失败");
+    const tasks: TodayTasks = {
+      formalTasks: [urgent],
+      upcomingDeadlineTasks: [],
+      overdueTasks: [],
+      completedTodayTasks: [],
+      autoStartedTaskIds: [],
+    };
+    const onPriorityChange = vi.fn(async () => {
+      throw new Error("save failed");
+    });
+
+    render(
+      <TodayTaskBoard
+        tasks={tasks}
+        onPriorityChange={onPriorityChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /保存失败 紧急程度/ }));
+    fireEvent.click(
+      screen.getByRole("menuitemradio", { name: "🚨 现在立刻马上要" }),
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "保存失败 紧急程度：😵 有点急",
+        }),
+      ).toBeTruthy();
+    });
   });
 
   it("renders completed task status as read-only", () => {
@@ -132,7 +221,7 @@ describe("TodayTaskBoard", () => {
     expect(screen.queryByRole("combobox", { name: "已经完成 主状态" })).toBeNull();
   });
 
-  it("shows an active stamp and temporary workhorse broadcast for an auto-started task", () => {
+  it("shows compact timing and a temporary workhorse broadcast for an auto-started task", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 7, 24, 13, 30));
     const started = task("started", "自动开工", "in_progress");
@@ -146,17 +235,9 @@ describe("TodayTaskBoard", () => {
 
     render(<TodayTaskBoard tasks={tasks} announcedTaskIds={[started.id]} />);
 
-    expect(screen.getByText("🐴 牛马强制上线")).toBeTruthy();
-    expect(
-      screen.getByLabelText(
-        "任务状态：进行中，紧急程度：😵 有点急，时间已走过 50%",
-      ),
-    ).toBeTruthy();
-    expect(screen.getByText("50%")).toBeTruthy();
-    expect(screen.getByText("AUTO")).toBeTruthy();
-    expect(
-      document.querySelector('img[data-mascot-state="ddl-calm"]'),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "自动开工 紧急程度：😵 有点急" })).toBeTruthy();
+    expect(document.querySelector(".task-pressure-stamp")).toBeNull();
+    expect(screen.getByText("时间 50% · 注意")).toBeTruthy();
     expect(screen.getByText(/打工马播报：时间到了，活自己醒了/)).toBeTruthy();
     expect(screen.getByRole("status")).toBeTruthy();
 
@@ -175,7 +256,7 @@ describe("TodayTaskBoard", () => {
     };
 
     const { rerender } = render(<TodayTaskBoard tasks={tasks} />);
-    expect(screen.getByText("🐴 牛马强制上线")).toBeTruthy();
+    expect(screen.getByText(/^时间 /)).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();
 
     rerender(<TodayTaskBoard tasks={tasks} announcedTaskIds={[started.id]} />);
@@ -204,7 +285,7 @@ describe("TodayTaskBoard", () => {
     expect(
       screen.getByRole("progressbar", { name: "压缩卡片的时间进度" }),
     ).toBeTruthy();
-    expect(screen.queryByText("😵 有点急")).toBeNull();
+    expect(screen.getByText("😵 有点急")).toBeTruthy();
   });
 
   it("shows a time-based chaos stamp while retaining overdue progress", async () => {

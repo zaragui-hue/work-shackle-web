@@ -74,6 +74,7 @@ export function DesignPreviewPage() {
             <TodayTaskBoard
               tasks={tasks}
               announcedTaskIds={tasks.autoStartedTaskIds}
+              onPriorityChange={() => undefined}
             />
           </Card>
 
@@ -135,6 +136,12 @@ function task(
     deadlineAtMs,
     priority,
     status,
+    note:
+      id === "meeting"
+        ? "备注：带上第七版需求稿，先确认哪些内容没有再次变化"
+        : id === "reply"
+          ? "备注：先处理真正影响上线的问题"
+          : undefined,
     createdAtMs: plannedAtMs - 2 * 60 * 60 * 1000,
     updatedAtMs: Date.now(),
     contactSnapshot: id === "meeting" ? "产品经理" : undefined,

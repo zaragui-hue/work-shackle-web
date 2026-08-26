@@ -11,6 +11,8 @@ type TodayTaskBoardProps = {
   onBroadcastDismissed?: (taskId: string) => void;
   onStatusChange?: (task: Task, status: TaskStatus) => void | Promise<void>;
   statusBusyTaskId?: string | null;
+  onPriorityChange?: (task: Task, priority: number) => void | Promise<void>;
+  priorityBusyTaskIds?: string[];
 };
 
 type SectionProps = {
@@ -46,6 +48,8 @@ function TodayTaskList({
   onBroadcastDismissed,
   onStatusChange,
   statusBusyTaskId,
+  onPriorityChange,
+  priorityBusyTaskIds,
 }: {
   tasks: Task[];
   variant: "upcoming" | "formal" | "overdue" | "completed";
@@ -55,6 +59,8 @@ function TodayTaskList({
   onBroadcastDismissed?: (taskId: string) => void;
   onStatusChange?: (task: Task, status: TaskStatus) => void | Promise<void>;
   statusBusyTaskId?: string | null;
+  onPriorityChange?: (task: Task, priority: number) => void | Promise<void>;
+  priorityBusyTaskIds?: string[];
 }) {
   return (
     <ul className="today-board__list" aria-label={listKey}>
@@ -68,6 +74,8 @@ function TodayTaskList({
           onBroadcastDismissed={onBroadcastDismissed}
           onStatusChange={onStatusChange}
           statusBusy={statusBusyTaskId === task.id}
+          onPriorityChange={onPriorityChange}
+          priorityBusy={priorityBusyTaskIds?.includes(task.id)}
         />
       ))}
     </ul>
@@ -122,6 +130,8 @@ export function TodayTaskBoard({
   onBroadcastDismissed,
   onStatusChange,
   statusBusyTaskId,
+  onPriorityChange,
+  priorityBusyTaskIds = [],
 }: TodayTaskBoardProps) {
   const { formalTasks, overdueTasks, completedTodayTasks } = tasks;
   const announcedTaskIdSet = new Set(announcedTaskIds);
@@ -142,6 +152,8 @@ export function TodayTaskBoard({
             onBroadcastDismissed={onBroadcastDismissed}
             onStatusChange={onStatusChange}
             statusBusyTaskId={statusBusyTaskId}
+            onPriorityChange={onPriorityChange}
+            priorityBusyTaskIds={priorityBusyTaskIds}
           />
         </section>
       ) : null}
@@ -157,6 +169,8 @@ export function TodayTaskBoard({
             onBroadcastDismissed={onBroadcastDismissed}
             onStatusChange={onStatusChange}
             statusBusyTaskId={statusBusyTaskId}
+            onPriorityChange={onPriorityChange}
+            priorityBusyTaskIds={priorityBusyTaskIds}
           />
         </TodaySection>
       ) : null}

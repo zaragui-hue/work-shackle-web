@@ -21,6 +21,7 @@ type DdlTimeProgressProps = {
   plannedAtMs: number;
   deadlineAtMs?: number;
   showRemaining?: boolean;
+  showMeta?: boolean;
   presentation?: "full" | "remaining-only";
 };
 
@@ -28,6 +29,7 @@ export function DdlTimeProgress({
   plannedAtMs,
   deadlineAtMs,
   showRemaining = true,
+  showMeta = true,
   presentation = "full",
 }: DdlTimeProgressProps) {
   const progress = useDdlProgress(plannedAtMs, deadlineAtMs);
@@ -92,20 +94,22 @@ export function DdlTimeProgress({
           style={{ width: `${fillPercent}%` }}
         />
       </div>
-      <div className="ddl-time-progress__meta">
-        <Mascot
-          state={mascotStateForDdlEmotion(progress.emotion)}
-          animation={mascotAnimationForDdlEmotion(progress.emotion)}
-          size="sm"
-          className="ddl-time-progress__mascot"
-        />
-        <p className="ddl-time-progress__copy">
-          {formatTimeElapsedCopy(progress.progressRatio)}
-        </p>
-        <p className="ddl-time-progress__emotion">
-          {ddlEmotionLabel(progress.emotion)}
-        </p>
-      </div>
+      {showMeta ? (
+        <div className="ddl-time-progress__meta">
+          <Mascot
+            state={mascotStateForDdlEmotion(progress.emotion)}
+            animation={mascotAnimationForDdlEmotion(progress.emotion)}
+            size="sm"
+            className="ddl-time-progress__mascot"
+          />
+          <p className="ddl-time-progress__copy">
+            {formatTimeElapsedCopy(progress.progressRatio)}
+          </p>
+          <p className="ddl-time-progress__emotion">
+            {ddlEmotionLabel(progress.emotion)}
+          </p>
+        </div>
+      ) : null}
       {showRemaining && remainingText ? (
         <p className="ddl-time-progress__remaining">{remainingText}</p>
       ) : null}

@@ -28,6 +28,7 @@ import { useWorkdayStatusAutomation } from "../features/today/useWorkdayStatusAu
 import {
   mapTaskError,
   queryTodayTasks,
+  updateTask,
   type Task,
   type TaskAppError,
   type TaskStatus,
@@ -55,6 +56,7 @@ export function TodayPage() {
   const [error, setError] = useState<string | null>(null);
   const [taskActionError, setTaskActionError] = useState<string | null>(null);
   const [statusBusyTaskId, setStatusBusyTaskId] = useState<string | null>(null);
+  const [priorityBusyTaskIds, setPriorityBusyTaskIds] = useState<string[]>([]);
   const {
     display: workCountdown,
     schedule: workSchedule,
@@ -139,6 +141,24 @@ export function TodayPage() {
       setStatusBusyTaskId(null);
     }
   }, [loadTodayTasks, statusBusyTaskId]);
+
+  const handleTaskPriorityChange = useCallback(async (task: Task, priority: number) => {
+    if (priority === task.priority || priorityBusyTaskIds.includes(task.id)) {
+      return;
+    }
+
+    setPriorityBusyTaskIds((current) => [...current, task.id]);
+    setTaskActionError(null);
+    try {
+      await updateTask({ id: task.id, priority });
+      await loadTodayTasks();
+    } catch (caught) {
+      setTaskActionError(mapTaskError(caught as TaskAppError));
+      throw caught;
+    } finally {
+      setPriorityBusyTaskIds((current) => current.filter((id) => id !== task.id));
+    }
+  }, [loadTodayTasks, priorityBusyTaskIds]);
 
   useEffect(() => {
     void loadTodayTasks();
@@ -308,6 +328,8 @@ export function TodayPage() {
               onBroadcastDismissed={dismissTaskBroadcast}
               onStatusChange={handleTaskStatusChange}
               statusBusyTaskId={statusBusyTaskId}
+              onPriorityChange={handleTaskPriorityChange}
+              priorityBusyTaskIds={priorityBusyTaskIds}
               onSelect={(taskId) => {
                 setSelectedTaskId(taskId);
                 setDrawerOpen(true);

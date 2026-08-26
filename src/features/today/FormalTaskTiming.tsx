@@ -1,6 +1,7 @@
 import type { Task } from "../../services/tauri/tasks";
 import { formatContact, formatDeadlineShort } from "../tasks/taskDisplay";
 import type { TaskPressure } from "./taskPressure";
+import { ddlEmotionLabel } from "./ddlProgressDisplay";
 import {
   formatOverdueDuration,
   formatPlannedTime,
@@ -24,6 +25,13 @@ export function FormalTaskTiming({ task, pressure }: FormalTaskTimingProps) {
   return (
     <div className="today-task-card__formal-timing">
       <div className="today-task-card__formal-meta" data-testid="formal-task-meta">
+        {pressure.valid ? (
+          <span
+            className={`today-task-card__pressure-copy today-task-card__pressure-copy--${pressure.emotion}`}
+          >
+            时间 {pressure.percentLabel} · {ddlEmotionLabel(pressure.emotion)}
+          </span>
+        ) : null}
         {remainingText ? (
           <span
             className="ddl-time-progress__remaining-inline"

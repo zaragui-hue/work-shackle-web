@@ -5,7 +5,6 @@ import {
   formatContact,
   formatDeadlineShort,
   isTerminalStatus,
-  priorityLabel,
   priorityToneClass,
   statusLabel,
 } from "../tasks/taskDisplay";
@@ -18,12 +17,9 @@ import {
 } from "./todayDisplay";
 import { DdlTimeProgress } from "./DdlTimeProgress";
 import { FormalTaskTiming } from "./FormalTaskTiming";
-import {
-  overdueChaosLabel,
-  overdueChaosLevel,
-} from "./ddlProgressDisplay";
+import { overdueChaosLabel, overdueChaosLevel } from "./ddlProgressDisplay";
 import { TaskAutoStartBroadcast } from "./TaskAutoStartBroadcast";
-import { TaskPressureStamp } from "./TaskPressureStamp";
+import { TaskPriorityMenu } from "./TaskPriorityMenu";
 import { useTaskPressure } from "./useTaskPressure";
 import "../tasks/priorityTone.css";
 import "./TodayTaskCard.css";
@@ -42,6 +38,8 @@ type TodayTaskCardProps = {
   onBroadcastDismissed?: (taskId: string) => void;
   onStatusChange?: (task: Task, status: TaskStatus) => void | Promise<void>;
   statusBusy?: boolean;
+  onPriorityChange?: (task: Task, priority: number) => void | Promise<void>;
+  priorityBusy?: boolean;
 };
 
 function OverdueChaosStamp({ deadlineAtMs }: { deadlineAtMs: number }) {
@@ -73,6 +71,8 @@ export function TodayTaskCard({
   onBroadcastDismissed,
   onStatusChange,
   statusBusy = false,
+  onPriorityChange,
+  priorityBusy = false,
 }: TodayTaskCardProps) {
   const overdueToday =
     variant === "formal" && isDeadlineOverdueToday(task.deadlineAtMs);
@@ -81,60 +81,135 @@ export function TodayTaskCard({
     variant === "formal" ? task.deadlineAtMs : undefined,
   );
   const terminal = isTerminalStatus(task.status);
-  const statusOptions = task.status === "not_started"
-    ? TASK_STATUS_OPTIONS
-    : TASK_STATUS_OPTIONS.filter((option) => option.value !== "not_started");
+  const statusOptions =
+    task.status === "not_started"
+      ? TASK_STATUS_OPTIONS
+      : TASK_STATUS_OPTIONS.filter((option) => option.value !== "not_started");
+  const note = task.note?.trim();
+  const [displayPriority, setDisplayPriority] = useState(task.priority);
+
+  useEffect(() => {
+    setDisplayPriority(task.priority);
+  }, [task.priority]);
+
+  const openDetail = () => onSelect?.(task.id);
+
+  const changePriority = async (priority: number) => {
+    if (priority === displayPriority || !onPriorityChange) {
+      return;
+    }
+
+    const previousPriority = displayPriority;
+    setDisplayPriority(priority);
+    try {
+      await onPriorityChange(task, priority);
+    } catch {
+      setDisplayPriority(previousPriority);
+    }
+  };
 
   return (
     <li
       className={`today-task-card today-task-card--${variant}${overdueToday ? " today-task-card--formal-overdue" : ""}`}
     >
-      <button
-        type="button"
-        className="today-task-card__button"
-        onClick={() => onSelect?.(task.id)}
-      >
-        <span
-          className={`today-task-card__priority ${priorityToneClass(task.priority)}`}
-          aria-hidden="true"
-        />
-        <div className="today-task-card__body">
-          <div className="today-task-card__head">
+      <span
+        className={`today-task-card__priority ${priorityToneClass(displayPriority)}`}
+        aria-hidden="true"
+      />
+
+      <div className="today-task-card__content">
+        <div className="today-task-card__topline">
+          <button
+            type="button"
+            className="today-task-card__title-button"
+            onClick={openDetail}
+          >
             <h3 className="today-task-card__title">{task.title}</h3>
-            {variant === "formal" ? (
-              <TaskPressureStamp
-                task={task}
-                pressure={pressure}
-                autoStarted={announceAutoStart}
-              />
-            ) : null}
+          </button>
+
+          <div className="today-task-card__actions">
             {variant === "overdue" && task.deadlineAtMs != null ? (
               <OverdueChaosStamp deadlineAtMs={task.deadlineAtMs} />
             ) : null}
-            {variant === "upcoming" && task.deadlineAtMs != null ? (
-              <p className="today-task-card__deadline">
-                <span className="today-task-card__deadline-label">DDL</span>
-                <span className="today-task-card__deadline-value">
-                  {formatDeadlineShort(task.deadlineAtMs)}
-                </span>
-              </p>
-            ) : null}
-          </div>
 
-          {variant === "upcoming" && task.deadlineAtMs != null ? (
-            <p className="today-task-card__remaining">
-              {formatRemainingUntilDeadline(task.deadlineAtMs)}
-            </p>
+            <TaskPriorityMenu
+              taskTitle={task.title}
+              value={displayPriority}
+              disabled={terminal || priorityBusy || !onPriorityChange}
+              onChange={(priority) => void changePriority(priority)}
+            />
+
+            {terminal ? (
+              <span
+                className="today-task-card__terminal-status"
+                aria-label={`${task.title} 主状态`}
+              >
+                {statusLabel(task.status)}
+              </span>
+            ) : (
+              <label className="today-task-card__status-control">
+                <span className="today-task-card__sr-only">主状态</span>
+                <select
+                  aria-label={`${task.title} 主状态`}
+                  value={task.status}
+                  disabled={statusBusy}
+                  onChange={(event) => {
+                    void onStatusChange?.(task, event.target.value as TaskStatus);
+                  }}
+                >
+                  {statusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+        </div>
+
+        {note ? (
+          <button
+            type="button"
+            className="today-task-card__note"
+            onClick={openDetail}
+            title={note}
+          >
+            {note}
+          </button>
+        ) : null}
+
+        <button
+          type="button"
+          className="today-task-card__detail-meta"
+          onClick={openDetail}
+          aria-label={`查看${task.title}详情`}
+        >
+          {variant === "upcoming" ? (
+            <div className="today-task-card__compact-meta">
+              {task.deadlineAtMs != null ? (
+                <>
+                  <span>{formatRemainingUntilDeadline(task.deadlineAtMs)}</span>
+                  <span>DDL {formatDeadlineShort(task.deadlineAtMs)}</span>
+                </>
+              ) : null}
+              {task.contactSnapshot?.trim() ? (
+                <span>{formatContact(task)}</span>
+              ) : null}
+            </div>
           ) : null}
 
-          {variant === "overdue" && task.deadlineAtMs != null ? (
-            <div className="today-task-card__overdue-meta">
-              <span className="today-task-card__meta-chip">
-                DDL {formatDeadlineShort(task.deadlineAtMs)}
-              </span>
-              <span className="today-task-card__overdue-badge">
-                {formatOverdueDuration(task.deadlineAtMs)}
-              </span>
+          {variant === "overdue" ? (
+            <div className="today-task-card__compact-meta">
+              {task.deadlineAtMs != null ? (
+                <>
+                  <span>{formatOverdueDuration(task.deadlineAtMs)}</span>
+                  <span>DDL {formatDeadlineShort(task.deadlineAtMs)}</span>
+                </>
+              ) : null}
+              {task.contactSnapshot?.trim() ? (
+                <span>{formatContact(task)}</span>
+              ) : null}
             </div>
           ) : null}
 
@@ -142,81 +217,35 @@ export function TodayTaskCard({
             <FormalTaskTiming task={task} pressure={pressure} />
           ) : null}
 
+          {variant === "completed" ? (
+            <div className="today-task-card__compact-meta">
+              {task.completedAtMs != null ? (
+                <span>{formatCompletedTime(task.completedAtMs)}</span>
+              ) : null}
+              {task.contactSnapshot?.trim() ? (
+                <span>{formatContact(task)}</span>
+              ) : null}
+            </div>
+          ) : null}
+
           {variant === "upcoming" || variant === "overdue" ? (
             <DdlTimeProgress
               plannedAtMs={task.plannedAtMs}
               deadlineAtMs={task.deadlineAtMs}
               showRemaining={false}
+              showMeta={false}
             />
           ) : null}
-
-          {variant !== "formal" ? <div className="today-task-card__foot">
-            {variant === "completed" ? (
-              <>
-                {task.completedAtMs != null ? (
-                  <span className="today-task-card__meta-chip today-task-card__meta-chip--muted">
-                    {formatCompletedTime(task.completedAtMs)}
-                  </span>
-                ) : null}
-                <span className="today-task-card__meta-chip today-task-card__meta-chip--muted">
-                  {priorityLabel(task.priority)}
-                </span>
-              </>
-            ) : null}
-
-            {variant === "upcoming" ? (
-              <span className="today-task-card__meta-chip">
-                {priorityLabel(task.priority)}
-              </span>
-            ) : null}
-
-            {variant === "overdue" ? (
-              <>
-                <span className="today-task-card__meta-chip">
-                  {priorityLabel(task.priority)}
-                </span>
-                {task.contactSnapshot?.trim() ? (
-                  <span className="today-task-card__contact">
-                    {formatContact(task)}
-                  </span>
-                ) : null}
-              </>
-            ) : null}
-          </div> : null}
-        </div>
-      </button>
-      <div className="today-task-card__management" aria-label={`${task.title} 任务管理`}>
-        <span className="today-task-card__management-kicker">任务管理</span>
-        {terminal ? (
-          <span className="today-task-card__terminal-status" aria-label={`${task.title} 主状态`}>
-            <span>主状态</span>
-            <strong>{statusLabel(task.status)}</strong>
-          </span>
-        ) : (
-          <label className="today-task-card__status-control">
-            <span>主状态</span>
-            <select
-              aria-label={`${task.title} 主状态`}
-              value={task.status}
-              disabled={statusBusy}
-              onChange={(event) => {
-                void onStatusChange?.(task, event.target.value as TaskStatus);
-              }}
-            >
-              {statusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+        </button>
       </div>
+
       {variant === "formal" && announceAutoStart ? (
-        <TaskAutoStartBroadcast
-          plannedAtMs={task.plannedAtMs}
-          onDismiss={() => onBroadcastDismissed?.(task.id)}
-        />
+        <div className="today-task-card__broadcast">
+          <TaskAutoStartBroadcast
+            plannedAtMs={task.plannedAtMs}
+            onDismiss={() => onBroadcastDismissed?.(task.id)}
+          />
+        </div>
       ) : null}
     </li>
   );

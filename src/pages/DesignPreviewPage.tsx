@@ -69,7 +69,10 @@ export function DesignPreviewPage() {
               <p>活可以插，队不能乱。</p>
               <Button>+ 新任务</Button>
             </div>
-            <TodayTaskBoard tasks={tasks} />
+            <TodayTaskBoard
+              tasks={tasks}
+              announcedTaskIds={tasks.autoStartedTaskIds}
+            />
           </Card>
 
           <WorkScheduleEditor schedule={schedule} onSaved={() => undefined} />
@@ -102,13 +105,13 @@ function buildPreviewTasks(): TodayTasks {
     ],
     formalTasks: [
       task("meeting", "参加需求反复横跳研讨会", now - hour, now + 3 * hour, 2, "waiting"),
-      task("reply", "假装没看到群里的 @所有人", now, now + 5 * hour, 1, "not_started"),
+      task("reply", "假装没看到群里的 @所有人", now, now + 5 * hour, 1, "in_progress"),
     ],
     overdueTasks: [
       task("debt", "客户说最后再改一版", now - 30 * hour, now - 18 * hour, 3, "paused"),
     ],
     completedTodayTasks: [],
-    autoStartedTaskIds: [],
+    autoStartedTaskIds: ["reply"],
   };
 }
 

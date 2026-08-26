@@ -22,10 +22,11 @@ describe("CreateTaskDrawer", () => {
     expect(document.querySelector(".ws-drawer__panel")).toBeTruthy();
     expect(document.querySelector(".ws-modal__panel")).toBeNull();
     expect(screen.getByLabelText("开始时间 日期").getAttribute("type")).toBe("date");
-    expect(screen.getByLabelText("开始时间 时分").getAttribute("type")).toBe("time");
-    expect(screen.getByLabelText("开始时间 时分").getAttribute("step")).toBe("60");
+    expect(screen.getByLabelText("开始时间 小时").tagName).toBe("SELECT");
+    expect(screen.getByLabelText("开始时间 分钟").tagName).toBe("SELECT");
     expect(screen.getByLabelText("完成时间 日期").getAttribute("type")).toBe("date");
-    expect(screen.getByLabelText("完成时间 时分").getAttribute("type")).toBe("time");
+    expect(screen.getByLabelText("完成时间 小时").tagName).toBe("SELECT");
+    expect(screen.getByLabelText("完成时间 分钟").tagName).toBe("SELECT");
     expect((screen.getByLabelText("紧急程度") as HTMLSelectElement).value).toBe("2");
     expect(screen.getByLabelText("🕵️ 接头人").getAttribute("placeholder"))
       .toBe("输入本次行动的秘密联络人");

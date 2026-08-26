@@ -50,7 +50,8 @@ it("combines independently selected date and minute values", () => {
   render(<TaskDateTimeField label="开始时间" value="2026-08-26T09:18" onChange={onChange} />);
   fireEvent.change(screen.getByLabelText("开始时间 日期"), { target: { value: "2026-08-27" } });
   expect(onChange).toHaveBeenLastCalledWith("2026-08-27T09:18");
-  fireEvent.change(screen.getByLabelText("开始时间 时分"), { target: { value: "10:25" } });
+  fireEvent.change(screen.getByLabelText("开始时间 小时"), { target: { value: "10" } });
+  fireEvent.change(screen.getByLabelText("开始时间 分钟"), { target: { value: "25" } });
   expect(onChange).toHaveBeenLastCalledWith("2026-08-26T10:25");
 });
 ```
@@ -83,7 +84,7 @@ export function combineDateTime(date: string, time: string) {
 }
 ```
 
-`TaskDateTimeField` renders a visible group label plus inputs labelled `${label} 日期` and `${label} 时分`. It applies `minDate` to the date input and only applies `minTime` when the selected date equals the minimum date.
+`TaskDateTimeField` renders a visible group label plus controls labelled `${label} 日期`, `${label} 小时`, and `${label} 分钟`. The hour selector contains `00`–`23`, and the minute selector contains every minute from `00`–`59`. It applies `minDate` to the date input and disables hour/minute choices before the minimum when the selected date equals the minimum date. Switching back to the minimum date clamps an earlier time to the first valid minute.
 
 - [ ] **Step 4: Run the focused test and verify it passes**
 
@@ -179,11 +180,13 @@ expect(screen.queryByLabelText("主状态")).toBeNull();
 expect(screen.queryByText("情报已同步")).toBeNull();
 
 expect(screen.getByLabelText("开始时间 日期")).toBeDisabled();
-expect(screen.getByLabelText("完成时间 时分")).toBeDisabled();
+expect(screen.getByLabelText("完成时间 小时")).toBeDisabled();
+expect(screen.getByLabelText("完成时间 分钟")).toBeDisabled();
 expect(screen.getByRole("button", { name: "申请延期" })).toBeTruthy();
 
 expect(screen.getByLabelText("新完成时间 日期")).toBeTruthy();
-expect(screen.getByLabelText("新完成时间 时分")).toBeTruthy();
+expect(screen.getByLabelText("新完成时间 小时")).toBeTruthy();
+expect(screen.getByLabelText("新完成时间 分钟")).toBeTruthy();
 ```
 
 - [ ] **Step 2: Run focused tests and verify they fail**

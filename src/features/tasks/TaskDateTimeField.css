@@ -9,7 +9,7 @@
 
 .task-datetime-field__controls {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(118px, 0.65fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
 }
 
@@ -19,18 +19,52 @@
   gap: 4px;
 }
 
-.task-datetime-field__part > span {
+.task-datetime-field__part > span,
+.task-datetime-field__part-label {
   font-size: 0.64rem;
   font-weight: 850;
   color: var(--color-ink-muted);
 }
 
-.task-datetime-field:disabled .task-datetime-field__part > span {
-  opacity: 0.7;
+.task-datetime-field__time-part {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
 }
 
-@media (max-width: 430px) {
-  .task-datetime-field__controls {
-    grid-template-columns: 1fr;
-  }
+.task-datetime-field__time-selectors {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 5px;
+}
+
+.task-datetime-field__time-selectors label {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.task-datetime-field__time-selectors label > span {
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: var(--color-ink-muted);
+}
+
+.task-datetime-field__time-selectors select {
+  min-width: 0;
+  padding-inline: 9px 26px;
+}
+
+.task-datetime-field__separator {
+  padding-bottom: 9px;
+  color: var(--color-ink-muted);
+  font-weight: 900;
+}
+
+.task-datetime-field:disabled .task-datetime-field__part > span,
+.task-datetime-field:disabled .task-datetime-field__part-label,
+.task-datetime-field:disabled .task-datetime-field__time-selectors label > span {
+  opacity: 0.7;
 }

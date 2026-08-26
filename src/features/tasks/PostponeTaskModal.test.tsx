@@ -38,14 +38,19 @@ describe("PostponeTaskModal", () => {
     expect(screen.getByText(/^当前完成时间：/)).toBeTruthy();
     expect((screen.getByLabelText("新完成时间 日期") as HTMLInputElement).value)
       .toBe("2026-08-26");
-    expect((screen.getByLabelText("新完成时间 时分") as HTMLInputElement).value)
-      .toBe("19:00");
+    expect((screen.getByLabelText("新完成时间 小时") as HTMLSelectElement).value)
+      .toBe("19");
+    expect((screen.getByLabelText("新完成时间 分钟") as HTMLSelectElement).value)
+      .toBe("00");
 
     fireEvent.change(screen.getByLabelText("新完成时间 日期"), {
       target: { value: "2026-08-27" },
     });
-    fireEvent.change(screen.getByLabelText("新完成时间 时分"), {
-      target: { value: "20:15" },
+    fireEvent.change(screen.getByLabelText("新完成时间 小时"), {
+      target: { value: "20" },
+    });
+    fireEvent.change(screen.getByLabelText("新完成时间 分钟"), {
+      target: { value: "15" },
     });
     fireEvent.change(screen.getByLabelText("延期原因"), {
       target: { value: "外部依赖延迟" },

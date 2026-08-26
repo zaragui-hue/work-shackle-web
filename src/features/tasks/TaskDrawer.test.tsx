@@ -90,12 +90,13 @@ describe("TaskDrawer", () => {
       "🕵️ 接头人",
     ]);
     expect(screen.getByLabelText("开始时间 日期").getAttribute("type")).toBe("date");
-    expect(screen.getByLabelText("开始时间 时分").getAttribute("type")).toBe("time");
-    expect(screen.getByLabelText("开始时间 时分").getAttribute("step")).toBe("60");
+    expect(screen.getByLabelText("开始时间 小时").tagName).toBe("SELECT");
+    expect(screen.getByLabelText("开始时间 分钟").tagName).toBe("SELECT");
     expect(screen.getByLabelText("完成时间 日期").getAttribute("type")).toBe("date");
-    expect(screen.getByLabelText("完成时间 时分").getAttribute("type")).toBe("time");
+    expect(screen.getByLabelText("完成时间 小时").tagName).toBe("SELECT");
+    expect(screen.getByLabelText("完成时间 分钟").tagName).toBe("SELECT");
     expect((screen.getByLabelText("开始时间 日期") as HTMLInputElement).disabled).toBe(true);
-    expect((screen.getByLabelText("完成时间 时分") as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByLabelText("完成时间 分钟") as HTMLSelectElement).disabled).toBe(true);
     expect(screen.queryByRole("progressbar", { name: "时间进度" })).toBeNull();
     expect(screen.queryByLabelText("主状态")).toBeNull();
     expect(screen.queryByText("任务管理")).toBeNull();
@@ -167,16 +168,24 @@ describe("TaskDrawer", () => {
     fireEvent.change(screen.getByLabelText("开始时间 日期"), {
       target: { value: startDate },
     });
-    fireEvent.change(screen.getByLabelText("开始时间 时分"), {
-      target: { value: startTime },
+    const [startHour, startMinute] = startTime.split(":");
+    const [endHour, endMinute] = endTime.split(":");
+    fireEvent.change(screen.getByLabelText("开始时间 小时"), {
+      target: { value: startHour },
+    });
+    fireEvent.change(screen.getByLabelText("开始时间 分钟"), {
+      target: { value: startMinute },
     });
     fireEvent.change(screen.getByLabelText("完成时间 日期"), {
       target: { value: endDate },
     });
-    fireEvent.change(screen.getByLabelText("完成时间 时分"), {
-      target: { value: endTime },
+    fireEvent.change(screen.getByLabelText("完成时间 小时"), {
+      target: { value: endHour },
     });
-    fireEvent.blur(screen.getByLabelText("完成时间 时分"));
+    fireEvent.change(screen.getByLabelText("完成时间 分钟"), {
+      target: { value: endMinute },
+    });
+    fireEvent.blur(screen.getByLabelText("完成时间 分钟"));
 
     await waitFor(() => expect(updateTask).toHaveBeenCalledWith(expect.objectContaining({
       plannedAtMs: nextStart.getTime(),
@@ -202,19 +211,16 @@ describe("TaskDrawer", () => {
     expect(updateTask).toHaveBeenCalledTimes(1);
   });
 
-  it("blocks autosave when the time range is invalid", async () => {
+  it("prevents choosing a completion time before the start time", async () => {
     vi.mocked(getTaskDetail).mockResolvedValue(futureNotStartedDetail());
     render(
       <TaskDrawer taskId="task-1" open onClose={vi.fn()} onChanged={vi.fn()} />,
     );
 
     await screen.findByDisplayValue("整理季度复盘");
-    fireEvent.change(screen.getByLabelText("完成时间 时分"), {
-      target: { value: "08:00" },
-    });
-    fireEvent.blur(screen.getByLabelText("完成时间 时分"));
-
-    expect(await screen.findByText("完成时间必须晚于开始时间")).toBeTruthy();
+    const hour = screen.getByLabelText("完成时间 小时") as HTMLSelectElement;
+    expect(hour.querySelector('option[value="08"]')?.disabled).toBe(true);
+    expect(hour.querySelector('option[value="09"]')?.disabled).toBe(false);
     expect(updateTask).not.toHaveBeenCalled();
   });
 
@@ -278,9 +284,11 @@ describe("TaskDrawer", () => {
     }
     for (const label of [
       "开始时间 日期",
-      "开始时间 时分",
+      "开始时间 小时",
+      "开始时间 分钟",
       "完成时间 日期",
-      "完成时间 时分",
+      "完成时间 小时",
+      "完成时间 分钟",
     ]) {
       expect((screen.getByLabelText(label) as HTMLInputElement).disabled).toBe(true);
     }

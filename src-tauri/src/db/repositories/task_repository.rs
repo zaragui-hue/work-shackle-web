@@ -179,6 +179,39 @@ impl TaskRepository {
         Self::get_by_id(connection, &input.id)
     }
 
+    pub fn start_due_tasks(
+        connection: &Connection,
+        now_ms: i64,
+    ) -> Result<Vec<String>, TaskRepositoryError> {
+        let transaction = connection.unchecked_transaction()?;
+        let ids = {
+            let mut statement = transaction.prepare(
+                "SELECT id
+                 FROM tasks
+                 WHERE status = 'not_started'
+                   AND planned_at_ms <= ?1
+                 ORDER BY id ASC",
+            )?;
+            let rows = statement
+                .query_map([now_ms], |row| row.get::<_, String>(0))?
+                .collect::<Result<Vec<_>, _>>()?;
+            rows
+        };
+
+        if !ids.is_empty() {
+            transaction.execute(
+                "UPDATE tasks
+                 SET status = 'in_progress', updated_at_ms = ?1
+                 WHERE status = 'not_started'
+                   AND planned_at_ms <= ?1",
+                [now_ms],
+            )?;
+        }
+
+        transaction.commit()?;
+        Ok(ids)
+    }
+
     pub fn update(
         connection: &Connection,
         id: &str,
@@ -578,6 +611,75 @@ mod tests {
             created_at_ms: planned_at_ms,
             updated_at_ms: planned_at_ms,
         }
+    }
+
+    #[test]
+    fn start_due_tasks_only_updates_due_not_started_tasks() {
+        let db = open_test_database();
+        for (id, planned_at_ms) in [
+            ("past", 1_000),
+            ("boundary", 2_000),
+            ("future", 3_000),
+        ] {
+            TaskRepository::create(
+                &db.connection,
+                sample_create_input(id, id, planned_at_ms),
+            )
+            .expect("create task");
+        }
+
+        let started =
+            TaskRepository::start_due_tasks(&db.connection, 2_000).expect("start due tasks");
+
+        assert_eq!(
+            started,
+            vec!["boundary".to_string(), "past".to_string()]
+        );
+        assert_eq!(
+            TaskRepository::get_by_id(&db.connection, "past")
+                .expect("past task")
+                .status,
+            TaskStatus::InProgress,
+        );
+        assert_eq!(
+            TaskRepository::get_by_id(&db.connection, "future")
+                .expect("future task")
+                .status,
+            TaskStatus::NotStarted,
+        );
+    }
+
+    #[test]
+    fn start_due_tasks_is_idempotent_and_preserves_manual_states() {
+        let db = open_test_database();
+        for id in ["paused", "waiting", "completed", "cancelled"] {
+            TaskRepository::create(&db.connection, sample_create_input(id, id, 1_000))
+                .expect("create task");
+        }
+        for (id, status) in [
+            ("paused", TaskStatus::Paused),
+            ("waiting", TaskStatus::Waiting),
+            ("completed", TaskStatus::Completed),
+            ("cancelled", TaskStatus::Cancelled),
+        ] {
+            TaskRepository::update(
+                &db.connection,
+                id,
+                UpdateTaskInput {
+                    status: Some(status),
+                    updated_at_ms: 1_500,
+                    ..Default::default()
+                },
+            )
+            .expect("set manual state");
+        }
+
+        assert!(TaskRepository::start_due_tasks(&db.connection, 2_000)
+            .expect("first reconcile")
+            .is_empty());
+        assert!(TaskRepository::start_due_tasks(&db.connection, 3_000)
+            .expect("second reconcile")
+            .is_empty());
     }
 
     #[test]

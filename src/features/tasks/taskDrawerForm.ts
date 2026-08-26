@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 import type { Task, TaskDetail, TaskStatus, UpdateTaskInput } from "../../services/tauri/tasks";
-import { datetimeLocalToMs } from "./createTaskForm";
+import {
+  datetimeLocalToMs,
+  taskCoreFormShape,
+  taskTimeRangeError,
+} from "./createTaskForm";
 import { msToDatetimeLocal } from "./taskDisplay";
 
 const taskStatusSchema = z.enum([
@@ -15,22 +19,16 @@ const taskStatusSchema = z.enum([
 
 export const taskDrawerFormSchema = z
   .object({
-    note: z.string().max(2000, "备注最多 2000 字").optional(),
+    ...taskCoreFormShape,
     status: taskStatusSchema,
-    deadlineAt: z.string().optional(),
-    contactId: z.string().optional(),
   })
   .superRefine((values, context) => {
-    // Deadline vs planned time is validated on the backend using persisted planned time.
-    if (!values.deadlineAt) {
-      return;
-    }
-    const deadlineAtMs = datetimeLocalToMs(values.deadlineAt);
-    if (Number.isNaN(deadlineAtMs)) {
+    const message = taskTimeRangeError(values);
+    if (message) {
       context.addIssue({
         code: "custom",
-        message: "DDL 格式无效",
-        path: ["deadlineAt"],
+        message,
+        path: ["endAt"],
       });
     }
   });
@@ -39,12 +37,15 @@ export type TaskDrawerFormValues = z.infer<typeof taskDrawerFormSchema>;
 
 export function taskDetailToFormValues(detail: TaskDetail): TaskDrawerFormValues {
   return {
+    title: detail.task.title,
     note: detail.task.note ?? "",
-    status: detail.task.status,
-    deadlineAt: detail.task.deadlineAtMs
+    startAt: msToDatetimeLocal(detail.task.plannedAtMs),
+    endAt: detail.task.deadlineAtMs
       ? msToDatetimeLocal(detail.task.deadlineAtMs)
       : "",
-    contactId: detail.task.contactId,
+    priority: detail.task.priority,
+    contactName: detail.task.contactSnapshot ?? "",
+    status: detail.task.status,
   };
 }
 
@@ -53,15 +54,20 @@ export function toUpdateTaskInput(
   values: TaskDrawerFormValues,
 ): UpdateTaskInput {
   const note = values.note?.trim();
+  const contactName = values.contactName?.trim() ?? "";
+  const originalContactName = task.contactSnapshot?.trim() ?? "";
+  const contactChanged = contactName !== originalContactName;
 
   return {
     id: task.id,
+    title: values.title.trim(),
     note: note ? note : null,
+    plannedAtMs: datetimeLocalToMs(values.startAt),
+    deadlineAtMs: datetimeLocalToMs(values.endAt),
+    priority: values.priority,
     status: values.status as TaskStatus,
-    deadlineAtMs: values.deadlineAt
-      ? datetimeLocalToMs(values.deadlineAt)
-      : null,
-    contactId: values.contactId ?? null,
+    contactId: contactChanged ? null : task.contactId ?? null,
+    contactSnapshot: contactName || null,
   };
 }
 

@@ -11,23 +11,30 @@ export const TASK_PRIORITIES = [
   { value: 5, label: "🚨 现在立刻马上要", hint: "别排了，先干这个" },
 ] as const;
 
+export const taskCoreFormShape = {
+  title: z.string().trim().min(1, "任务名称必填"),
+  note: z.string().max(2000, "备注最多 2000 字").optional(),
+  startAt: z.string().min(1, "请选择开始时间"),
+  endAt: z.string().min(1, "请选择完成时间"),
+  priority: z.number().int().min(1).max(5),
+  contactName: z.string().max(100, "对接人最多 100 字").optional(),
+};
+
+export function taskTimeRangeError(values: { startAt: string; endAt: string }) {
+  const startAtMs = datetimeLocalToMs(values.startAt);
+  const endAtMs = datetimeLocalToMs(values.endAt);
+  if (Number.isNaN(startAtMs) || Number.isNaN(endAtMs)) return null;
+  return endAtMs <= startAtMs ? "完成时间必须晚于开始时间" : null;
+}
+
 export const createTaskFormSchema = z
-  .object({
-    title: z.string().trim().min(1, "任务名称必填"),
-    note: z.string().max(2000, "备注最多 2000 字").optional(),
-    startAt: z.string().min(1, "请选择开始时间"),
-    endAt: z.string().min(1, "请选择完成时间"),
-    priority: z.number().int().min(1).max(5),
-    contactName: z.string().max(100, "对接人最多 100 字").optional(),
-  })
+  .object(taskCoreFormShape)
   .superRefine((values, context) => {
-    const startAtMs = datetimeLocalToMs(values.startAt);
-    const endAtMs = datetimeLocalToMs(values.endAt);
-    if (Number.isNaN(startAtMs) || Number.isNaN(endAtMs)) return;
-    if (endAtMs <= startAtMs) {
+    const message = taskTimeRangeError(values);
+    if (message) {
       context.addIssue({
         code: "custom",
-        message: "完成时间必须晚于开始时间",
+        message,
         path: ["endAt"],
       });
     }

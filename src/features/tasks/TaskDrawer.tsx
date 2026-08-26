@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 
 import {
   cancelTask,
@@ -11,19 +11,17 @@ import {
   type TaskAppError,
   type TaskDetail,
 } from "../../services/tauri/tasks";
-import { Button, Drawer, Input, Select, Textarea } from "../../shared/ui";
-import { ContactPicker } from "./ContactPicker";
+import { Button, Drawer, Select } from "../../shared/ui";
 import {
-  formatDeadline,
   formatPostponementRange,
   formatReminderTime,
   isTerminalStatus,
   postponementCountLabel,
-  priorityLabel,
-  priorityToneClass,
 } from "./taskDisplay";
 import { DdlTimeProgress } from "../today/DdlTimeProgress";
+import { datetimeLocalToMs } from "./createTaskForm";
 import { PostponeTaskModal } from "./PostponeTaskModal";
+import { TaskCoreFields } from "./TaskCoreFields";
 import {
   TASK_STATUS_OPTIONS,
   taskDetailToFormValues,
@@ -31,7 +29,6 @@ import {
   toUpdateTaskInput,
   type TaskDrawerFormValues,
 } from "./taskDrawerForm";
-import "./priorityTone.css";
 import "./TaskDrawer.css";
 
 type TaskDrawerProps = {
@@ -49,17 +46,20 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
 
   const {
     register,
-    control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<TaskDrawerFormValues>({
     resolver: zodResolver(taskDrawerFormSchema),
     defaultValues: {
+      title: "",
       note: "",
+      startAt: "",
+      endAt: "",
+      priority: 2,
+      contactName: "",
       status: "not_started",
-      deadlineAt: "",
-      contactId: undefined,
     },
   });
 
@@ -90,6 +90,14 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
 
   const terminal = detail ? isTerminalStatus(detail.task.status) : false;
   const canPostpone = detail != null && !terminal && detail.task.deadlineAtMs != null;
+  const startAt = watch("startAt");
+  const endAt = watch("endAt");
+  const displayedPlannedAtMs = startAt ? datetimeLocalToMs(startAt) : Number.NaN;
+  const displayedDeadlineAtMs = endAt ? datetimeLocalToMs(endAt) : Number.NaN;
+  const hasValidTimeRange =
+    Number.isFinite(displayedPlannedAtMs) &&
+    Number.isFinite(displayedDeadlineAtMs) &&
+    displayedDeadlineAtMs > displayedPlannedAtMs;
 
   const onSubmit = handleSubmit(async (values) => {
     if (!detail) {
@@ -148,7 +156,7 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
     <>
       <Drawer
         open={open}
-        title={detail?.task.title ?? "任务详情"}
+        title="任务详情"
         onClose={onClose}
         footer={
           detail && !terminal ? (
@@ -176,84 +184,48 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
 
         {detail && !loading ? (
           <form id="task-drawer-form" className="task-drawer__form" onSubmit={onSubmit}>
-            <div className="task-drawer__hero">
-              <span
-                className={`task-drawer__priority-dot ${priorityToneClass(detail.task.priority)}`}
-                aria-hidden="true"
-              />
-              <div className="task-drawer__hero-copy">
-                <p className="task-drawer__priority-label">{priorityLabel(detail.task.priority)}</p>
-                <p className="task-drawer__planned">
-                  计划 {formatDeadline(detail.task.plannedAtMs)}
-                </p>
-              </div>
-            </div>
+            <TaskCoreFields
+              register={register}
+              errors={errors}
+              disabled={terminal || isSubmitting}
+            />
 
-            <section className="task-drawer__deadline-band" aria-label="DDL">
-              <div className="task-drawer__deadline-fields">
-                <Input
-                  label="DDL"
-                  type="datetime-local"
-                  hint="精确到分钟"
-                  disabled={terminal}
-                  error={errors.deadlineAt?.message}
-                  {...register("deadlineAt")}
-                />
+            <section className="task-drawer__management" aria-labelledby="task-drawer-management">
+              <div className="task-drawer__management-heading">
+                <h3 id="task-drawer-management">任务管理</h3>
+                {canPostpone ? (
+                  <Button
+                    type="button"
+                    variant="wheat"
+                    className="task-drawer__postpone-btn"
+                    onClick={() => setPostponeOpen(true)}
+                    disabled={isSubmitting}
+                  >
+                    延期
+                  </Button>
+                ) : null}
               </div>
-              {canPostpone ? (
-                <Button
-                  type="button"
-                  variant="wheat"
-                  className="task-drawer__postpone-btn"
-                  onClick={() => setPostponeOpen(true)}
-                  disabled={isSubmitting}
-                >
-                  延期
-                </Button>
+
+              {!terminal && hasValidTimeRange ? (
+                <DdlTimeProgress
+                  plannedAtMs={displayedPlannedAtMs}
+                  deadlineAtMs={displayedDeadlineAtMs}
+                />
               ) : null}
+
+              <Select
+                label="主状态"
+                disabled={terminal || isSubmitting}
+                error={errors.status?.message}
+                {...register("status")}
+              >
+                {TASK_STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
             </section>
-
-            {!terminal ? (
-              <DdlTimeProgress
-                plannedAtMs={detail.task.plannedAtMs}
-                deadlineAtMs={detail.task.deadlineAtMs}
-              />
-            ) : null}
-
-            <Select
-              label="主状态"
-              disabled={terminal}
-              error={errors.status?.message}
-              {...register("status")}
-            >
-              {TASK_STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-
-            <Textarea
-              label="备注"
-              rows={3}
-              disabled={terminal}
-              error={errors.note?.message}
-              {...register("note")}
-            />
-
-            <Controller
-              control={control}
-              name="contactId"
-              render={({ field }) => (
-                <ContactPicker
-                  active={open}
-                  value={field.value}
-                  onChange={field.onChange}
-                  error={errors.contactId?.message}
-                  disabled={terminal || isSubmitting}
-                />
-              )}
-            />
 
             {detail.postponements.length > 0 ? (
               <section className="task-drawer__section" aria-labelledby="task-drawer-postponements">

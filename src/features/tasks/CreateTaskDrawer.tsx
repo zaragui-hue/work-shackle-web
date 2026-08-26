@@ -8,14 +8,14 @@ import {
   type Task,
   type TaskAppError,
 } from "../../services/tauri/tasks";
-import { Button, Drawer, Input, Select, Textarea } from "../../shared/ui";
+import { Button, Drawer } from "../../shared/ui";
 import {
   createDefaultFormValues,
   createTaskFormSchema,
-  TASK_PRIORITIES,
   type CreateTaskFormValues,
   toCreateTaskInput,
 } from "./createTaskForm";
+import { TaskCoreFields } from "./TaskCoreFields";
 import "./CreateTaskDrawer.css";
 
 type CreateTaskDrawerProps = {
@@ -70,60 +70,9 @@ export function CreateTaskDrawer({ open, onClose, onCreated }: CreateTaskDrawerP
           </Button>
         </>
       }
-    >
+      >
       <form id="create-task-form" className="create-task-form" onSubmit={onSubmit}>
-        <Input
-          label="任务名称"
-          placeholder="今天要搬哪块砖"
-          autoFocus
-          error={errors.title?.message}
-          {...register("title")}
-        />
-
-        <Textarea
-          label="备注"
-          placeholder="可选"
-          rows={2}
-          error={errors.note?.message}
-          {...register("note")}
-        />
-
-        <section className="create-task-form__time-range" aria-labelledby="create-task-time-range">
-          <h3 id="create-task-time-range">任务时间段</h3>
-          <Input
-            label="开始时间"
-            type="datetime-local"
-            step={60}
-            error={errors.startAt?.message}
-            {...register("startAt")}
-          />
-          <Input
-            label="完成时间"
-            type="datetime-local"
-            step={60}
-            error={errors.endAt?.message}
-            {...register("endAt")}
-          />
-        </section>
-
-        <Select
-          label="紧急程度"
-          error={errors.priority?.message}
-          {...register("priority", { valueAsNumber: true })}
-        >
-          {TASK_PRIORITIES.map((priority) => (
-            <option key={priority.value} value={priority.value}>
-              {priority.label} · {priority.hint}
-            </option>
-          ))}
-        </Select>
-
-        <Input
-          label="对接人"
-          placeholder="可选，输入姓名"
-          error={errors.contactName?.message}
-          {...register("contactName")}
-        />
+        <TaskCoreFields register={register} errors={errors} autoFocusTitle />
 
         {submitError ? (
           <p className="create-task-form__error" role="alert">

@@ -1,0 +1,22 @@
+.task-core-fields__time-range {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 2px solid var(--color-anchor);
+  border-radius: 3px;
+  color: var(--color-anchor);
+  background: var(--color-paper-raised);
+  box-shadow: 4px 4px 0 var(--color-stage);
+}
+
+.task-core-fields__time-range h3 {
+  width: fit-content;
+  margin: 0;
+  padding: 3px 6px;
+  border: 2px solid var(--color-anchor);
+  border-radius: 2px;
+  font-size: var(--font-size-caption);
+  font-weight: 900;
+  color: var(--color-anchor);
+  background: var(--color-signal);
+}

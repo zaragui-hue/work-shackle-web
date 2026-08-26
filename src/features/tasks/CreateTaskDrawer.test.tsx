@@ -26,6 +26,18 @@ describe("CreateTaskDrawer", () => {
     expect((screen.getByLabelText("紧急程度") as HTMLSelectElement).value).toBe("2");
     expect(screen.getByLabelText("对接人")).toBeTruthy();
     expect(screen.queryByText("自定义提醒")).toBeNull();
+    expect(
+      Array.from(document.querySelectorAll(".ws-field__label")).map((label) =>
+        label.textContent?.trim(),
+      ),
+    ).toEqual([
+      "任务名称",
+      "备注",
+      "开始时间",
+      "完成时间",
+      "紧急程度",
+      "对接人",
+    ]);
   });
 
   it("closes from the drawer footer", () => {

@@ -1,18 +1,25 @@
 import type {
+  Control,
   FieldErrors,
   FieldValues,
   Path,
   UseFormRegister,
 } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form";
 
 import { Input, Select, Textarea } from "../../shared/ui";
 import { TASK_PRIORITIES, type CreateTaskFormValues } from "./createTaskForm";
+import { TaskDateTimeField } from "./TaskDateTimeField";
+import { addMinutesToDateTime } from "./taskDateTime";
 import "./TaskCoreFields.css";
 
 type TaskCoreFieldsProps<T extends FieldValues & CreateTaskFormValues> = {
   register: UseFormRegister<T>;
+  control: Control<T>;
   errors: FieldErrors<T>;
   disabled?: boolean;
+  timeDisabled?: boolean;
+  minStartAt?: string;
   autoFocusTitle?: boolean;
   onFieldBlur?: () => void;
   onSelectChange?: () => void;
@@ -30,12 +37,18 @@ function errorMessage<T extends FieldValues>(
 
 export function TaskCoreFields<T extends FieldValues & CreateTaskFormValues>({
   register,
+  control,
   errors,
   disabled = false,
+  timeDisabled = false,
+  minStartAt,
   autoFocusTitle = false,
   onFieldBlur,
   onSelectChange,
 }: TaskCoreFieldsProps<T>) {
+  const startAt = String(useWatch({ control, name: path<T>("startAt") }) ?? "");
+  const timeFieldsDisabled = disabled || timeDisabled;
+
   return (
     <>
       <Input
@@ -58,21 +71,44 @@ export function TaskCoreFields<T extends FieldValues & CreateTaskFormValues>({
 
       <section className="task-core-fields__time-range" aria-labelledby="task-core-time-range">
         <h3 id="task-core-time-range">任务时间段</h3>
-        <Input
-          label="开始时间"
-          type="datetime-local"
-          step={60}
-          disabled={disabled}
-          error={errorMessage(errors, "startAt")}
-          {...register(path<T>("startAt"), { onBlur: onFieldBlur })}
+        {timeDisabled && !disabled ? (
+          <p className="task-core-fields__time-lock">任务已开始，完成时间请通过申请延期调整。</p>
+        ) : null}
+        <Controller
+          control={control}
+          name={path<T>("startAt")}
+          render={({ field }) => (
+            <TaskDateTimeField
+              label="开始时间"
+              value={String(field.value ?? "")}
+              min={minStartAt}
+              disabled={timeFieldsDisabled}
+              error={errorMessage(errors, "startAt")}
+              onChange={field.onChange}
+              onBlur={() => {
+                field.onBlur();
+                onFieldBlur?.();
+              }}
+            />
+          )}
         />
-        <Input
-          label="完成时间"
-          type="datetime-local"
-          step={60}
-          disabled={disabled}
-          error={errorMessage(errors, "endAt")}
-          {...register(path<T>("endAt"), { onBlur: onFieldBlur })}
+        <Controller
+          control={control}
+          name={path<T>("endAt")}
+          render={({ field }) => (
+            <TaskDateTimeField
+              label="完成时间"
+              value={String(field.value ?? "")}
+              min={addMinutesToDateTime(startAt, 1)}
+              disabled={timeFieldsDisabled}
+              error={errorMessage(errors, "endAt")}
+              onChange={field.onChange}
+              onBlur={() => {
+                field.onBlur();
+                onFieldBlur?.();
+              }}
+            />
+          )}
         />
       </section>
 

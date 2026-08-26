@@ -16,6 +16,7 @@ import {
   toCreateTaskInput,
 } from "./createTaskForm";
 import { TaskCoreFields } from "./TaskCoreFields";
+import { currentMinuteValue } from "./taskDateTime";
 import "./CreateTaskDrawer.css";
 
 type CreateTaskDrawerProps = {
@@ -28,6 +29,7 @@ export function CreateTaskDrawer({ open, onClose, onCreated }: CreateTaskDrawerP
   const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
@@ -72,7 +74,13 @@ export function CreateTaskDrawer({ open, onClose, onCreated }: CreateTaskDrawerP
       }
       >
       <form id="create-task-form" className="create-task-form" onSubmit={onSubmit}>
-        <TaskCoreFields register={register} errors={errors} autoFocusTitle />
+        <TaskCoreFields
+          register={register}
+          control={control}
+          errors={errors}
+          minStartAt={currentMinuteValue()}
+          autoFocusTitle
+        />
 
         {submitError ? (
           <p className="create-task-form__error" role="alert">

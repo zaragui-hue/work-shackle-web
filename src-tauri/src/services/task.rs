@@ -196,6 +196,27 @@ pub struct TodayTasksDto {
 pub struct TaskService;
 
 impl TaskService {
+    pub fn validate_planned_start(
+        planned_at_ms: i64,
+        current_time_ms: i64,
+    ) -> Result<(), AppError> {
+        let minute_remainder = current_time_ms.rem_euclid(60_000);
+        let current_selectable_minute = if minute_remainder == 0 {
+            current_time_ms
+        } else {
+            current_time_ms - minute_remainder + 60_000
+        };
+
+        if planned_at_ms < current_selectable_minute {
+            return Err(AppError::InvalidTaskInput {
+                message: "planned time must not be before the current selectable minute"
+                    .to_string(),
+            });
+        }
+
+        Ok(())
+    }
+
     pub fn create(connection: &Connection, input: CreateTaskRequest) -> Result<TaskDto, AppError> {
         validate_create_request(&input)?;
 
@@ -564,6 +585,14 @@ fn validate_create_request(input: &CreateTaskRequest) -> Result<(), AppError> {
 }
 
 fn validate_update_request(existing: &Task, input: &UpdateTaskRequest) -> Result<(), AppError> {
+    if existing.status != TaskStatus::NotStarted
+        && (input.planned_at_ms.is_some() || input.deadline_at_ms.is_some())
+    {
+        return Err(AppError::InvalidTaskInput {
+            message: "started task times can only change through postponement".to_string(),
+        });
+    }
+
     let planned_at_ms = input.planned_at_ms.unwrap_or(existing.planned_at_ms);
     let deadline_at_ms = match input.deadline_at_ms {
         Some(deadline) => deadline,
@@ -839,6 +868,42 @@ mod tests {
             _temp: temp,
             connection,
         }
+    }
+
+    #[test]
+    fn planned_start_must_not_precede_current_selectable_minute() {
+        assert!(TaskService::validate_planned_start(120_000, 179_999).is_err());
+        assert!(TaskService::validate_planned_start(180_000, 179_999).is_ok());
+        assert!(TaskService::validate_planned_start(180_000, 180_000).is_ok());
+    }
+
+    #[test]
+    fn started_task_rejects_direct_time_edits() {
+        let existing = Task {
+            id: "started".to_string(),
+            title: "Started".to_string(),
+            note: None,
+            planned_at_ms: 100_000,
+            deadline_at_ms: Some(200_000),
+            priority: 2,
+            status: TaskStatus::InProgress,
+            contact_id: None,
+            contact_snapshot: None,
+            created_at_ms: 90_000,
+            completed_at_ms: None,
+            cancelled_at_ms: None,
+            updated_at_ms: 100_000,
+        };
+        let input = UpdateTaskRequest {
+            id: existing.id.clone(),
+            planned_at_ms: Some(110_000),
+            ..Default::default()
+        };
+
+        assert!(matches!(
+            validate_update_request(&existing, &input),
+            Err(AppError::InvalidTaskInput { .. })
+        ));
     }
 
     #[test]

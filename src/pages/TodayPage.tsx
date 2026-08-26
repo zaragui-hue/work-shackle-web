@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { copy } from "../config/copy";
 import { CreateTaskDrawer } from "../features/tasks/CreateTaskDrawer";
 import { TaskDrawer } from "../features/tasks/TaskDrawer";
+import { changeTaskStatus } from "../features/tasks/taskStatusActions";
 import { LunchReminderBanner } from "../features/today/LunchReminderBanner";
 import { TodayTaskBoard } from "../features/today/TodayTaskBoard";
 import { useLunchReminder } from "../features/today/useLunchReminder";
@@ -27,7 +28,9 @@ import { useWorkdayStatusAutomation } from "../features/today/useWorkdayStatusAu
 import {
   mapTaskError,
   queryTodayTasks,
+  type Task,
   type TaskAppError,
+  type TaskStatus,
   type TodayTasks,
 } from "../services/tauri/tasks";
 import { Button, Card, EmptyState } from "../shared/ui";
@@ -50,6 +53,8 @@ export function TodayPage() {
   const hasLoadedTasks = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [taskActionError, setTaskActionError] = useState<string | null>(null);
+  const [statusBusyTaskId, setStatusBusyTaskId] = useState<string | null>(null);
   const {
     display: workCountdown,
     schedule: workSchedule,
@@ -111,6 +116,29 @@ export function TodayPage() {
   const dismissTaskBroadcast = useCallback((taskId: string) => {
     setAnnouncedTaskIds((current) => current.filter((id) => id !== taskId));
   }, []);
+
+  const handleTaskStatusChange = useCallback(async (task: Task, status: TaskStatus) => {
+    if (status === task.status || statusBusyTaskId) {
+      return;
+    }
+    if (
+      status === "cancelled" &&
+      !window.confirm("确定取消这个任务吗？取消后仍保留在历史记录中。")
+    ) {
+      return;
+    }
+
+    setStatusBusyTaskId(task.id);
+    setTaskActionError(null);
+    try {
+      await changeTaskStatus(task.id, status);
+      await loadTodayTasks();
+    } catch (caught) {
+      setTaskActionError(mapTaskError(caught as TaskAppError));
+    } finally {
+      setStatusBusyTaskId(null);
+    }
+  }, [loadTodayTasks, statusBusyTaskId]);
 
   useEffect(() => {
     void loadTodayTasks();
@@ -267,11 +295,19 @@ export function TodayPage() {
             </div>
           ) : null}
 
+          {taskActionError && !error ? (
+            <p className="today-page__task-action-error" role="alert">
+              {taskActionError}
+            </p>
+          ) : null}
+
           {!loading && !error && !showEmpty ? (
             <TodayTaskBoard
               tasks={todayTasks}
               announcedTaskIds={announcedTaskIds}
               onBroadcastDismissed={dismissTaskBroadcast}
+              onStatusChange={handleTaskStatusChange}
+              statusBusyTaskId={statusBusyTaskId}
               onSelect={(taskId) => {
                 setSelectedTaskId(taskId);
                 setDrawerOpen(true);

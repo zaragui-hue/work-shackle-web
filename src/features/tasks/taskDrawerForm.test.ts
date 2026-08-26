@@ -38,7 +38,7 @@ describe("taskDrawerForm", () => {
     });
   });
 
-  it("maps every edited field and clears a stale contact link", () => {
+  it("locks time and status out of autosave after the task has started", () => {
     expect(toUpdateTaskInput(detail.task, {
       title: " 改后的任务 ",
       note: " 更新备注 ",
@@ -51,12 +51,21 @@ describe("taskDrawerForm", () => {
       id: "task-1",
       title: "改后的任务",
       note: "更新备注",
-      plannedAtMs: new Date("2026-08-26T10:00").getTime(),
-      deadlineAtMs: new Date("2026-08-26T19:00").getTime(),
       priority: 5,
-      status: "paused",
       contactId: null,
       contactSnapshot: "新对接人",
+    });
+  });
+
+  it("includes time edits while a task is still not started", () => {
+    const task = { ...detail.task, status: "not_started" as const };
+    expect(toUpdateTaskInput(task, {
+      ...taskDetailToFormValues({ ...detail, task }),
+      startAt: "2026-08-26T10:00",
+      endAt: "2026-08-26T19:00",
+    })).toMatchObject({
+      plannedAtMs: new Date("2026-08-26T10:00").getTime(),
+      deadlineAtMs: new Date("2026-08-26T19:00").getTime(),
     });
   });
 

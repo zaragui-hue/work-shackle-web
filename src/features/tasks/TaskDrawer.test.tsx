@@ -8,6 +8,7 @@ import {
   type TaskDetail,
 } from "../../services/tauri/tasks";
 import { TaskDrawer } from "./TaskDrawer";
+import { msToDatetimeLocal } from "./taskDisplay";
 
 vi.mock("../../services/tauri/tasks", () => ({
   cancelTask: vi.fn(),
@@ -44,9 +45,27 @@ const detail: TaskDetail = {
   postponements: [],
 };
 
+function futureNotStartedDetail(): TaskDetail {
+  const planned = new Date();
+  planned.setDate(planned.getDate() + 1);
+  planned.setHours(9, 0, 0, 0);
+  const deadline = new Date(planned);
+  deadline.setHours(18, 0, 0, 0);
+  return {
+    ...detail,
+    task: {
+      ...detail.task,
+      status: "not_started",
+      plannedAtMs: planned.getTime(),
+      deadlineAtMs: deadline.getTime(),
+    },
+  };
+}
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 describe("TaskDrawer", () => {
@@ -70,12 +89,16 @@ describe("TaskDrawer", () => {
       "紧急程度",
       "🕵️ 接头人",
     ]);
-    expect(screen.getByLabelText("开始时间").getAttribute("type")).toBe("datetime-local");
-    expect(screen.getByLabelText("开始时间").getAttribute("step")).toBe("60");
-    expect(screen.getByLabelText("完成时间").getAttribute("type")).toBe("datetime-local");
-    expect(screen.getByLabelText("完成时间").getAttribute("step")).toBe("60");
-    expect(await screen.findByRole("progressbar", { name: "时间进度" })).toBeTruthy();
-    expect(screen.getByLabelText("主状态")).toBeTruthy();
+    expect(screen.getByLabelText("开始时间 日期").getAttribute("type")).toBe("date");
+    expect(screen.getByLabelText("开始时间 时分").getAttribute("type")).toBe("time");
+    expect(screen.getByLabelText("开始时间 时分").getAttribute("step")).toBe("60");
+    expect(screen.getByLabelText("完成时间 日期").getAttribute("type")).toBe("date");
+    expect(screen.getByLabelText("完成时间 时分").getAttribute("type")).toBe("time");
+    expect((screen.getByLabelText("开始时间 日期") as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByLabelText("完成时间 时分") as HTMLInputElement).disabled).toBe(true);
+    expect(screen.queryByRole("progressbar", { name: "时间进度" })).toBeNull();
+    expect(screen.queryByLabelText("主状态")).toBeNull();
+    expect(screen.queryByText("任务管理")).toBeNull();
     expect(screen.queryByText("自定义提醒")).toBeNull();
     expect(screen.queryByRole("button", { name: "保存" })).toBeNull();
     expect(screen.getByRole("button", { name: "取消任务" })).toBeTruthy();
@@ -85,7 +108,7 @@ describe("TaskDrawer", () => {
     expect(document.querySelector(".task-drawer__management .task-drawer__postpone-btn")).toBeNull();
   });
 
-  it("autosaves every edited core field on blur", async () => {
+  it("autosaves editable started-task fields without time or status", async () => {
     vi.mocked(getTaskDetail).mockResolvedValue(detail);
     let resolveSave: (task: TaskDetail["task"]) => void = () => undefined;
     vi.mocked(updateTask).mockReturnValue(new Promise((resolve) => {
@@ -100,12 +123,6 @@ describe("TaskDrawer", () => {
     fireEvent.change(screen.getByLabelText("任务名称"), {
       target: { value: "改后的任务" },
     });
-    fireEvent.change(screen.getByLabelText("开始时间"), {
-      target: { value: "2026-08-26T10:00" },
-    });
-    fireEvent.change(screen.getByLabelText("完成时间"), {
-      target: { value: "2026-08-26T19:00" },
-    });
     fireEvent.change(screen.getByLabelText("紧急程度"), {
       target: { value: "5" },
     });
@@ -115,19 +132,56 @@ describe("TaskDrawer", () => {
     fireEvent.blur(screen.getByLabelText("🕵️ 接头人"));
 
     await waitFor(() => expect(updateTask).toHaveBeenCalledTimes(1));
-    expect(screen.getByText("正在传递情报…")).toBeTruthy();
-    expect(updateTask).toHaveBeenCalledWith(expect.objectContaining({
+    expect(updateTask).toHaveBeenCalledWith({
       id: "task-1",
       title: "改后的任务",
-      plannedAtMs: new Date("2026-08-26T10:00").getTime(),
-      deadlineAtMs: new Date("2026-08-26T19:00").getTime(),
+      note: "带数据",
       priority: 5,
       contactId: null,
       contactSnapshot: "新对接人",
-    }));
+    });
     resolveSave({ ...detail.task, title: "改后的任务", priority: 5 });
-    await screen.findByText("情报已同步");
+    await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText("情报已同步")).toBeNull();
     expect(onChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it("autosaves date and minute edits before the task starts", async () => {
+    const notStarted = futureNotStartedDetail();
+    const nextStart = new Date(notStarted.task.plannedAtMs);
+    nextStart.setDate(nextStart.getDate() + 1);
+    nextStart.setHours(10, 0, 0, 0);
+    const nextEnd = new Date(nextStart);
+    nextEnd.setHours(19, 0, 0, 0);
+    const [startDate, startTime] = msToDatetimeLocal(nextStart.getTime()).split("T");
+    const [endDate, endTime] = msToDatetimeLocal(nextEnd.getTime()).split("T");
+    vi.mocked(getTaskDetail).mockResolvedValue(notStarted);
+    vi.mocked(updateTask).mockResolvedValue({
+      ...notStarted.task,
+      plannedAtMs: nextStart.getTime(),
+      deadlineAtMs: nextEnd.getTime(),
+    });
+    render(<TaskDrawer taskId="task-1" open onClose={vi.fn()} onChanged={vi.fn()} />);
+
+    await screen.findByDisplayValue("整理季度复盘");
+    fireEvent.change(screen.getByLabelText("开始时间 日期"), {
+      target: { value: startDate },
+    });
+    fireEvent.change(screen.getByLabelText("开始时间 时分"), {
+      target: { value: startTime },
+    });
+    fireEvent.change(screen.getByLabelText("完成时间 日期"), {
+      target: { value: endDate },
+    });
+    fireEvent.change(screen.getByLabelText("完成时间 时分"), {
+      target: { value: endTime },
+    });
+    fireEvent.blur(screen.getByLabelText("完成时间 时分"));
+
+    await waitFor(() => expect(updateTask).toHaveBeenCalledWith(expect.objectContaining({
+      plannedAtMs: nextStart.getTime(),
+      deadlineAtMs: nextEnd.getTime(),
+    })));
   });
 
   it("autosaves selects immediately and deduplicates the same snapshot", async () => {
@@ -149,16 +203,16 @@ describe("TaskDrawer", () => {
   });
 
   it("blocks autosave when the time range is invalid", async () => {
-    vi.mocked(getTaskDetail).mockResolvedValue(detail);
+    vi.mocked(getTaskDetail).mockResolvedValue(futureNotStartedDetail());
     render(
       <TaskDrawer taskId="task-1" open onClose={vi.fn()} onChanged={vi.fn()} />,
     );
 
     await screen.findByDisplayValue("整理季度复盘");
-    fireEvent.change(screen.getByLabelText("完成时间"), {
-      target: { value: "2026-08-26T08:00" },
+    fireEvent.change(screen.getByLabelText("完成时间 时分"), {
+      target: { value: "08:00" },
     });
-    fireEvent.blur(screen.getByLabelText("完成时间"));
+    fireEvent.blur(screen.getByLabelText("完成时间 时分"));
 
     expect(await screen.findByText("完成时间必须晚于开始时间")).toBeTruthy();
     expect(updateTask).not.toHaveBeenCalled();
@@ -217,10 +271,16 @@ describe("TaskDrawer", () => {
     for (const label of [
       "任务名称",
       "备注",
-      "开始时间",
-      "完成时间",
       "紧急程度",
       "🕵️ 接头人",
+    ]) {
+      expect((screen.getByLabelText(label) as HTMLInputElement).disabled).toBe(true);
+    }
+    for (const label of [
+      "开始时间 日期",
+      "开始时间 时分",
+      "完成时间 日期",
+      "完成时间 时分",
     ]) {
       expect((screen.getByLabelText(label) as HTMLInputElement).disabled).toBe(true);
     }

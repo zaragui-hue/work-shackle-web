@@ -21,10 +21,11 @@ describe("CreateTaskDrawer", () => {
     expect(screen.getByRole("dialog", { name: "新建任务" })).toBeTruthy();
     expect(document.querySelector(".ws-drawer__panel")).toBeTruthy();
     expect(document.querySelector(".ws-modal__panel")).toBeNull();
-    expect(screen.getByLabelText("开始时间").getAttribute("type")).toBe("datetime-local");
-    expect(screen.getByLabelText("开始时间").getAttribute("step")).toBe("60");
-    expect(screen.getByLabelText("完成时间").getAttribute("type")).toBe("datetime-local");
-    expect(screen.getByLabelText("完成时间").getAttribute("step")).toBe("60");
+    expect(screen.getByLabelText("开始时间 日期").getAttribute("type")).toBe("date");
+    expect(screen.getByLabelText("开始时间 时分").getAttribute("type")).toBe("time");
+    expect(screen.getByLabelText("开始时间 时分").getAttribute("step")).toBe("60");
+    expect(screen.getByLabelText("完成时间 日期").getAttribute("type")).toBe("date");
+    expect(screen.getByLabelText("完成时间 时分").getAttribute("type")).toBe("time");
     expect((screen.getByLabelText("紧急程度") as HTMLSelectElement).value).toBe("2");
     expect(screen.getByLabelText("🕵️ 接头人").getAttribute("placeholder"))
       .toBe("输入本次行动的秘密联络人");

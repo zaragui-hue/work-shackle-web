@@ -5,11 +5,11 @@ import { createDefaultFormValues, createTaskFormSchema, toCreateTaskInput } from
 afterEach(() => vi.useRealTimers());
 
 describe("createTaskForm", () => {
-  it("defaults to the current minute and today at 18:00", () => {
+  it("defaults to the next selectable minute and today at 18:00", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 7, 24, 9, 17, 43));
     expect(createDefaultFormValues()).toMatchObject({
-      startAt: "2026-08-24T09:17",
+      startAt: "2026-08-24T09:18",
       endAt: "2026-08-24T18:00",
       priority: 2,
       contactName: "",
@@ -23,6 +23,8 @@ describe("createTaskForm", () => {
   });
 
   it("requires completion to be later than start", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 24, 8, 0));
     const result = createTaskFormSchema.safeParse({
       ...createDefaultFormValues(new Date(2026, 7, 24, 9, 0)),
       title: "交方案",
@@ -30,6 +32,21 @@ describe("createTaskForm", () => {
     });
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toBe("完成时间必须晚于开始时间");
+  });
+
+  it("rejects a start before the current selectable minute", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 24, 9, 17, 43));
+    const result = createTaskFormSchema.safeParse({
+      ...createDefaultFormValues(),
+      title: "交方案",
+      startAt: "2026-08-24T09:17",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.some((issue) =>
+      issue.message === "开始时间不能早于当前时间"
+    )).toBe(true);
   });
 
   it("maps the time range and free-text contact", () => {

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 
-import type { Task, TodayTasks } from "../../services/tauri/tasks";
+import type { Task, TaskStatus, TodayTasks } from "../../services/tauri/tasks";
 import { TodayTaskCard } from "./TodayTaskCard";
 import "./TodayTaskBoard.css";
 
@@ -9,6 +9,8 @@ type TodayTaskBoardProps = {
   onSelect?: (taskId: string) => void;
   announcedTaskIds?: string[];
   onBroadcastDismissed?: (taskId: string) => void;
+  onStatusChange?: (task: Task, status: TaskStatus) => void | Promise<void>;
+  statusBusyTaskId?: string | null;
 };
 
 type SectionProps = {
@@ -42,6 +44,8 @@ function TodayTaskList({
   listKey,
   announcedTaskIds,
   onBroadcastDismissed,
+  onStatusChange,
+  statusBusyTaskId,
 }: {
   tasks: Task[];
   variant: "upcoming" | "formal" | "overdue" | "completed";
@@ -49,6 +53,8 @@ function TodayTaskList({
   listKey: string;
   announcedTaskIds: Set<string>;
   onBroadcastDismissed?: (taskId: string) => void;
+  onStatusChange?: (task: Task, status: TaskStatus) => void | Promise<void>;
+  statusBusyTaskId?: string | null;
 }) {
   return (
     <ul className="today-board__list" aria-label={listKey}>
@@ -60,6 +66,8 @@ function TodayTaskList({
           onSelect={onSelect}
           announceAutoStart={variant === "formal" && announcedTaskIds.has(task.id)}
           onBroadcastDismissed={onBroadcastDismissed}
+          onStatusChange={onStatusChange}
+          statusBusy={statusBusyTaskId === task.id}
         />
       ))}
     </ul>
@@ -112,6 +120,8 @@ export function TodayTaskBoard({
   onSelect,
   announcedTaskIds = [],
   onBroadcastDismissed,
+  onStatusChange,
+  statusBusyTaskId,
 }: TodayTaskBoardProps) {
   const { formalTasks, overdueTasks, completedTodayTasks } = tasks;
   const announcedTaskIdSet = new Set(announcedTaskIds);
@@ -130,6 +140,8 @@ export function TodayTaskBoard({
             listKey="formal"
             announcedTaskIds={announcedTaskIdSet}
             onBroadcastDismissed={onBroadcastDismissed}
+            onStatusChange={onStatusChange}
+            statusBusyTaskId={statusBusyTaskId}
           />
         </section>
       ) : null}
@@ -143,6 +155,8 @@ export function TodayTaskBoard({
             listKey="overdue"
             announcedTaskIds={announcedTaskIdSet}
             onBroadcastDismissed={onBroadcastDismissed}
+            onStatusChange={onStatusChange}
+            statusBusyTaskId={statusBusyTaskId}
           />
         </TodaySection>
       ) : null}

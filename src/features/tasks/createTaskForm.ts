@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { z } from "zod";
 
 import type { CreateTaskInput } from "../../services/tauri/tasks";
+import { currentMinuteValue, isBeforeCurrentMinute } from "./taskDateTime";
 
 export const TASK_PRIORITIES = [
   { value: 1, label: "🫧 不急", hint: "反正老板也不催" },
@@ -30,6 +31,13 @@ export function taskTimeRangeError(values: { startAt: string; endAt: string }) {
 export const createTaskFormSchema = z
   .object(taskCoreFormShape)
   .superRefine((values, context) => {
+    if (isBeforeCurrentMinute(values.startAt)) {
+      context.addIssue({
+        code: "custom",
+        message: "开始时间不能早于当前时间",
+        path: ["startAt"],
+      });
+    }
     const message = taskTimeRangeError(values);
     if (message) {
       context.addIssue({
@@ -47,8 +55,7 @@ export function datetimeLocalToMs(value: string): number {
 }
 
 export function createDefaultFormValues(now = new Date()): CreateTaskFormValues {
-  const start = new Date(now);
-  start.setSeconds(0, 0);
+  const start = new Date(currentMinuteValue(now));
   const end = new Date(start);
   end.setHours(18, 0, 0, 0);
   if (end <= start) end.setDate(end.getDate() + 1);

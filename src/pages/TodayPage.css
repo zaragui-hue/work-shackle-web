@@ -100,6 +100,16 @@
 
 .today-page__status p { color: var(--color-danger); }
 
+.today-page__task-action-error {
+  margin: 0;
+  padding: 8px 10px;
+  border: 2px solid var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 10%, var(--color-paper-raised));
+  color: var(--color-danger);
+  font-size: var(--font-size-caption);
+  font-weight: 850;
+}
+
 .today-page__skeleton { display: grid; gap: 12px; }
 .today-page__skeleton-block {
   height: 4.5rem;

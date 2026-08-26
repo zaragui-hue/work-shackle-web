@@ -87,6 +87,51 @@ describe("TodayTaskBoard", () => {
     expect(screen.getByRole("list", { name: "formal" })).toBeTruthy();
   });
 
+  it("changes main status from the card without opening the drawer", () => {
+    const started = task("managed", "卡片内管理", "in_progress");
+    const tasks: TodayTasks = {
+      formalTasks: [started],
+      upcomingDeadlineTasks: [],
+      overdueTasks: [],
+      completedTodayTasks: [],
+      autoStartedTaskIds: [],
+    };
+    const onSelect = vi.fn();
+    const onStatusChange = vi.fn();
+
+    render(
+      <TodayTaskBoard
+        tasks={tasks}
+        onSelect={onSelect}
+        onStatusChange={onStatusChange}
+      />,
+    );
+
+    const status = screen.getByLabelText("卡片内管理 主状态") as HTMLSelectElement;
+    expect(Array.from(status.options).map((option) => option.textContent)).not.toContain("未开始");
+    fireEvent.change(status, { target: { value: "paused" } });
+
+    expect(onStatusChange).toHaveBeenCalledWith(started, "paused");
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("renders completed task status as read-only", () => {
+    const completed = task("done", "已经完成", "completed");
+    const tasks: TodayTasks = {
+      formalTasks: [],
+      upcomingDeadlineTasks: [],
+      overdueTasks: [],
+      completedTodayTasks: [completed],
+      autoStartedTaskIds: [],
+    };
+
+    render(<TodayTaskBoard tasks={tasks} />);
+    fireEvent.click(screen.getByRole("button", { name: /今天已经搞定/ }));
+
+    expect(screen.getByLabelText("已经完成 主状态").textContent).toContain("已完成");
+    expect(screen.queryByRole("combobox", { name: "已经完成 主状态" })).toBeNull();
+  });
+
   it("shows an active stamp and temporary workhorse broadcast for an auto-started task", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 7, 24, 13, 30));

@@ -1,12 +1,13 @@
 import { z } from "zod";
 
-import type { Task, TaskDetail, TaskStatus, UpdateTaskInput } from "../../services/tauri/tasks";
+import type { Task, TaskDetail, UpdateTaskInput } from "../../services/tauri/tasks";
 import {
   datetimeLocalToMs,
   taskCoreFormShape,
   taskTimeRangeError,
 } from "./createTaskForm";
 import { msToDatetimeLocal } from "./taskDisplay";
+import { isBeforeCurrentMinute } from "./taskDateTime";
 
 const taskStatusSchema = z.enum([
   "not_started",
@@ -23,6 +24,13 @@ export const taskDrawerFormSchema = z
     status: taskStatusSchema,
   })
   .superRefine((values, context) => {
+    if (values.status === "not_started" && isBeforeCurrentMinute(values.startAt)) {
+      context.addIssue({
+        code: "custom",
+        message: "开始时间不能早于当前时间",
+        path: ["startAt"],
+      });
+    }
     const message = taskTimeRangeError(values);
     if (message) {
       context.addIssue({
@@ -58,24 +66,20 @@ export function toUpdateTaskInput(
   const originalContactName = task.contactSnapshot?.trim() ?? "";
   const contactChanged = contactName !== originalContactName;
 
+  const timeUpdate = task.status === "not_started"
+    ? {
+        plannedAtMs: datetimeLocalToMs(values.startAt),
+        deadlineAtMs: datetimeLocalToMs(values.endAt),
+      }
+    : {};
+
   return {
     id: task.id,
     title: values.title.trim(),
     note: note ? note : null,
-    plannedAtMs: datetimeLocalToMs(values.startAt),
-    deadlineAtMs: datetimeLocalToMs(values.endAt),
+    ...timeUpdate,
     priority: values.priority,
-    status: values.status as TaskStatus,
     contactId: contactChanged ? null : task.contactId ?? null,
     contactSnapshot: contactName || null,
   };
 }
-
-export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
-  { value: "not_started", label: "未开始" },
-  { value: "in_progress", label: "进行中" },
-  { value: "paused", label: "暂停" },
-  { value: "waiting", label: "等别人" },
-  { value: "completed", label: "已完成" },
-  { value: "cancelled", label: "已取消" },
-];

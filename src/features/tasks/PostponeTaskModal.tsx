@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
 import {
@@ -8,14 +8,16 @@ import {
   postponeTask,
   type TaskAppError,
 } from "../../services/tauri/tasks";
-import { Button, Input, Modal, Textarea } from "../../shared/ui";
+import { Button, Modal, Textarea } from "../../shared/ui";
 import { datetimeLocalToMs } from "./createTaskForm";
 import { formatDeadline, msToDatetimeLocal } from "./taskDisplay";
+import { TaskDateTimeField } from "./TaskDateTimeField";
+import { addMinutesToDateTime } from "./taskDateTime";
 import "./PostponeTaskModal.css";
 
 const postponeTaskFormSchema = z
   .object({
-    newDeadlineAt: z.string().min(1, "请填写新 DDL"),
+    newDeadlineAt: z.string().min(1, "请填写新完成时间"),
     reason: z.string().trim().min(1, "请填写延期原因"),
   })
   .superRefine((values, context) => {
@@ -23,7 +25,7 @@ const postponeTaskFormSchema = z
     if (Number.isNaN(newDeadlineAtMs)) {
       context.addIssue({
         code: "custom",
-        message: "新 DDL 格式无效",
+        message: "新完成时间格式无效",
         path: ["newDeadlineAt"],
       });
     }
@@ -51,6 +53,7 @@ export function PostponeTaskModal({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
@@ -82,11 +85,11 @@ export function PostponeTaskModal({
 
     const newDeadlineAtMs = datetimeLocalToMs(values.newDeadlineAt);
     if (currentDeadlineAtMs != null && newDeadlineAtMs <= currentDeadlineAtMs) {
-      setSubmitError("新 DDL 必须晚于当前 DDL");
+      setSubmitError("新完成时间必须晚于当前完成时间");
       return;
     }
     if (plannedAtMs != null && newDeadlineAtMs < plannedAtMs) {
-      setSubmitError("新 DDL 不能早于计划时间");
+      setSubmitError("新完成时间不能早于计划时间");
       return;
     }
 
@@ -122,7 +125,7 @@ export function PostponeTaskModal({
     >
       {currentDeadlineAtMs != null ? (
         <p className="postpone-task-modal__current">
-          当前 DDL：{formatDeadline(currentDeadlineAtMs)}
+          当前完成时间：{formatDeadline(currentDeadlineAtMs)}
         </p>
       ) : null}
 
@@ -133,12 +136,22 @@ export function PostponeTaskModal({
       ) : null}
 
       <form id="postpone-task-form" className="postpone-task-modal__form" onSubmit={onSubmit}>
-        <Input
-          label="新 DDL"
-          type="datetime-local"
-          hint="必须晚于当前 DDL"
-          error={errors.newDeadlineAt?.message}
-          {...register("newDeadlineAt")}
+        <Controller
+          control={control}
+          name="newDeadlineAt"
+          render={({ field }) => (
+            <TaskDateTimeField
+              label="新完成时间"
+              value={field.value}
+              min={currentDeadlineAtMs == null
+                ? undefined
+                : addMinutesToDateTime(msToDatetimeLocal(currentDeadlineAtMs), 1)}
+              hint="必须晚于当前完成时间"
+              error={errors.newDeadlineAt?.message}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+            />
+          )}
         />
 
         <Textarea

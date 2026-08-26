@@ -12,23 +12,21 @@ import {
   type TaskAppError,
   type TaskDetail,
 } from "../../services/tauri/tasks";
-import { Button, Drawer, Select } from "../../shared/ui";
+import { Button, Drawer } from "../../shared/ui";
 import {
   formatPostponementRange,
   isTerminalStatus,
   postponementCountLabel,
 } from "./taskDisplay";
-import { DdlTimeProgress } from "../today/DdlTimeProgress";
-import { datetimeLocalToMs } from "./createTaskForm";
 import { PostponeTaskModal } from "./PostponeTaskModal";
 import { TaskCoreFields } from "./TaskCoreFields";
 import {
-  TASK_STATUS_OPTIONS,
   taskDetailToFormValues,
   taskDrawerFormSchema,
   toUpdateTaskInput,
   type TaskDrawerFormValues,
 } from "./taskDrawerForm";
+import { currentMinuteValue } from "./taskDateTime";
 import "./TaskDrawer.css";
 
 type TaskDrawerProps = {
@@ -55,10 +53,10 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
 
   const {
     register,
+    control,
     getValues,
     reset,
     trigger,
-    watch,
     formState: { errors },
   } = useForm<TaskDrawerFormValues>({
     resolver: zodResolver(taskDrawerFormSchema),
@@ -114,15 +112,8 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
   }, [open, taskId, loadDetail]);
 
   const terminal = detail ? isTerminalStatus(detail.task.status) : false;
-  const canPostpone = detail != null && !terminal && detail.task.deadlineAtMs != null;
-  const startAt = watch("startAt");
-  const endAt = watch("endAt");
-  const displayedPlannedAtMs = startAt ? datetimeLocalToMs(startAt) : Number.NaN;
-  const displayedDeadlineAtMs = endAt ? datetimeLocalToMs(endAt) : Number.NaN;
-  const hasValidTimeRange =
-    Number.isFinite(displayedPlannedAtMs) &&
-    Number.isFinite(displayedDeadlineAtMs) &&
-    displayedDeadlineAtMs > displayedPlannedAtMs;
+  const timeLocked = detail != null && detail.task.status !== "not_started";
+  const canPostpone = detail != null && timeLocked && !terminal && detail.task.deadlineAtMs != null;
 
   const enqueueSave = useCallback((values: TaskDrawerFormValues) => {
     const task = latestTaskRef.current;
@@ -296,44 +287,14 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
           >
             <TaskCoreFields
               register={register}
+              control={control}
               errors={errors}
               disabled={terminal}
+              timeDisabled={timeLocked}
+              minStartAt={!timeLocked ? currentMinuteValue() : undefined}
               onFieldBlur={() => void requestAutoSave()}
               onSelectChange={handleSelectAutoSave}
             />
-
-            {saveStatus === "saving" ? (
-              <p className="task-drawer__save-status" role="status">正在传递情报…</p>
-            ) : null}
-            {saveStatus === "saved" ? (
-              <p className="task-drawer__save-status" role="status">情报已同步</p>
-            ) : null}
-
-            <section className="task-drawer__management" aria-labelledby="task-drawer-management">
-              <div className="task-drawer__management-heading">
-                <h3 id="task-drawer-management">任务管理</h3>
-              </div>
-
-              {!terminal && hasValidTimeRange ? (
-                <DdlTimeProgress
-                  plannedAtMs={displayedPlannedAtMs}
-                  deadlineAtMs={displayedDeadlineAtMs}
-                />
-              ) : null}
-
-              <Select
-                label="主状态"
-                disabled={terminal}
-                error={errors.status?.message}
-                {...register("status", { onChange: handleSelectAutoSave })}
-              >
-                {TASK_STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
-            </section>
 
             {detail.postponements.length > 0 ? (
               <section className="task-drawer__section" aria-labelledby="task-drawer-postponements">

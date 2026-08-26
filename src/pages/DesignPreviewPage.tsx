@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
+import { CreateTaskDrawer } from "../features/tasks/CreateTaskDrawer";
 import { TodayTaskBoard } from "../features/today/TodayTaskBoard";
 import { WorkCountdownBanner } from "../features/today/WorkCountdownBanner";
 import { WorkScheduleEditor } from "../features/today/WorkScheduleEditor";
@@ -14,6 +15,7 @@ import "./TodayPage.css";
 export function DesignPreviewPage() {
   const schedule = useMemo(buildPreviewSchedule, []);
   const tasks = useMemo(buildPreviewTasks, []);
+  const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="ws-shell">
@@ -67,7 +69,7 @@ export function DesignPreviewPage() {
           <Card title="今日待办 / 不建议补货" headerAccent className="today-page__tasks-card">
             <div className="today-page__toolbar">
               <p>活可以插，队不能乱。</p>
-              <Button>+ 新任务</Button>
+              <Button onClick={() => setCreateOpen(true)}>+ 新任务</Button>
             </div>
             <TodayTaskBoard
               tasks={tasks}
@@ -78,6 +80,7 @@ export function DesignPreviewPage() {
           <WorkScheduleEditor schedule={schedule} onSaved={() => undefined} />
         </div>
       </main>
+      <CreateTaskDrawer open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 }

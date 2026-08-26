@@ -12,6 +12,10 @@ pub fn create_task(
     state: State<'_, AppState>,
     input: CreateTaskRequest,
 ) -> Result<TaskDto, AppError> {
+    TaskService::validate_planned_start(
+        input.planned_at_ms,
+        chrono::Local::now().timestamp_millis(),
+    )?;
     state.with_db_app(|connection| TaskService::create(connection, input))
 }
 

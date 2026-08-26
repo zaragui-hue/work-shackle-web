@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 
-import type { Task } from "../../services/tauri/tasks";
+import type { Task, TaskStatus } from "../../services/tauri/tasks";
 import {
   formatContact,
   formatDeadlineShort,
+  isTerminalStatus,
   priorityLabel,
   priorityToneClass,
+  statusLabel,
 } from "../tasks/taskDisplay";
+import { TASK_STATUS_OPTIONS } from "../tasks/taskStatusActions";
 import {
   formatCompletedTime,
   formatOverdueDuration,
@@ -37,6 +40,8 @@ type TodayTaskCardProps = {
   onSelect?: (taskId: string) => void;
   announceAutoStart?: boolean;
   onBroadcastDismissed?: (taskId: string) => void;
+  onStatusChange?: (task: Task, status: TaskStatus) => void | Promise<void>;
+  statusBusy?: boolean;
 };
 
 function OverdueChaosStamp({ deadlineAtMs }: { deadlineAtMs: number }) {
@@ -66,6 +71,8 @@ export function TodayTaskCard({
   onSelect,
   announceAutoStart = false,
   onBroadcastDismissed,
+  onStatusChange,
+  statusBusy = false,
 }: TodayTaskCardProps) {
   const overdueToday =
     variant === "formal" && isDeadlineOverdueToday(task.deadlineAtMs);
@@ -73,6 +80,10 @@ export function TodayTaskCard({
     task.plannedAtMs,
     variant === "formal" ? task.deadlineAtMs : undefined,
   );
+  const terminal = isTerminalStatus(task.status);
+  const statusOptions = task.status === "not_started"
+    ? TASK_STATUS_OPTIONS
+    : TASK_STATUS_OPTIONS.filter((option) => option.value !== "not_started");
 
   return (
     <li
@@ -174,6 +185,33 @@ export function TodayTaskCard({
           </div> : null}
         </div>
       </button>
+      <div className="today-task-card__management" aria-label={`${task.title} 任务管理`}>
+        <span className="today-task-card__management-kicker">任务管理</span>
+        {terminal ? (
+          <span className="today-task-card__terminal-status" aria-label={`${task.title} 主状态`}>
+            <span>主状态</span>
+            <strong>{statusLabel(task.status)}</strong>
+          </span>
+        ) : (
+          <label className="today-task-card__status-control">
+            <span>主状态</span>
+            <select
+              aria-label={`${task.title} 主状态`}
+              value={task.status}
+              disabled={statusBusy}
+              onChange={(event) => {
+                void onStatusChange?.(task, event.target.value as TaskStatus);
+              }}
+            >
+              {statusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
       {variant === "formal" && announceAutoStart ? (
         <TaskAutoStartBroadcast
           plannedAtMs={task.plannedAtMs}

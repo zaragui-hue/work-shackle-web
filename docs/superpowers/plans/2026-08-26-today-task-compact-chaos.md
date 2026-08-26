@@ -249,3 +249,118 @@ git commit -m "chore: preview overdue chaos tiers"
 Run: `git diff --check && git status --short`
 
 Expected: no whitespace errors and no uncommitted feature files.
+
+### Task 5: Restore the formal-task progress rail
+
+**Files:**
+- Create: `src/features/today/FormalTaskTiming.tsx`
+- Modify: `src/features/today/TodayTaskCard.tsx`
+- Modify: `src/features/today/TodayTaskCard.css`
+- Test: `src/features/today/TodayTaskBoard.test.tsx`
+
+- [ ] **Step 1: Strengthen the formal-card test**
+
+```tsx
+const meta = screen.getByTestId("formal-task-meta");
+expect(meta.textContent).toMatch(/(还剩|已逾期).*计划.*DDL.*产品经理/);
+expect(
+  screen.getByRole("progressbar", { name: "压缩卡片的时间进度" }),
+).toBeTruthy();
+```
+
+- [ ] **Step 2: Run the board test and verify the new assertion fails**
+
+Run: `npm test -- src/features/today/TodayTaskBoard.test.tsx`
+
+Expected: FAIL because formal tasks currently render no progressbar.
+
+- [ ] **Step 3: Add one compact timing component**
+
+```tsx
+export function FormalTaskTiming({ task }: { task: Task }) {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 1_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const ratio = task.deadlineAtMs == null
+    ? 0
+    : (nowMs - task.plannedAtMs) / (task.deadlineAtMs - task.plannedAtMs);
+  const fillPercent = ddlProgressFillPercent(ratio);
+  const remainingText = task.deadlineAtMs == null
+    ? null
+    : task.deadlineAtMs <= nowMs
+      ? formatOverdueDuration(task.deadlineAtMs, nowMs)
+      : formatRemainingUntilDeadline(task.deadlineAtMs, nowMs);
+
+  return (
+    <div className="today-task-card__formal-timing">
+      <div className="today-task-card__formal-meta" data-testid="formal-task-meta">
+        {remainingText ? <span>{remainingText}</span> : null}
+        <span className="today-task-card__formal-meta-item">
+          计划 {formatPlannedTime(task.plannedAtMs)}
+        </span>
+        {task.deadlineAtMs != null ? (
+          <span className="today-task-card__formal-meta-item">
+            DDL {formatDeadlineShort(task.deadlineAtMs)}
+          </span>
+        ) : null}
+        {task.contactSnapshot?.trim() ? (
+          <span className="today-task-card__contact">{formatContact(task)}</span>
+        ) : null}
+      </div>
+      {task.deadlineAtMs != null ? (
+        <div
+          className="today-task-card__formal-progress"
+          role="progressbar"
+          aria-label={`${task.title}的时间进度`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(fillPercent)}
+        >
+          <span style={{ width: `${fillPercent}%` }} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+```
+
+The component owns the one-second clock used by both remaining copy and the rail, so it does not duplicate backend progress requests.
+
+- [ ] **Step 4: Replace the formal metadata block with `FormalTaskTiming`**
+
+```tsx
+{variant === "formal" ? <FormalTaskTiming task={task} /> : null}
+```
+
+- [ ] **Step 5: Style the retained rail without restoring the old extra rows**
+
+```css
+.today-task-card__formal-timing { display: grid; gap: 6px; }
+.today-task-card__formal-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(61, 43, 31, 0.08);
+}
+.today-task-card__formal-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--color-green);
+}
+```
+
+- [ ] **Step 6: Run focused tests, full tests, and build**
+
+Run: `npm test -- src/features/today/TodayTaskBoard.test.tsx && npm test && npm run build`
+
+Expected: all tests pass and Vite builds successfully.
+
+- [ ] **Step 7: Commit the correction**
+
+```bash
+git add src/features/today/FormalTaskTiming.tsx src/features/today/TodayTaskCard.tsx src/features/today/TodayTaskCard.css src/features/today/TodayTaskBoard.test.tsx
+git commit -m "fix: retain formal task progress bars"
+```

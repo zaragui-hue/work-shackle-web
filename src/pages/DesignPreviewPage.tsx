@@ -108,7 +108,9 @@ function buildPreviewTasks(): TodayTasks {
       task("reply", "假装没看到群里的 @所有人", now, now + 5 * hour, 1, "in_progress"),
     ],
     overdueTasks: [
-      task("debt", "客户说最后再改一版", now - 30 * hour, now - 18 * hour, 3, "paused"),
+      task("debt-light", "客户说再润色一下", now - 24 * hour, now - 12 * hour, 1, "paused"),
+      task("debt-serious", "需求已经改到第八版", now - 60 * hour, now - 36 * hour, 2, "waiting"),
+      task("debt-gave-up", "上周五说马上要的活", now - 120 * hour, now - 96 * hour, 3, "paused"),
     ],
     completedTodayTasks: [],
     autoStartedTaskIds: ["reply"],

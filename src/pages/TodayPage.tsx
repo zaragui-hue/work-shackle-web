@@ -18,6 +18,7 @@ import { StatusCockpit } from "../features/today/StatusCockpit";
 import { useWorkStatus } from "../features/today/WorkStatusContext";
 import { WorkdayStatusNotice } from "../features/today/WorkdayStatusNotice";
 import { isTodayFullyEmpty } from "../features/today/todayDisplay";
+import { useTaskAutoStart } from "../features/today/useTaskAutoStart";
 import { useWorkCountdown } from "../features/today/useWorkCountdown";
 import { WorkCountdownBanner } from "../features/today/WorkCountdownBanner";
 import { WorkScheduleEditor } from "../features/today/WorkScheduleEditor";
@@ -96,6 +97,8 @@ export function TodayPage() {
       setLoading(false);
     }
   }, []);
+
+  useTaskAutoStart(todayTasks.formalTasks, loadTodayTasks);
 
   useEffect(() => {
     void loadTodayTasks();

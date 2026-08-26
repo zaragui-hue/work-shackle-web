@@ -2,7 +2,6 @@ import { copy } from "../../config/copy";
 import type { DdlEmotion } from "../../services/tauri/ddl";
 import type { TaskStatus } from "../../services/tauri/tasks";
 
-export type TaskUrgencyTone = "low" | "normal" | "urgent";
 export type OverdueChaosLevel = "slightly" | "serious" | "gave_up";
 
 const HOUR_MS = 60 * 60 * 1_000;
@@ -53,12 +52,6 @@ export function ddlProgressFillPercent(progressRatio: number): number {
 
 export function taskStatusStampCopy(status: TaskStatus): string {
   return STATUS_STAMP_COPY[status];
-}
-
-export function taskUrgencyTone(priority: number): TaskUrgencyTone {
-  if (priority <= 1) return "low";
-  if (priority >= 3) return "urgent";
-  return "normal";
 }
 
 export function overdueChaosLevel(

@@ -6,12 +6,10 @@ import {
   formatDeadlineShort,
   priorityLabel,
   priorityToneClass,
-  statusLabel,
 } from "../tasks/taskDisplay";
 import {
   formatCompletedTime,
   formatOverdueDuration,
-  formatPlannedTime,
   formatRemainingUntilDeadline,
   isDeadlineOverdueToday,
 } from "./todayDisplay";
@@ -20,10 +18,10 @@ import { FormalTaskTiming } from "./FormalTaskTiming";
 import {
   overdueChaosLabel,
   overdueChaosLevel,
-  taskStatusStampCopy,
-  taskUrgencyTone,
 } from "./ddlProgressDisplay";
 import { TaskAutoStartBroadcast } from "./TaskAutoStartBroadcast";
+import { TaskPressureStamp } from "./TaskPressureStamp";
+import { useTaskPressure } from "./useTaskPressure";
 import "../tasks/priorityTone.css";
 import "./TodayTaskCard.css";
 
@@ -71,6 +69,10 @@ export function TodayTaskCard({
 }: TodayTaskCardProps) {
   const overdueToday =
     variant === "formal" && isDeadlineOverdueToday(task.deadlineAtMs);
+  const pressure = useTaskPressure(
+    task.plannedAtMs,
+    variant === "formal" ? task.deadlineAtMs : undefined,
+  );
 
   return (
     <li
@@ -89,19 +91,11 @@ export function TodayTaskCard({
           <div className="today-task-card__head">
             <h3 className="today-task-card__title">{task.title}</h3>
             {variant === "formal" ? (
-              <div className="today-task-card__status-stack">
-                <span
-                  className={`today-task-card__status-stamp today-task-card__status-stamp--${task.status} today-task-card__status-stamp--urgency-${taskUrgencyTone(task.priority)}${announceAutoStart ? " today-task-card__status-stamp--announced" : ""}`}
-                  aria-label={`任务状态：${statusLabel(task.status)}，紧急程度：${priorityLabel(task.priority)}`}
-                >
-                  {taskStatusStampCopy(task.status)}
-                </span>
-                {announceAutoStart ? (
-                  <span className="today-task-card__status-source">
-                    {formatPlannedTime(task.plannedAtMs)} · 自动
-                  </span>
-                ) : null}
-              </div>
+              <TaskPressureStamp
+                task={task}
+                pressure={pressure}
+                autoStarted={announceAutoStart}
+              />
             ) : null}
             {variant === "overdue" && task.deadlineAtMs != null ? (
               <OverdueChaosStamp deadlineAtMs={task.deadlineAtMs} />
@@ -134,7 +128,7 @@ export function TodayTaskCard({
           ) : null}
 
           {variant === "formal" ? (
-            <FormalTaskTiming task={task} />
+            <FormalTaskTiming task={task} pressure={pressure} />
           ) : null}
 
           {variant === "upcoming" || variant === "overdue" ? (

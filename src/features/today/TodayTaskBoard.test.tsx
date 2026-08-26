@@ -89,6 +89,7 @@ describe("TodayTaskBoard", () => {
 
   it("shows an active stamp and temporary workhorse broadcast for an auto-started task", () => {
     vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 24, 13, 30));
     const started = task("started", "自动开工", "in_progress");
     const tasks: TodayTasks = {
       formalTasks: [started],
@@ -102,7 +103,14 @@ describe("TodayTaskBoard", () => {
 
     expect(screen.getByText("🐴 牛马强制上线")).toBeTruthy();
     expect(
-      screen.getByLabelText("任务状态：进行中，紧急程度：😵 有点急"),
+      screen.getByLabelText(
+        "任务状态：进行中，紧急程度：😵 有点急，时间已走过 50%",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("50%")).toBeTruthy();
+    expect(screen.getByText("AUTO")).toBeTruthy();
+    expect(
+      document.querySelector('img[data-mascot-state="ddl-calm"]'),
     ).toBeTruthy();
     expect(screen.getByText(/打工马播报：时间到了，活自己醒了/)).toBeTruthy();
     expect(screen.getByRole("status")).toBeTruthy();

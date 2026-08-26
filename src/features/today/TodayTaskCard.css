@@ -90,70 +90,115 @@
   letter-spacing: -0.03em;
 }
 
-.today-task-card__status-stack {
-  display: grid;
-  justify-items: end;
-  gap: 4px;
-  min-width: max-content;
-  padding-right: 7px;
-}
-
-.today-task-card__status-stamp {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 118px;
-  padding: 5px 9px;
+.task-pressure-stamp {
+  position: relative;
+  display: block;
+  width: 166px;
+  min-height: 66px;
+  margin: 0 8px 2px 0;
+  padding: 7px 9px 7px 54px;
   border: 3px solid var(--color-anchor);
   border-radius: 2px;
-  background: var(--color-paper-deep);
-  box-shadow: 3px 3px 0 var(--color-anchor);
+  background: #d9e7cf;
+  box-shadow: 4px 4px 0 var(--color-anchor);
   color: var(--color-ink);
-  font-size: 0.78rem;
-  font-weight: 1000;
-  line-height: 1;
-  transform: rotate(3deg);
-}
-
-.today-task-card__status-stamp--not_started {
-  color: var(--color-ink-muted);
-  box-shadow: 3px 3px 0 color-mix(in srgb, var(--color-anchor) 58%, transparent);
-}
-
-.today-task-card__status-stamp--in_progress {
-  transform: rotate(5deg);
-}
-
-.today-task-card__status-stamp--paused {
-  transform: rotate(-3deg);
-}
-
-.today-task-card__status-stamp--waiting {
   transform: rotate(2deg);
 }
 
-.today-task-card__status-stamp--urgency-low {
-  background: color-mix(in srgb, var(--color-paper-raised) 72%, #aaa096);
+.task-pressure-stamp__mascot {
+  position: absolute;
+  left: -10px;
+  bottom: -5px;
+  width: 58px;
+  height: 58px;
+  border: 3px solid var(--color-anchor);
+  border-radius: 50%;
+  background: var(--color-reaction);
+  z-index: 1;
 }
 
-.today-task-card__status-stamp--urgency-normal {
+.task-pressure-stamp__content {
+  display: grid;
+  min-width: 0;
+}
+
+.task-pressure-stamp__eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  font-family: var(--font-data);
+  font-size: 0.49rem;
+  font-weight: 1000;
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+
+.task-pressure-stamp__eyebrow b {
+  padding: 2px 3px 1px;
+  background: var(--color-anchor);
+  color: var(--color-paper-raised);
+  font-size: 0.46rem;
+  letter-spacing: 0.06em;
+}
+
+.task-pressure-stamp__percent {
+  margin-top: 2px;
+  font-family: var(--font-data);
+  font-size: 1.9rem;
+  font-weight: 1000;
+  letter-spacing: -0.08em;
+  line-height: 0.88;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.task-pressure-stamp__status {
+  margin-top: 5px;
+  overflow: hidden;
+  font-size: 0.58rem;
+  font-weight: 1000;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-pressure-stamp--notice {
   background: #dfff31;
 }
 
-.today-task-card__status-stamp--urgency-urgent {
+.task-pressure-stamp--anxious {
+  background: #ffbd45;
+  transform: rotate(-2deg);
+}
+
+.task-pressure-stamp--panic {
   background: #ff735c;
+  transform: rotate(3deg);
 }
 
-.today-task-card__status-stamp--announced {
+.task-pressure-stamp--burning {
+  background: #ff3f5f;
+  color: #fff7dc;
+  transform: rotate(-4deg);
+}
+
+.task-pressure-stamp--overdue {
+  border-color: #ff3f5f;
+  background: var(--color-anchor);
+  box-shadow: 5px 5px 0 #ff3f5f;
+  color: #ffefc2;
+  transform: rotate(5deg);
+}
+
+.task-pressure-stamp--burning .task-pressure-stamp__eyebrow b,
+.task-pressure-stamp--overdue .task-pressure-stamp__eyebrow b {
+  background: #fff7dc;
+  color: var(--color-anchor);
+}
+
+.task-pressure-stamp--announced {
   animation: today-task-card-stamp 210ms cubic-bezier(.15,1.25,.35,1);
-}
-
-.today-task-card__status-source {
-  color: var(--color-ink-muted);
-  font-family: var(--font-data);
-  font-size: 0.55rem;
-  font-weight: var(--font-weight-medium);
-  white-space: nowrap;
 }
 
 .today-task-card__deadline {
@@ -245,11 +290,14 @@
   transition: width 180ms linear;
 }
 
-.today-task-card__formal-progress--warning > span {
+.today-task-card__formal-progress--notice > span,
+.today-task-card__formal-progress--anxious > span {
   background: var(--color-signal);
 }
 
-.today-task-card__formal-progress--danger > span {
+.today-task-card__formal-progress--panic > span,
+.today-task-card__formal-progress--burning > span,
+.today-task-card__formal-progress--overdue > span {
   background: var(--color-danger);
 }
 
@@ -371,7 +419,7 @@
 
 @keyframes today-task-card-stamp {
   0% { opacity: 0; transform: rotate(-8deg) scale(1.45); }
-  100% { opacity: 1; transform: rotate(5deg) scale(1); }
+  100% { opacity: 1; transform: rotate(2deg) scale(1); }
 }
 
 @media (max-width: 520px) {
@@ -383,9 +431,27 @@
     justify-items: start;
   }
 
-  .today-task-card__status-stack {
-    justify-items: start;
-    padding: 2px 0 3px;
+  .task-pressure-stamp {
+    width: 142px;
+    min-height: 60px;
+    margin: 2px 0 5px 7px;
+    padding: 6px 7px 6px 45px;
+    justify-self: start;
+  }
+
+  .task-pressure-stamp__mascot {
+    left: -8px;
+    bottom: -4px;
+    width: 50px;
+    height: 50px;
+  }
+
+  .task-pressure-stamp__percent {
+    font-size: 1.58rem;
+  }
+
+  .task-pressure-stamp__status {
+    font-size: 0.52rem;
   }
 
   .today-task-card__formal-meta {
@@ -404,10 +470,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .today-task-card__status-stamp,
-  .today-task-card__status-stamp--in_progress,
-  .today-task-card__status-stamp--paused,
-  .today-task-card__status-stamp--waiting,
+  .task-pressure-stamp,
   .today-task-card__chaos-stamp {
     animation: none;
     transform: none;

@@ -8,7 +8,6 @@ import {
   overdueChaosLabel,
   overdueChaosLevel,
   taskStatusStampCopy,
-  taskUrgencyTone,
 } from "./ddlProgressDisplay";
 
 describe("canShowDdlProgress", () => {
@@ -65,15 +64,6 @@ describe("taskStatusStampCopy", () => {
     expect(taskStatusStampCopy("in_progress")).toBe("🐴 牛马强制上线");
     expect(taskStatusStampCopy("paused")).toBe("🫠 工位融化中");
     expect(taskStatusStampCopy("waiting")).toBe("🤡 等一个天降奇迹");
-  });
-});
-
-describe("taskUrgencyTone", () => {
-  it("maps priority labels into three visual intensities", () => {
-    expect(taskUrgencyTone(1)).toBe("low");
-    expect(taskUrgencyTone(2)).toBe("normal");
-    expect(taskUrgencyTone(3)).toBe("urgent");
-    expect(taskUrgencyTone(5)).toBe("urgent");
   });
 });
 

@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
-
 import type { Task } from "../../services/tauri/tasks";
 import { formatContact, formatDeadlineShort } from "../tasks/taskDisplay";
-import { ddlProgressFillPercent } from "./ddlProgressDisplay";
+import type { TaskPressure } from "./taskPressure";
 import {
   formatOverdueDuration,
   formatPlannedTime,
@@ -11,31 +9,17 @@ import {
 
 type FormalTaskTimingProps = {
   task: Task;
+  pressure: TaskPressure;
 };
 
-export function FormalTaskTiming({ task }: FormalTaskTimingProps) {
-  const [nowMs, setNowMs] = useState(() => Date.now());
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => setNowMs(Date.now()), 1_000);
-    return () => window.clearInterval(intervalId);
-  }, []);
-
+export function FormalTaskTiming({ task, pressure }: FormalTaskTimingProps) {
   const deadlineAtMs = task.deadlineAtMs;
-  const hasValidRange =
-    deadlineAtMs != null && deadlineAtMs > task.plannedAtMs;
-  const progressRatio = hasValidRange
-    ? (nowMs - task.plannedAtMs) / (deadlineAtMs - task.plannedAtMs)
-    : 0;
-  const fillPercent = ddlProgressFillPercent(progressRatio);
-  const progressTone =
-    progressRatio >= 0.9 ? "danger" : progressRatio >= 0.65 ? "warning" : "calm";
   const remainingText =
     deadlineAtMs == null
       ? null
-      : deadlineAtMs <= nowMs
-        ? formatOverdueDuration(deadlineAtMs, nowMs)
-        : formatRemainingUntilDeadline(deadlineAtMs, nowMs);
+      : deadlineAtMs <= pressure.nowMs
+        ? formatOverdueDuration(deadlineAtMs, pressure.nowMs)
+        : formatRemainingUntilDeadline(deadlineAtMs, pressure.nowMs);
 
   return (
     <div className="today-task-card__formal-timing">
@@ -61,16 +45,16 @@ export function FormalTaskTiming({ task }: FormalTaskTimingProps) {
         ) : null}
       </div>
 
-      {hasValidRange ? (
+      {pressure.valid ? (
         <div
-          className={`today-task-card__formal-progress today-task-card__formal-progress--${progressTone}`}
+          className={`today-task-card__formal-progress today-task-card__formal-progress--${pressure.emotion}`}
           role="progressbar"
           aria-label={`${task.title}的时间进度`}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={Math.round(fillPercent)}
+          aria-valuenow={Math.round(pressure.fillPercent)}
         >
-          <span style={{ width: `${fillPercent}%` }} />
+          <span style={{ width: `${pressure.fillPercent}%` }} />
         </div>
       ) : null}
     </div>

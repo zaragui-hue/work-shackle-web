@@ -47,6 +47,15 @@
   font-weight: var(--font-weight-medium);
 }
 
+.ddl-time-progress__remaining-inline {
+  color: var(--color-stage);
+  font-family: var(--font-data);
+  font-size: 0.66rem;
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .ddl-time-progress--notice .ddl-time-progress__fill {
   background: var(--color-wheat);
 }

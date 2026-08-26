@@ -21,12 +21,14 @@ type DdlTimeProgressProps = {
   plannedAtMs: number;
   deadlineAtMs?: number;
   showRemaining?: boolean;
+  presentation?: "full" | "remaining-only";
 };
 
 export function DdlTimeProgress({
   plannedAtMs,
   deadlineAtMs,
   showRemaining = true,
+  presentation = "full",
 }: DdlTimeProgressProps) {
   const progress = useDdlProgress(plannedAtMs, deadlineAtMs);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -55,6 +57,17 @@ export function DdlTimeProgress({
   const remainingText = progress.isOverdue
     ? formatOverdueDuration(deadlineAtMs, nowMs)
     : formatRemainingUntilDeadline(deadlineAtMs, nowMs);
+
+  if (presentation === "remaining-only") {
+    return (
+      <span
+        className="ddl-time-progress__remaining-inline"
+        data-testid="ddl-remaining-inline"
+      >
+        {remainingText}
+      </span>
+    );
+  }
 
   return (
     <div

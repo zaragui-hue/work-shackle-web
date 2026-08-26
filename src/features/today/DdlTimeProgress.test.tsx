@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { computeDdlProgress } from "../../services/tauri/ddl";
@@ -19,6 +19,7 @@ describe("DdlTimeProgress", () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.clearAllMocks();
   });
 
@@ -48,5 +49,19 @@ describe("DdlTimeProgress", () => {
         .querySelector("img[data-mascot-animation]")
         ?.getAttribute("data-mascot-animation"),
     ).toBe("breathe");
+  });
+
+  it("shows only the live remaining text in compact presentation", async () => {
+    render(
+      <DdlTimeProgress
+        plannedAtMs={Date.now() - 1_000}
+        deadlineAtMs={Date.now() + 60_000}
+        presentation="remaining-only"
+      />,
+    );
+
+    expect(await screen.findByTestId("ddl-remaining-inline")).toBeTruthy();
+    expect(screen.queryByRole("progressbar", { name: "时间进度" })).toBeNull();
+    expect(document.querySelector("img[data-mascot-state]")).toBeNull();
   });
 });

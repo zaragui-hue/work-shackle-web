@@ -5,6 +5,10 @@ import {
   ddlEmotionLabel,
   ddlProgressFillPercent,
   formatTimeElapsedCopy,
+  overdueChaosLabel,
+  overdueChaosLevel,
+  taskStatusStampCopy,
+  taskUrgencyTone,
 } from "./ddlProgressDisplay";
 
 describe("canShowDdlProgress", () => {
@@ -52,5 +56,41 @@ describe("ddlProgressFillPercent", () => {
     expect(ddlProgressFillPercent(0.4)).toBe(40);
     expect(ddlProgressFillPercent(1.1)).toBe(100);
     expect(ddlProgressFillPercent(0)).toBe(0);
+  });
+});
+
+describe("taskStatusStampCopy", () => {
+  it("uses short state-aware chaos copy with the emoji first", () => {
+    expect(taskStatusStampCopy("not_started")).toBe("🫥 活还没醒");
+    expect(taskStatusStampCopy("in_progress")).toBe("🐴 牛马强制上线");
+    expect(taskStatusStampCopy("paused")).toBe("🫠 工位融化中");
+    expect(taskStatusStampCopy("waiting")).toBe("🤡 等一个天降奇迹");
+  });
+});
+
+describe("taskUrgencyTone", () => {
+  it("maps priority labels into three visual intensities", () => {
+    expect(taskUrgencyTone(1)).toBe("low");
+    expect(taskUrgencyTone(2)).toBe("normal");
+    expect(taskUrgencyTone(3)).toBe("urgent");
+    expect(taskUrgencyTone(5)).toBe("urgent");
+  });
+});
+
+describe("overdueChaosLevel", () => {
+  const hour = 60 * 60 * 1_000;
+  const now = new Date(2026, 7, 26, 12).getTime();
+
+  it("changes tiers exactly at 24 and 72 hours overdue", () => {
+    expect(overdueChaosLevel(now - 23 * hour, now)).toBe("slightly");
+    expect(overdueChaosLevel(now - 24 * hour, now)).toBe("serious");
+    expect(overdueChaosLevel(now - 71 * hour, now)).toBe("serious");
+    expect(overdueChaosLevel(now - 72 * hour, now)).toBe("gave_up");
+  });
+
+  it("provides the approved stamp labels", () => {
+    expect(overdueChaosLabel("slightly")).toBe("有点超时");
+    expect(overdueChaosLabel("serious")).toBe("严重超时");
+    expect(overdueChaosLabel("gave_up")).toBe("放弃挣扎");
   });
 });

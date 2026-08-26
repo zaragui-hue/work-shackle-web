@@ -18,6 +18,14 @@
   color: var(--color-danger);
 }
 
+.task-drawer__save-status {
+  min-height: 1.2em;
+  margin: calc(var(--space-2) * -1) 0 0;
+  font-size: var(--font-size-caption);
+  color: var(--color-ink-muted);
+  text-align: right;
+}
+
 .task-drawer__management {
   display: grid;
   gap: var(--space-2);
@@ -30,10 +38,7 @@
 }
 
 .task-drawer__management-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+  display: block;
 }
 
 .task-drawer__management-heading h3 {
@@ -51,6 +56,10 @@
 .task-drawer__postpone-btn {
   min-height: 40px;
   padding-inline: 18px;
+}
+
+.ws-drawer__footer .task-drawer__postpone-btn {
+  border-style: dashed;
 }
 
 .task-drawer__section {
@@ -74,28 +83,6 @@
   color: var(--color-anchor);
   background: var(--color-signal);
   letter-spacing: 0.02em;
-}
-
-.task-drawer__reminder-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 6px;
-}
-
-.task-drawer__reminder-list li {
-  display: grid;
-  gap: 1px;
-  font-size: var(--font-size-caption);
-}
-
-.task-drawer__reminder-list strong {
-  color: var(--color-ink);
-}
-
-.task-drawer__reminder-list span {
-  color: var(--color-ink-muted);
 }
 
 .task-drawer__postponement-list {

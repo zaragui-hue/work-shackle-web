@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import {
@@ -8,13 +8,13 @@ import {
   getTaskDetail,
   mapTaskError,
   updateTask,
+  type Task,
   type TaskAppError,
   type TaskDetail,
 } from "../../services/tauri/tasks";
 import { Button, Drawer, Select } from "../../shared/ui";
 import {
   formatPostponementRange,
-  formatReminderTime,
   isTerminalStatus,
   postponementCountLabel,
 } from "./taskDisplay";
@@ -38,18 +38,28 @@ type TaskDrawerProps = {
   onChanged: () => void;
 };
 
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
 export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps) {
   const [detail, setDetail] = useState<TaskDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [postponeOpen, setPostponeOpen] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const mountedRef = useRef(true);
+  const activeTaskIdRef = useRef<string | null>(null);
+  const latestTaskRef = useRef<Task | null>(null);
+  const lastSavedKeyRef = useRef("");
+  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const saveByKeyRef = useRef(new Map<string, Promise<boolean>>());
 
   const {
     register,
-    handleSubmit,
+    getValues,
     reset,
+    trigger,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<TaskDrawerFormValues>({
     resolver: zodResolver(taskDrawerFormSchema),
     defaultValues: {
@@ -63,13 +73,25 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
     },
   });
 
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const loadDetail = useCallback(async (id: string) => {
     setLoading(true);
     setActionError(null);
     try {
       const next = await getTaskDetail(id);
+      const values = taskDetailToFormValues(next);
       setDetail(next);
-      reset(taskDetailToFormValues(next));
+      activeTaskIdRef.current = next.task.id;
+      latestTaskRef.current = next.task;
+      lastSavedKeyRef.current = `${next.task.id}:${JSON.stringify(values)}`;
+      setSaveStatus("idle");
+      reset(values);
     } catch (caught) {
       setActionError(mapTaskError(caught as TaskAppError));
       setDetail(null);
@@ -81,8 +103,11 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
   useEffect(() => {
     if (!open || !taskId) {
       setDetail(null);
+      activeTaskIdRef.current = null;
+      latestTaskRef.current = null;
       setActionError(null);
       setPostponeOpen(false);
+      setSaveStatus("idle");
       return;
     }
     void loadDetail(taskId);
@@ -99,22 +124,84 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
     Number.isFinite(displayedDeadlineAtMs) &&
     displayedDeadlineAtMs > displayedPlannedAtMs;
 
-  const onSubmit = handleSubmit(async (values) => {
-    if (!detail) {
-      return;
+  const enqueueSave = useCallback((values: TaskDrawerFormValues) => {
+    const task = latestTaskRef.current;
+    if (!task) {
+      return Promise.resolve(false);
     }
-    setActionError(null);
-    try {
-      await updateTask(toUpdateTaskInput(detail.task, values));
-      onChanged();
-      await loadDetail(detail.task.id);
-    } catch (caught) {
-      setActionError(mapTaskError(caught as TaskAppError));
+
+    const key = `${task.id}:${JSON.stringify(values)}`;
+    if (key === lastSavedKeyRef.current) {
+      return Promise.resolve(true);
     }
-  });
+
+    const existing = saveByKeyRef.current.get(key);
+    if (existing) {
+      return existing;
+    }
+
+    const run = saveChainRef.current.then(async () => {
+      const latestTask = latestTaskRef.current?.id === task.id
+        ? latestTaskRef.current
+        : task;
+      if (mountedRef.current && activeTaskIdRef.current === task.id) {
+        setActionError(null);
+        setSaveStatus("saving");
+      }
+
+      try {
+        const updated = await updateTask(toUpdateTaskInput(latestTask, values));
+        if (mountedRef.current && activeTaskIdRef.current === task.id) {
+          latestTaskRef.current = updated;
+          lastSavedKeyRef.current = key;
+          setDetail((current) => current && current.task.id === task.id
+            ? { ...current, task: updated }
+            : current);
+          setSaveStatus("saved");
+          onChanged();
+        }
+        return true;
+      } catch (caught) {
+        if (mountedRef.current && activeTaskIdRef.current === task.id) {
+          setSaveStatus("error");
+          setActionError(mapTaskError(caught as TaskAppError));
+        }
+        return false;
+      }
+    });
+
+    saveChainRef.current = run.then(() => undefined);
+    saveByKeyRef.current.set(key, run);
+    void run.then(() => {
+      if (saveByKeyRef.current.get(key) === run) {
+        saveByKeyRef.current.delete(key);
+      }
+    });
+    return run;
+  }, [onChanged]);
+
+  const requestAutoSave = useCallback(async () => {
+    if (!detail || terminal) {
+      return terminal;
+    }
+    const valid = await trigger();
+    if (!valid) {
+      return false;
+    }
+    return enqueueSave(getValues());
+  }, [detail, enqueueSave, getValues, terminal, trigger]);
+
+  const handleSelectAutoSave = useCallback(() => {
+    queueMicrotask(() => {
+      void requestAutoSave();
+    });
+  }, [requestAutoSave]);
 
   const handleComplete = async () => {
     if (!detail) {
+      return;
+    }
+    if (!await requestAutoSave()) {
       return;
     }
     setActionError(null);
@@ -132,6 +219,9 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
       return;
     }
     if (!window.confirm("确定取消这个任务吗？取消后仍保留在历史记录中。")) {
+      return;
+    }
+    if (!await requestAutoSave()) {
       return;
     }
     setActionError(null);
@@ -152,6 +242,15 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
     await loadDetail(detail.task.id);
   };
 
+  const handleOpenPostpone = async () => {
+    if (!await requestAutoSave()) {
+      return;
+    }
+    setPostponeOpen(true);
+  };
+
+  const actionBusy = saveStatus === "saving";
+
   return (
     <>
       <Drawer
@@ -161,14 +260,21 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
         footer={
           detail && !terminal ? (
             <>
-              <Button variant="secondary" onClick={() => void handleCancelTask()} disabled={isSubmitting}>
+              <Button variant="secondary" onClick={() => void handleCancelTask()} disabled={actionBusy}>
                 取消任务
               </Button>
-              <Button variant="wheat" onClick={() => void handleComplete()} disabled={isSubmitting}>
-                完成
-              </Button>
-              <Button type="submit" form="task-drawer-form" disabled={isSubmitting}>
-                {isSubmitting ? "保存中…" : "保存"}
+              {canPostpone ? (
+                <Button
+                  variant="wheat"
+                  className="task-drawer__postpone-btn"
+                  onClick={() => void handleOpenPostpone()}
+                  disabled={actionBusy}
+                >
+                  申请延期
+                </Button>
+              ) : null}
+              <Button onClick={() => void handleComplete()} disabled={actionBusy}>
+                完成任务
               </Button>
             </>
           ) : null
@@ -183,27 +289,29 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
         ) : null}
 
         {detail && !loading ? (
-          <form id="task-drawer-form" className="task-drawer__form" onSubmit={onSubmit}>
+          <form
+            id="task-drawer-form"
+            className="task-drawer__form"
+            onSubmit={(event) => event.preventDefault()}
+          >
             <TaskCoreFields
               register={register}
               errors={errors}
-              disabled={terminal || isSubmitting}
+              disabled={terminal}
+              onFieldBlur={() => void requestAutoSave()}
+              onSelectChange={handleSelectAutoSave}
             />
+
+            {saveStatus === "saving" ? (
+              <p className="task-drawer__save-status" role="status">正在传递情报…</p>
+            ) : null}
+            {saveStatus === "saved" ? (
+              <p className="task-drawer__save-status" role="status">情报已同步</p>
+            ) : null}
 
             <section className="task-drawer__management" aria-labelledby="task-drawer-management">
               <div className="task-drawer__management-heading">
                 <h3 id="task-drawer-management">任务管理</h3>
-                {canPostpone ? (
-                  <Button
-                    type="button"
-                    variant="wheat"
-                    className="task-drawer__postpone-btn"
-                    onClick={() => setPostponeOpen(true)}
-                    disabled={isSubmitting}
-                  >
-                    延期
-                  </Button>
-                ) : null}
               </div>
 
               {!terminal && hasValidTimeRange ? (
@@ -215,9 +323,9 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
 
               <Select
                 label="主状态"
-                disabled={terminal || isSubmitting}
+                disabled={terminal}
                 error={errors.status?.message}
-                {...register("status")}
+                {...register("status", { onChange: handleSelectAutoSave })}
               >
                 {TASK_STATUS_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -246,22 +354,6 @@ export function TaskDrawer({ taskId, open, onClose, onChanged }: TaskDrawerProps
                 </ol>
               </section>
             ) : null}
-
-            <section className="task-drawer__section" aria-labelledby="task-drawer-reminders">
-              <h3 id="task-drawer-reminders">自定义提醒</h3>
-              {detail.reminders.length === 0 ? (
-                <p className="task-drawer__empty">还没有自定义提醒。</p>
-              ) : (
-                <ul className="task-drawer__reminder-list">
-                  {detail.reminders.map((reminder) => (
-                    <li key={reminder.id}>
-                      <strong>{formatReminderTime(reminder.remindAtMs)}</strong>
-                      {reminder.message ? <span>{reminder.message}</span> : null}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
 
             {terminal ? (
               <p className="task-drawer__terminal-note">此任务已结束，详情为只读。</p>

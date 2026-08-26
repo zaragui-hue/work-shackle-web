@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import type { Task } from "../../services/tauri/tasks";
 import {
   formatContact,
@@ -14,6 +16,12 @@ import {
   isDeadlineOverdueToday,
 } from "./todayDisplay";
 import { DdlTimeProgress } from "./DdlTimeProgress";
+import {
+  overdueChaosLabel,
+  overdueChaosLevel,
+  taskStatusStampCopy,
+  taskUrgencyTone,
+} from "./ddlProgressDisplay";
 import { TaskAutoStartBroadcast } from "./TaskAutoStartBroadcast";
 import "../tasks/priorityTone.css";
 import "./TodayTaskCard.css";
@@ -31,6 +39,27 @@ type TodayTaskCardProps = {
   announceAutoStart?: boolean;
   onBroadcastDismissed?: (taskId: string) => void;
 };
+
+function OverdueChaosStamp({ deadlineAtMs }: { deadlineAtMs: number }) {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNowMs(Date.now()), 1_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const level = overdueChaosLevel(deadlineAtMs, nowMs);
+  const label = overdueChaosLabel(level);
+
+  return (
+    <span
+      className={`today-task-card__chaos-stamp today-task-card__chaos-stamp--${level}`}
+      aria-label={`逾期状态：${label}`}
+    >
+      {label}
+    </span>
+  );
+}
 
 export function TodayTaskCard({
   task,
@@ -61,10 +90,10 @@ export function TodayTaskCard({
             {variant === "formal" ? (
               <div className="today-task-card__status-stack">
                 <span
-                  className={`today-task-card__status-stamp today-task-card__status-stamp--${task.status}${announceAutoStart ? " today-task-card__status-stamp--announced" : ""}`}
-                  aria-label={`任务状态：${statusLabel(task.status)}`}
+                  className={`today-task-card__status-stamp today-task-card__status-stamp--${task.status} today-task-card__status-stamp--urgency-${taskUrgencyTone(task.priority)}${announceAutoStart ? " today-task-card__status-stamp--announced" : ""}`}
+                  aria-label={`任务状态：${statusLabel(task.status)}，紧急程度：${priorityLabel(task.priority)}`}
                 >
-                  {task.status === "in_progress" ? "开工了" : statusLabel(task.status)}
+                  {taskStatusStampCopy(task.status)}
                 </span>
                 {announceAutoStart ? (
                   <span className="today-task-card__status-source">
@@ -72,6 +101,9 @@ export function TodayTaskCard({
                   </span>
                 ) : null}
               </div>
+            ) : null}
+            {variant === "overdue" && task.deadlineAtMs != null ? (
+              <OverdueChaosStamp deadlineAtMs={task.deadlineAtMs} />
             ) : null}
             {variant === "upcoming" && task.deadlineAtMs != null ? (
               <p className="today-task-card__deadline">
@@ -89,12 +121,6 @@ export function TodayTaskCard({
             </p>
           ) : null}
 
-          {overdueToday && task.deadlineAtMs != null ? (
-            <p className="today-task-card__overdue-badge">
-              {formatOverdueDuration(task.deadlineAtMs)}
-            </p>
-          ) : null}
-
           {variant === "overdue" && task.deadlineAtMs != null ? (
             <div className="today-task-card__overdue-meta">
               <span className="today-task-card__meta-chip">
@@ -106,15 +132,40 @@ export function TodayTaskCard({
             </div>
           ) : null}
 
-          {variant !== "completed" ? (
+          {variant === "formal" ? (
+            <div className="today-task-card__formal-meta" data-testid="formal-task-meta">
+              {task.deadlineAtMs != null ? (
+                <DdlTimeProgress
+                  plannedAtMs={task.plannedAtMs}
+                  deadlineAtMs={task.deadlineAtMs}
+                  presentation="remaining-only"
+                />
+              ) : null}
+              <span className="today-task-card__formal-meta-item">
+                计划 {formatPlannedTime(task.plannedAtMs)}
+              </span>
+              {task.deadlineAtMs != null ? (
+                <span className="today-task-card__formal-meta-item">
+                  DDL {formatDeadlineShort(task.deadlineAtMs)}
+                </span>
+              ) : null}
+              {task.contactSnapshot?.trim() ? (
+                <span className="today-task-card__contact">
+                  {formatContact(task)}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+
+          {variant === "upcoming" || variant === "overdue" ? (
             <DdlTimeProgress
               plannedAtMs={task.plannedAtMs}
               deadlineAtMs={task.deadlineAtMs}
-              showRemaining={variant === "formal" && !overdueToday}
+              showRemaining={false}
             />
           ) : null}
 
-          <div className="today-task-card__foot">
+          {variant !== "formal" ? <div className="today-task-card__foot">
             {variant === "completed" ? (
               <>
                 {task.completedAtMs != null ? (
@@ -134,27 +185,6 @@ export function TodayTaskCard({
               </span>
             ) : null}
 
-            {variant === "formal" ? (
-              <>
-                <span className="today-task-card__meta-chip">
-                  {priorityLabel(task.priority)}
-                </span>
-                <span className="today-task-card__meta-chip">
-                  计划 {formatPlannedTime(task.plannedAtMs)}
-                </span>
-                {task.deadlineAtMs != null ? (
-                  <span className="today-task-card__meta-chip">
-                    DDL {formatDeadlineShort(task.deadlineAtMs)}
-                  </span>
-                ) : null}
-                {task.contactSnapshot?.trim() ? (
-                  <span className="today-task-card__contact">
-                    {formatContact(task)}
-                  </span>
-                ) : null}
-              </>
-            ) : null}
-
             {variant === "overdue" ? (
               <>
                 <span className="today-task-card__meta-chip">
@@ -167,7 +197,7 @@ export function TodayTaskCard({
                 ) : null}
               </>
             ) : null}
-          </div>
+          </div> : null}
         </div>
       </button>
       {variant === "formal" && announceAutoStart ? (

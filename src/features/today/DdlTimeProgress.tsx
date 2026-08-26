@@ -49,12 +49,12 @@ export function DdlTimeProgress({
     };
   }, [deadlineAtMs, showRemaining]);
 
-  if (deadlineAtMs == null || progress == null) {
+  if (deadlineAtMs == null) {
     return null;
   }
 
-  const fillPercent = ddlProgressFillPercent(progress.progressRatio);
-  const remainingText = progress.isOverdue
+  const isOverdue = progress?.isOverdue ?? deadlineAtMs <= nowMs;
+  const remainingText = isOverdue
     ? formatOverdueDuration(deadlineAtMs, nowMs)
     : formatRemainingUntilDeadline(deadlineAtMs, nowMs);
 
@@ -68,6 +68,12 @@ export function DdlTimeProgress({
       </span>
     );
   }
+
+  if (progress == null) {
+    return null;
+  }
+
+  const fillPercent = ddlProgressFillPercent(progress.progressRatio);
 
   return (
     <div

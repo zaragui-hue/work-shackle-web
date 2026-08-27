@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 
 import { copy } from "../config/copy";
 import { CreateTaskDrawer } from "../features/tasks/CreateTaskDrawer";
@@ -34,6 +35,7 @@ import {
   type TaskStatus,
   type TodayTasks,
 } from "../services/tauri/tasks";
+import { REMINDER_TASK_CHANGED_EVENT } from "../services/tauri/reminder";
 import { Button, Card, EmptyState } from "../shared/ui";
 import "./TodayPage.css";
 
@@ -162,6 +164,28 @@ export function TodayPage() {
 
   useEffect(() => {
     void loadTodayTasks();
+  }, [loadTodayTasks]);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    void listen(REMINDER_TASK_CHANGED_EVENT, () => {
+      if (!disposed) {
+        void loadTodayTasks();
+      }
+    }).then((cleanup) => {
+      if (disposed) {
+        cleanup();
+      } else {
+        unlisten = cleanup;
+      }
+    });
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
   }, [loadTodayTasks]);
 
   useEffect(() => {

@@ -7,8 +7,15 @@ import {
 
 import {
   REMINDER_OPEN_TASK_EVENT,
+  REMINDER_TASK_CHANGED_EVENT,
   type ReminderOpenTaskPayload,
 } from "../../services/tauri/reminder";
+import {
+  completeTask,
+  getTaskById,
+  postponeTask,
+  updateTask,
+} from "../../services/tauri/tasks";
 
 type UseReminderOpenTaskOptions = {
   onOpenTask: (taskId: string) => void;
@@ -48,6 +55,44 @@ export async function openTaskFromReminderWindow(taskId: string): Promise<void> 
   await main.setFocus();
   await emitTo("main", REMINDER_OPEN_TASK_EVENT, { taskId });
   await getCurrentWebviewWindow().hide();
+}
+
+async function hideReminderWindow(): Promise<void> {
+  await getCurrentWebviewWindow().hide();
+}
+
+async function notifyTaskChanged(taskId: string): Promise<void> {
+  await emitTo("main", REMINDER_TASK_CHANGED_EVENT, { taskId });
+}
+
+export async function beginTaskFromReminderWindow(taskId: string): Promise<void> {
+  const task = await getTaskById(taskId);
+  if (task.status !== "in_progress") {
+    await updateTask({ id: taskId, status: "in_progress" });
+  }
+  await notifyTaskChanged(taskId);
+  await openTaskFromReminderWindow(taskId);
+}
+
+export async function postponeTaskFromReminderWindow(
+  taskId: string,
+  newDeadlineAtMs: number,
+): Promise<void> {
+  await postponeTask({
+    taskId,
+    newDeadlineAtMs,
+    reason: "到点爆炸弹窗延期",
+  });
+  await notifyTaskChanged(taskId);
+  await hideReminderWindow();
+}
+
+export async function completeTaskFromReminderWindow(
+  taskId: string,
+): Promise<void> {
+  await completeTask(taskId);
+  await notifyTaskChanged(taskId);
+  await hideReminderWindow();
 }
 
 export function useReminderOpenTaskBridge(onOpenTask: (taskId: string) => void) {

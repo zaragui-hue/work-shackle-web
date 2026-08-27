@@ -1,6 +1,7 @@
 export const REMINDER_WINDOW_LABEL = "ddl-reminder";
 export const REMINDER_WINDOW_SHOW_EVENT = "reminder://window-show";
 export const REMINDER_OPEN_TASK_EVENT = "reminder://open-task";
+export const REMINDER_TASK_CHANGED_EVENT = "reminder://task-changed";
 
 export type CustomReminderTriggeredPayload = {
   kind: "custom";

@@ -283,7 +283,11 @@ export function TodayPage() {
           </StatusCockpit>
         </section>
 
-        <Card title="今日待办 / 不建议补货" headerAccent className="today-page__tasks-card">
+        <Card
+          title="今天这些破事 / 先狠狠干掉"
+          headerAccent
+          className="today-page__tasks-card"
+        >
           {!lunchReminderLoading && lunchReminder && !lunchReminderDismissed ? (
             <LunchReminderBanner
               reminder={lunchReminder}
@@ -294,8 +298,8 @@ export function TodayPage() {
           ) : null}
 
           <div className="today-page__toolbar">
-            <p>活可以插，队不能乱。</p>
-            <Button onClick={() => setCreateOpen(true)}>+ 新任务</Button>
+            <p>⚠ 别让 DDL 先动手</p>
+            <Button onClick={() => setCreateOpen(true)}>＋ 再塞一件</Button>
           </div>
 
           {loading ? (
@@ -341,7 +345,9 @@ export function TodayPage() {
             <EmptyState
               title={copy.today.emptyTitle}
               description={copy.today.emptyDescription}
-              action={<Button onClick={() => setCreateOpen(true)}>+ 新任务</Button>}
+              action={
+                <Button onClick={() => setCreateOpen(true)}>＋ 再塞一件</Button>
+              }
             />
           ) : null}
 

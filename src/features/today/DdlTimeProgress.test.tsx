@@ -64,4 +64,48 @@ describe("DdlTimeProgress", () => {
     expect(screen.queryByRole("progressbar", { name: "时间进度" })).toBeNull();
     expect(document.querySelector("img[data-mascot-state]")).toBeNull();
   });
+
+  it("pins an overdue marker to a full rail", async () => {
+    vi.mocked(computeDdlProgress).mockResolvedValue({
+      progressRatio: 1.4,
+      remainingMs: -3_600_000,
+      isOverdue: true,
+      emotion: "overdue",
+    });
+
+    render(
+      <DdlTimeProgress
+        plannedAtMs={Date.now() - 2 * 60 * 60 * 1_000}
+        deadlineAtMs={Date.now() - 60 * 60 * 1_000}
+        presentation="track-marker"
+        forceFull
+      />,
+    );
+
+    const progressbar = await screen.findByRole("progressbar", {
+      name: "逾期时间轨道",
+    });
+    expect(progressbar.getAttribute("aria-valuenow")).toBe("100");
+    expect(screen.getByTestId("ddl-time-marker").textContent).toMatch(
+      /已经炸了.*已逾期/,
+    );
+  });
+
+  it("keeps the forced overdue rail visible when desktop progress is unavailable", async () => {
+    vi.mocked(computeDdlProgress).mockRejectedValue(new Error("unavailable"));
+
+    render(
+      <DdlTimeProgress
+        plannedAtMs={Date.now() - 2 * 60 * 60 * 1_000}
+        deadlineAtMs={Date.now() - 60 * 60 * 1_000}
+        presentation="track-marker"
+        forceFull
+      />,
+    );
+
+    const progressbar = await screen.findByRole("progressbar", {
+      name: "逾期时间轨道",
+    });
+    expect(progressbar.getAttribute("aria-valuenow")).toBe("100");
+  });
 });

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 
 import type { Task, TaskStatus, TodayTasks } from "../../services/tauri/tasks";
+import { dedupeTodayTaskGroups } from "./todayDisplay";
 import { TodayTaskCard } from "./TodayTaskCard";
 import "./TodayTaskBoard.css";
 
@@ -18,11 +19,18 @@ type TodayTaskBoardProps = {
 type SectionProps = {
   title: string;
   hint?: string;
+  badge?: string;
   tone?: "default" | "upcoming" | "debt";
   children: ReactNode;
 };
 
-function TodaySection({ title, hint, tone = "default", children }: SectionProps) {
+function TodaySection({
+  title,
+  hint,
+  badge,
+  tone = "default",
+  children,
+}: SectionProps) {
   return (
     <section
       className={`today-board__section today-board__section--${tone}`}
@@ -33,6 +41,7 @@ function TodaySection({ title, hint, tone = "default", children }: SectionProps)
           {title}
         </h3>
         {hint ? <p className="today-board__section-hint">{hint}</p> : null}
+        {badge ? <span className="today-board__section-badge">{badge}</span> : null}
       </header>
       {children}
     </section>
@@ -133,7 +142,11 @@ export function TodayTaskBoard({
   onPriorityChange,
   priorityBusyTaskIds = [],
 }: TodayTaskBoardProps) {
-  const { formalTasks, overdueTasks, completedTodayTasks } = tasks;
+  const { completedTodayTasks } = tasks;
+  const { formalTasks, overdueTasks } = dedupeTodayTaskGroups(
+    tasks.formalTasks,
+    tasks.overdueTasks,
+  );
   const announcedTaskIdSet = new Set(announcedTaskIds);
 
   return (
@@ -159,7 +172,11 @@ export function TodayTaskBoard({
       ) : null}
 
       {overdueTasks.length > 0 ? (
-        <TodaySection title="历史欠账" tone="debt" hint="以前遗留下来的">
+        <TodaySection
+          title="昨日烂尾现场"
+          tone="debt"
+          badge={`${overdueTasks.length} 笔旧账`}
+        >
           <TodayTaskList
             tasks={overdueTasks}
             variant="overdue"

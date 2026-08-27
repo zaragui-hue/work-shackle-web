@@ -14,6 +14,7 @@ import {
   formatOverdueDuration,
   formatRemainingUntilDeadline,
   isDeadlineOverdueToday,
+  overdueTreatmentPrompt,
 } from "./todayDisplay";
 import { DdlTimeProgress } from "./DdlTimeProgress";
 import { FormalTaskTiming } from "./FormalTaskTiming";
@@ -200,17 +201,24 @@ export function TodayTaskCard({
           ) : null}
 
           {variant === "overdue" ? (
-            <div className="today-task-card__compact-meta">
+            <>
+              <div className="today-task-card__compact-meta">
+                {task.deadlineAtMs != null ? (
+                  <>
+                    <span>{formatOverdueDuration(task.deadlineAtMs)}</span>
+                    <span>原 DDL {formatDeadlineShort(task.deadlineAtMs)}</span>
+                  </>
+                ) : null}
+                {task.contactSnapshot?.trim() ? (
+                  <span>{formatContact(task)}</span>
+                ) : null}
+              </div>
               {task.deadlineAtMs != null ? (
-                <>
-                  <span>{formatOverdueDuration(task.deadlineAtMs)}</span>
-                  <span>DDL {formatDeadlineShort(task.deadlineAtMs)}</span>
-                </>
+                <p className="today-task-card__overdue-prompt">
+                  {overdueTreatmentPrompt(task.deadlineAtMs)}
+                </p>
               ) : null}
-              {task.contactSnapshot?.trim() ? (
-                <span>{formatContact(task)}</span>
-              ) : null}
-            </div>
+            </>
           ) : null}
 
           {variant === "formal" ? (
@@ -228,12 +236,21 @@ export function TodayTaskCard({
             </div>
           ) : null}
 
-          {variant === "upcoming" || variant === "overdue" ? (
+          {variant === "upcoming" ? (
             <DdlTimeProgress
               plannedAtMs={task.plannedAtMs}
               deadlineAtMs={task.deadlineAtMs}
               showRemaining={false}
               showMeta={false}
+            />
+          ) : null}
+
+          {variant === "overdue" ? (
+            <DdlTimeProgress
+              plannedAtMs={task.plannedAtMs}
+              deadlineAtMs={task.deadlineAtMs}
+              presentation="track-marker"
+              forceFull
             />
           ) : null}
         </button>

@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 import type { Task } from "../../services/tauri/tasks";
 import { formatContact, formatDeadlineShort } from "../tasks/taskDisplay";
 import type { TaskPressure } from "./taskPressure";
@@ -32,14 +34,6 @@ export function FormalTaskTiming({ task, pressure }: FormalTaskTimingProps) {
             时间 {pressure.percentLabel} · {ddlEmotionLabel(pressure.emotion)}
           </span>
         ) : null}
-        {remainingText ? (
-          <span
-            className="ddl-time-progress__remaining-inline"
-            data-testid="ddl-remaining-inline"
-          >
-            {remainingText}
-          </span>
-        ) : null}
         <span className="today-task-card__formal-meta-item">
           计划 {formatPlannedTime(task.plannedAtMs)}
         </span>
@@ -55,14 +49,36 @@ export function FormalTaskTiming({ task, pressure }: FormalTaskTimingProps) {
 
       {pressure.valid ? (
         <div
-          className={`today-task-card__formal-progress today-task-card__formal-progress--${pressure.emotion}`}
-          role="progressbar"
-          aria-label={`${task.title}的时间进度`}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(pressure.fillPercent)}
+          className="ddl-time-progress__marker-shell today-task-card__formal-rail"
+          style={
+            {
+              "--ddl-progress": `${pressure.fillPercent}%`,
+            } as CSSProperties
+          }
         >
-          <span style={{ width: `${pressure.fillPercent}%` }} />
+          {remainingText ? (
+            <span
+              className={`ddl-time-progress__marker ddl-time-progress__marker--${pressure.emotion}`}
+              data-testid="formal-time-marker"
+            >
+              <small>
+                {deadlineAtMs != null && deadlineAtMs <= pressure.nowMs
+                  ? "已经炸了"
+                  : "距离爆炸"}
+              </small>
+              <strong>{remainingText}</strong>
+            </span>
+          ) : null}
+          <div
+            className={`today-task-card__formal-progress today-task-card__formal-progress--${pressure.emotion}`}
+            role="progressbar"
+            aria-label={`${task.title}的时间进度`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(pressure.fillPercent)}
+          >
+            <span style={{ width: `${pressure.fillPercent}%` }} />
+          </div>
         </div>
       ) : null}
     </div>

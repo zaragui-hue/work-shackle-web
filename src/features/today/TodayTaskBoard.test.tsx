@@ -87,6 +87,31 @@ describe("TodayTaskBoard", () => {
     expect(screen.getByRole("list", { name: "formal" })).toBeTruthy();
   });
 
+  it("moves a duplicate cross-day task into the overdue list only", () => {
+    const debt = task("debt-only", "跨日烂尾");
+    const tasks: TodayTasks = {
+      formalTasks: [task("today", "今天新活"), debt],
+      upcomingDeadlineTasks: [],
+      overdueTasks: [debt],
+      completedTodayTasks: [],
+      autoStartedTaskIds: [],
+    };
+
+    render(<TodayTaskBoard tasks={tasks} />);
+
+    expect(screen.getAllByText("跨日烂尾")).toHaveLength(1);
+    expect(
+      within(screen.getByRole("list", { name: "overdue" })).getByText(
+        "跨日烂尾",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "昨日烂尾现场" }),
+    ).toBeTruthy();
+    expect(screen.getByText("1 笔旧账")).toBeTruthy();
+    expect(screen.queryByText("以前遗留下来的")).toBeNull();
+  });
+
   it("changes main status from the card without opening the drawer", () => {
     const started = task("managed", "卡片内管理", "in_progress");
     const tasks: TodayTasks = {
@@ -280,8 +305,11 @@ describe("TodayTaskBoard", () => {
     render(<TodayTaskBoard tasks={tasks} />);
 
     const meta = screen.getByTestId("formal-task-meta");
-    expect(meta.textContent).toMatch(/(还剩|已逾期).*计划.*DDL.*产品经理/);
-    expect(within(meta).getByTestId("ddl-remaining-inline")).toBeTruthy();
+    expect(meta.textContent).toMatch(/时间.*计划.*DDL.*产品经理/);
+    expect(within(meta).queryByTestId("ddl-remaining-inline")).toBeNull();
+    expect(screen.getByTestId("formal-time-marker").textContent).toMatch(
+      /(距离爆炸|已经炸了).*(还剩|已逾期)/,
+    );
     expect(
       screen.getByRole("progressbar", { name: "压缩卡片的时间进度" }),
     ).toBeTruthy();
@@ -305,8 +333,15 @@ describe("TodayTaskBoard", () => {
 
     expect(screen.getByText("严重超时")).toBeTruthy();
     expect(screen.getByLabelText("逾期状态：严重超时")).toBeTruthy();
+    const progressbar = await screen.findByRole("progressbar", {
+      name: "逾期时间轨道",
+    });
+    expect(progressbar.getAttribute("aria-valuenow")).toBe("100");
+    expect(screen.getByTestId("ddl-time-marker").textContent).toMatch(
+      /已经炸了.*已逾期/,
+    );
     expect(
-      await screen.findByRole("progressbar", { name: "时间进度" }),
+      screen.getByText("它已经在工位上扎根了。建议优先处理，今天别再养它。"),
     ).toBeTruthy();
     expect(screen.getAllByText(/已逾期/).length).toBeGreaterThan(0);
   });

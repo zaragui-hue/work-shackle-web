@@ -18,6 +18,84 @@
   min-width: 0;
 }
 
+.ddl-time-progress__marker-shell {
+  position: relative;
+  min-width: 0;
+  padding-top: 27px;
+}
+
+.ddl-time-progress__marker {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: clamp(54px, var(--ddl-progress), calc(100% - 54px));
+  min-height: 22px;
+  padding: 4px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1.5px solid var(--color-anchor);
+  background: var(--color-anchor);
+  color: var(--color-paper-raised);
+  box-shadow: 2px 2px 0 var(--color-stage);
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.ddl-time-progress__marker::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  border: 3px solid transparent;
+  border-top-color: var(--color-anchor);
+  transform: translateX(-50%);
+}
+
+.ddl-time-progress__marker small {
+  color: color-mix(in srgb, var(--color-danger) 78%, white);
+  font-size: 0.48rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+}
+
+.ddl-time-progress__marker strong {
+  font-size: 0.68rem;
+  font-weight: 1000;
+}
+
+.ddl-time-progress--force-full .ddl-time-progress__marker {
+  right: 0;
+  left: auto;
+  background: var(--color-danger);
+  box-shadow: 2px 2px 0 var(--color-anchor);
+  transform: none;
+}
+
+.ddl-time-progress--force-full .ddl-time-progress__marker::after {
+  right: 8px;
+  left: auto;
+  border-top-color: var(--color-danger);
+  transform: none;
+}
+
+.ddl-time-progress--force-full .ddl-time-progress__marker small {
+  color: white;
+}
+
+.ddl-time-progress--force-full .ddl-time-progress__track {
+  border: 1px solid var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 16%, transparent);
+}
+
+.ddl-time-progress--force-full .ddl-time-progress__fill {
+  width: 100%;
+  background: var(--color-danger);
+}
+
 .ddl-time-progress__meta {
   display: flex;
   flex-wrap: wrap;
@@ -79,4 +157,21 @@
 .ddl-time-progress--anxious .ddl-time-progress__emotion,
 .ddl-time-progress--panic .ddl-time-progress__emotion {
   color: #b86a3a;
+}
+
+@media (max-width: 520px) {
+  .ddl-time-progress__marker {
+    left: clamp(38px, var(--ddl-progress), calc(100% - 38px));
+  }
+
+  .ddl-time-progress__marker small {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ddl-time-progress__fill,
+  .ddl-time-progress__marker {
+    transition: none;
+  }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 import {
   mascotAnimationForDdlEmotion,
@@ -22,7 +22,8 @@ type DdlTimeProgressProps = {
   deadlineAtMs?: number;
   showRemaining?: boolean;
   showMeta?: boolean;
-  presentation?: "full" | "remaining-only";
+  presentation?: "full" | "remaining-only" | "track-marker";
+  forceFull?: boolean;
 };
 
 export function DdlTimeProgress({
@@ -31,6 +32,7 @@ export function DdlTimeProgress({
   showRemaining = true,
   showMeta = true,
   presentation = "full",
+  forceFull = false,
 }: DdlTimeProgressProps) {
   const progress = useDdlProgress(plannedAtMs, deadlineAtMs);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -68,6 +70,53 @@ export function DdlTimeProgress({
       >
         {remainingText}
       </span>
+    );
+  }
+
+  if (presentation === "track-marker") {
+    if (progress == null && !forceFull) {
+      return null;
+    }
+
+    const emotion = progress?.emotion ?? "overdue";
+    const fillPercent = progress
+      ? ddlProgressFillPercent(progress.progressRatio)
+      : 100;
+    const railPercent = forceFull ? 100 : fillPercent;
+    return (
+      <div
+        className={`ddl-time-progress ddl-time-progress--${emotion} ddl-time-progress--track-marker${forceFull ? " ddl-time-progress--force-full" : ""}`}
+      >
+        <div
+          className="ddl-time-progress__marker-shell"
+          style={
+            {
+              "--ddl-progress": `${railPercent}%`,
+            } as CSSProperties
+          }
+        >
+          <span
+            className="ddl-time-progress__marker"
+            data-testid="ddl-time-marker"
+          >
+            <small>{isOverdue ? "已经炸了" : "距离爆炸"}</small>
+            <strong>{remainingText}</strong>
+          </span>
+          <div
+            className="ddl-time-progress__track"
+            role="progressbar"
+            aria-label={isOverdue ? "逾期时间轨道" : "时间进度"}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(railPercent)}
+          >
+            <div
+              className="ddl-time-progress__fill"
+              style={{ width: `${railPercent}%` }}
+            />
+          </div>
+        </div>
+      </div>
     );
   }
 

@@ -12,6 +12,8 @@
 
 .today-board__section-head {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
   gap: 4px;
 }
 
@@ -29,13 +31,31 @@
 }
 
 .today-board__section--debt .today-board__section-title {
-  color: var(--color-ink-muted);
+  color: var(--color-ink);
 }
 
 .today-board__section-hint {
+  grid-column: 1 / -1;
   margin: 0;
   font-size: var(--font-size-meta);
   color: var(--color-ink-muted);
+}
+
+.today-board__section-badge {
+  padding: 4px 6px;
+  border: 1.5px solid var(--color-anchor);
+  background: var(--color-danger);
+  color: var(--color-paper-raised);
+  font-family: var(--font-data);
+  font-size: 0.58rem;
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.today-board__section--debt .today-board__section-head {
+  padding-bottom: 6px;
+  border-bottom: 3px solid var(--color-anchor);
 }
 
 .today-board__list {

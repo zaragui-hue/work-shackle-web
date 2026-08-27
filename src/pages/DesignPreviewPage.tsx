@@ -66,10 +66,14 @@ export function DesignPreviewPage() {
             </div>
           </section>
 
-          <Card title="今日待办 / 不建议补货" headerAccent className="today-page__tasks-card">
+          <Card
+            title="今天这些破事 / 先狠狠干掉"
+            headerAccent
+            className="today-page__tasks-card"
+          >
             <div className="today-page__toolbar">
-              <p>活可以插，队不能乱。</p>
-              <Button onClick={() => setCreateOpen(true)}>+ 新任务</Button>
+              <p>⚠ 别让 DDL 先动手</p>
+              <Button onClick={() => setCreateOpen(true)}>＋ 再塞一件</Button>
             </div>
             <TodayTaskBoard
               tasks={tasks}

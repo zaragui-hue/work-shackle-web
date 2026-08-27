@@ -5,8 +5,8 @@ import {
   ddlEmotionLabel,
   ddlProgressFillPercent,
   formatTimeElapsedCopy,
-  overdueChaosLabel,
-  overdueChaosLevel,
+  overdueRailLevel,
+  overdueRailStatus,
   taskStatusStampCopy,
 } from "./ddlProgressDisplay";
 
@@ -67,20 +67,29 @@ describe("taskStatusStampCopy", () => {
   });
 });
 
-describe("overdueChaosLevel", () => {
+describe("overdueRailStatus", () => {
   const hour = 60 * 60 * 1_000;
   const now = new Date(2026, 7, 26, 12).getTime();
 
   it("changes tiers exactly at 24 and 72 hours overdue", () => {
-    expect(overdueChaosLevel(now - 23 * hour, now)).toBe("slightly");
-    expect(overdueChaosLevel(now - 24 * hour, now)).toBe("serious");
-    expect(overdueChaosLevel(now - 71 * hour, now)).toBe("serious");
-    expect(overdueChaosLevel(now - 72 * hour, now)).toBe("gave_up");
+    expect(overdueRailLevel(now - 23 * hour, now)).toBe("slightly");
+    expect(overdueRailLevel(now - 24 * hour, now)).toBe("serious");
+    expect(overdueRailLevel(now - 71 * hour, now)).toBe("serious");
+    expect(overdueRailLevel(now - 72 * hour, now)).toBe("gave_up");
   });
 
-  it("provides the approved stamp labels", () => {
-    expect(overdueChaosLabel("slightly")).toBe("有点超时");
-    expect(overdueChaosLabel("serious")).toBe("严重超时");
-    expect(overdueChaosLabel("gave_up")).toBe("放弃挣扎");
+  it("merges severity and elapsed duration into the approved rail copy", () => {
+    expect(overdueRailStatus(now - 12 * hour, now)).toEqual({
+      level: "slightly",
+      label: "尸体还热，赶紧抢救",
+      value: "超时 12 小时",
+      ariaLabel: "尸体还热，赶紧抢救 · 超时 12 小时",
+    });
+    expect(overdueRailStatus(now - 48 * hour, now).ariaLabel).toBe(
+      "已经烂透，优先处理 · 超时 2 天",
+    );
+    expect(overdueRailStatus(now - 96 * hour, now).ariaLabel).toBe(
+      "永久工位，爱咋咋地 · 超时 4 天",
+    );
   });
 });

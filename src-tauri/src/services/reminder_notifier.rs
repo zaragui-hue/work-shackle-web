@@ -258,6 +258,7 @@ mod tests {
             vec![
                 "one_hour_remaining".to_string(),
                 "quarter_remaining".to_string(),
+                "ddl_due".to_string(),
             ]
         );
     }

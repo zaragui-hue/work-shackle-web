@@ -350,28 +350,6 @@
   box-shadow: 2px 2px 0 var(--color-danger);
 }
 
-.today-task-card__chaos-stamp {
-  display: inline-flex;
-  align-items: center;
-  min-height: 20px;
-  padding: 3px 5px;
-  border: 1.5px solid var(--color-anchor);
-  border-radius: 2px;
-  background: var(--color-reaction);
-  color: var(--color-ink);
-  font-size: 0.55rem;
-  font-weight: 1000;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.today-task-card__chaos-stamp--serious,
-.today-task-card__chaos-stamp--gave_up {
-  border-color: var(--color-danger);
-  background: var(--color-danger);
-  color: var(--color-paper-raised);
-}
-
 .today-task-card__broadcast {
   grid-column: 2;
   min-width: 0;
@@ -410,10 +388,6 @@
   .today-task-card__status-control select {
     min-width: 68px;
     padding-left: 5px;
-  }
-
-  .today-task-card__chaos-stamp {
-    display: none;
   }
 
   .today-task-card__title {

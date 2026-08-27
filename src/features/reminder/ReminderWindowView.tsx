@@ -12,6 +12,7 @@ import {
   reminderRemainingLabel,
 } from "./reminderWindowCopy";
 import { openTaskFromReminderWindow } from "./reminderWindowActions";
+import { DeadlineExplosionView } from "./DeadlineExplosionView";
 import "./ReminderWindowView.css";
 
 type ReminderWindowViewProps = {
@@ -28,6 +29,9 @@ const STAGE_DISPLAY: Record<string, { metric: string; stamp: string }> = {
 
 export function ReminderWindowView({ payload, onDismiss }: ReminderWindowViewProps) {
   const { primary, additionalCount } = payload;
+  if (primary.kind === "system" && primary.reminderKind === "ddl_due") {
+    return <DeadlineExplosionView payload={payload} />;
+  }
   const emotion = reminderEmotion(primary);
   const extraLabel = additionalTasksLabel(additionalCount);
   const reminderKind =

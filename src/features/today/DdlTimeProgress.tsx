@@ -13,6 +13,7 @@ import {
   ddlEmotionLabel,
   ddlProgressFillPercent,
   formatTimeElapsedCopy,
+  overdueRailStatus,
 } from "./ddlProgressDisplay";
 import { useDdlProgress } from "./useDdlProgress";
 import "./DdlTimeProgress.css";
@@ -24,6 +25,9 @@ type DdlTimeProgressProps = {
   showMeta?: boolean;
   presentation?: "full" | "remaining-only" | "track-marker";
   forceFull?: boolean;
+  markerLabel?: string;
+  markerValue?: string;
+  markerAriaLabel?: string;
 };
 
 export function DdlTimeProgress({
@@ -33,6 +37,9 @@ export function DdlTimeProgress({
   showMeta = true,
   presentation = "full",
   forceFull = false,
+  markerLabel,
+  markerValue,
+  markerAriaLabel,
 }: DdlTimeProgressProps) {
   const progress = useDdlProgress(plannedAtMs, deadlineAtMs);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -83,6 +90,17 @@ export function DdlTimeProgress({
       ? ddlProgressFillPercent(progress.progressRatio)
       : 100;
     const railPercent = forceFull ? 100 : fillPercent;
+    const overdueStatus = isOverdue
+      ? overdueRailStatus(deadlineAtMs, nowMs)
+      : null;
+    const resolvedMarkerLabel =
+      markerLabel ?? overdueStatus?.label ?? "距离爆炸";
+    const resolvedMarkerValue =
+      markerValue ?? overdueStatus?.value ?? remainingText;
+    const resolvedMarkerAriaLabel =
+      markerAriaLabel ??
+      overdueStatus?.ariaLabel ??
+      `${resolvedMarkerLabel} · ${resolvedMarkerValue}`;
     return (
       <div
         className={`ddl-time-progress ddl-time-progress--${emotion} ddl-time-progress--track-marker${forceFull ? " ddl-time-progress--force-full" : ""}`}
@@ -98,9 +116,10 @@ export function DdlTimeProgress({
           <span
             className="ddl-time-progress__marker"
             data-testid="ddl-time-marker"
+            aria-label={resolvedMarkerAriaLabel}
           >
-            <small>{isOverdue ? "已经炸了" : "距离爆炸"}</small>
-            <strong>{remainingText}</strong>
+            <small aria-hidden="true">{resolvedMarkerLabel}</small>
+            <strong aria-hidden="true">{resolvedMarkerValue}</strong>
           </span>
           <div
             className="ddl-time-progress__track"

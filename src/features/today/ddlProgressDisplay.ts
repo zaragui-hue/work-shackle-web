@@ -1,8 +1,17 @@
 import { copy } from "../../config/copy";
+import { formatDistanceStrict } from "date-fns";
+import { zhCN } from "date-fns/locale";
 import type { DdlEmotion } from "../../services/tauri/ddl";
 import type { TaskStatus } from "../../services/tauri/tasks";
 
-export type OverdueChaosLevel = "slightly" | "serious" | "gave_up";
+export type OverdueRailLevel = "slightly" | "serious" | "gave_up";
+
+export type OverdueRailStatus = {
+  level: OverdueRailLevel;
+  label: string;
+  value: string;
+  ariaLabel: string;
+};
 
 const HOUR_MS = 60 * 60 * 1_000;
 
@@ -15,10 +24,10 @@ const STATUS_STAMP_COPY: Record<TaskStatus, string> = {
   cancelled: "🗑️ 活消失了",
 };
 
-const OVERDUE_CHAOS_LABELS: Record<OverdueChaosLevel, string> = {
-  slightly: "有点超时",
-  serious: "严重超时",
-  gave_up: "放弃挣扎",
+const OVERDUE_RAIL_LABELS: Record<OverdueRailLevel, string> = {
+  slightly: "尸体还热，赶紧抢救",
+  serious: "已经烂透，优先处理",
+  gave_up: "永久工位，爱咋咋地",
 };
 
 export function canShowDdlProgress(
@@ -54,16 +63,23 @@ export function taskStatusStampCopy(status: TaskStatus): string {
   return STATUS_STAMP_COPY[status];
 }
 
-export function overdueChaosLevel(
+export function overdueRailLevel(
   deadlineAtMs: number,
   nowMs = Date.now(),
-): OverdueChaosLevel {
+): OverdueRailLevel {
   const overdueMs = Math.max(0, nowMs - deadlineAtMs);
   if (overdueMs >= 72 * HOUR_MS) return "gave_up";
   if (overdueMs >= 24 * HOUR_MS) return "serious";
   return "slightly";
 }
 
-export function overdueChaosLabel(level: OverdueChaosLevel): string {
-  return OVERDUE_CHAOS_LABELS[level];
+export function overdueRailStatus(
+  deadlineAtMs: number,
+  nowMs = Date.now(),
+): OverdueRailStatus {
+  const level = overdueRailLevel(deadlineAtMs, nowMs);
+  const label = OVERDUE_RAIL_LABELS[level];
+  const duration = formatDistanceStrict(nowMs, deadlineAtMs, { locale: zhCN });
+  const value = `超时 ${duration}`;
+  return { level, label, value, ariaLabel: `${label} · ${value}` };
 }

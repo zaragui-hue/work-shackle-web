@@ -87,7 +87,10 @@ describe("DdlTimeProgress", () => {
     });
     expect(progressbar.getAttribute("aria-valuenow")).toBe("100");
     expect(screen.getByTestId("ddl-time-marker").textContent).toMatch(
-      /已经炸了.*已逾期/,
+      /尸体还热，赶紧抢救.*超时/,
+    );
+    expect(screen.getByTestId("ddl-time-marker").getAttribute("aria-label")).toMatch(
+      /尸体还热，赶紧抢救 · 超时/,
     );
   });
 

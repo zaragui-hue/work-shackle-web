@@ -316,7 +316,7 @@ describe("TodayTaskBoard", () => {
     expect(screen.getByText("😵 有点急")).toBeTruthy();
   });
 
-  it("shows a time-based chaos stamp while retaining overdue progress", async () => {
+  it("merges overdue severity into the full progress rail", async () => {
     const debt = {
       ...task("debt", "积灰的需求", "paused"),
       deadlineAtMs: Date.now() - 36 * 60 * 60 * 1_000,
@@ -331,18 +331,18 @@ describe("TodayTaskBoard", () => {
 
     render(<TodayTaskBoard tasks={tasks} />);
 
-    expect(screen.getByText("严重超时")).toBeTruthy();
-    expect(screen.getByLabelText("逾期状态：严重超时")).toBeTruthy();
+    expect(screen.queryByText("严重超时")).toBeNull();
+    expect(screen.queryByLabelText("逾期状态：严重超时")).toBeNull();
     const progressbar = await screen.findByRole("progressbar", {
       name: "逾期时间轨道",
     });
     expect(progressbar.getAttribute("aria-valuenow")).toBe("100");
     expect(screen.getByTestId("ddl-time-marker").textContent).toMatch(
-      /已经炸了.*已逾期/,
+      /已经烂透，优先处理.*超时/,
     );
     expect(
       screen.getByText("它已经在工位上扎根了。建议优先处理，今天别再养它。"),
     ).toBeTruthy();
-    expect(screen.getAllByText(/已逾期/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/已逾期/)).toBeNull();
   });
 });

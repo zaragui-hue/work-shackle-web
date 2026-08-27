@@ -6,6 +6,9 @@ import { ReminderWindowView } from "./ReminderWindowView";
 
 vi.mock("./reminderWindowActions", () => ({
   openTaskFromReminderWindow: vi.fn(),
+  beginTaskFromReminderWindow: vi.fn(),
+  postponeTaskFromReminderWindow: vi.fn(),
+  completeTaskFromReminderWindow: vi.fn(),
 }));
 
 afterEach(cleanup);
@@ -113,5 +116,18 @@ describe("ReminderWindowView mascot", () => {
     expect(screen.getByRole("button", { name: "我知道了，别催" })).toBeTruthy();
     expect(container.querySelector(".ws-mascot-frame--md")).toBeTruthy();
     expect(container.querySelector(".ws-mascot-frame--lg")).toBeNull();
+  });
+
+  it("routes ddl due payloads to the explosion dialog", () => {
+    render(
+      <ReminderWindowView payload={systemPayload("ddl_due")} onDismiss={() => {}} />,
+    );
+
+    expect(screen.getByRole("dialog", { name: "提交方案" })).toBeTruthy();
+    expect(screen.getByLabelText("到点爆炸")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "现在处理" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "延期" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "结束任务" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "我知道了，别催" })).toBeNull();
   });
 });

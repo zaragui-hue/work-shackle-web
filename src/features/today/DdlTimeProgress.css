@@ -21,23 +21,23 @@
 .ddl-time-progress__marker-shell {
   position: relative;
   min-width: 0;
-  padding-top: 27px;
+  padding-top: 37px;
 }
 
 .ddl-time-progress__marker {
   position: absolute;
   z-index: 1;
   top: 0;
-  left: clamp(54px, var(--ddl-progress), calc(100% - 54px));
-  min-height: 22px;
-  padding: 4px 6px;
+  left: clamp(78px, var(--ddl-progress), calc(100% - 78px));
+  min-height: 31px;
+  padding: 5px 8px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   border: 1.5px solid var(--color-anchor);
   background: var(--color-anchor);
   color: var(--color-paper-raised);
-  box-shadow: 2px 2px 0 var(--color-stage);
+  box-shadow: 3px 3px 0 var(--color-stage);
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -56,20 +56,22 @@
 }
 
 .ddl-time-progress__marker small {
-  color: color-mix(in srgb, var(--color-danger) 78%, white);
-  font-size: 0.48rem;
+  color: var(--color-reaction);
+  font-size: 0.65rem;
   font-weight: 950;
   letter-spacing: 0.04em;
 }
 
 .ddl-time-progress__marker strong {
-  font-size: 0.68rem;
+  font-size: 0.86rem;
   font-weight: 1000;
 }
 
 .ddl-time-progress--force-full .ddl-time-progress__marker {
   right: 0;
   left: auto;
+  min-width: 220px;
+  justify-content: center;
   background: var(--color-danger);
   box-shadow: 2px 2px 0 var(--color-anchor);
   transform: none;
@@ -161,11 +163,19 @@
 
 @media (max-width: 520px) {
   .ddl-time-progress__marker {
-    left: clamp(38px, var(--ddl-progress), calc(100% - 38px));
+    left: clamp(68px, var(--ddl-progress), calc(100% - 68px));
   }
 
   .ddl-time-progress__marker small {
-    display: none;
+    font-size: 0.58rem;
+  }
+
+  .ddl-time-progress__marker strong {
+    font-size: 0.78rem;
+  }
+
+  .ddl-time-progress--force-full .ddl-time-progress__marker {
+    min-width: 196px;
   }
 }
 

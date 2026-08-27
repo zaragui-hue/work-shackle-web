@@ -360,8 +360,7 @@ mod tests {
     fn deadline_due_fires_when_crossed_during_active_session() {
         let db = open_test_database();
         let cutoff = 10_000;
-        let task =
-            create_task_with_deadline(&db.connection, "到点任务", 1_000, 20_000, vec![]);
+        let task = create_task_with_deadline(&db.connection, "到点任务", 1_000, 20_000, vec![]);
 
         let result = ReminderEngineService::tick(&db.connection, 20_000, cutoff).expect("tick");
 

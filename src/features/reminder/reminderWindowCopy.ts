@@ -34,6 +34,8 @@ export function reminderHeadline(payload: ReminderTriggeredPayload): string {
       return SYSTEM_HEADLINES.quarter_remaining;
     case "one_hour_remaining":
       return SYSTEM_HEADLINES.one_hour_remaining;
+    case "ddl_due":
+      return SYSTEM_HEADLINES.ddl_due;
     default:
       return SYSTEM_HEADLINES.fallback;
   }
@@ -51,6 +53,8 @@ export function reminderRemainingLabel(payload: ReminderTriggeredPayload): strin
       return SYSTEM_REMAINING.quarter_remaining;
     case "one_hour_remaining":
       return SYSTEM_REMAINING.one_hour_remaining;
+    case "ddl_due":
+      return SYSTEM_REMAINING.ddl_due;
     default:
       return SYSTEM_REMAINING.fallback;
   }
@@ -68,6 +72,8 @@ export function reminderKindLabel(payload: ReminderTriggeredPayload): string {
       return SYSTEM_KINDS.quarter_remaining;
     case "one_hour_remaining":
       return SYSTEM_KINDS.one_hour_remaining;
+    case "ddl_due":
+      return SYSTEM_KINDS.ddl_due;
     default:
       return SYSTEM_KINDS.fallback;
   }

@@ -14,13 +14,34 @@ import {
 import { AppShell } from "./shared/shell/AppShell";
 import { StartupPanel } from "./pages/StartupPanel";
 import { DesignPreviewPage } from "./pages/DesignPreviewPage";
+import { DeadlineExplosionView } from "./features/reminder/DeadlineExplosionView";
 
 function App() {
-  if (
-    import.meta.env.DEV &&
-    new URLSearchParams(window.location.search).get("preview") === "today"
-  ) {
-    return <DesignPreviewPage />;
+  if (import.meta.env.DEV) {
+    const preview = new URLSearchParams(window.location.search).get("preview");
+    if (preview === "today") {
+      return <DesignPreviewPage />;
+    }
+    if (preview === "deadline-explosion") {
+      const deadlineAtMs = new Date();
+      deadlineAtMs.setHours(18, 0, 0, 0);
+      return (
+        <DeadlineExplosionView
+          payload={{
+            primary: {
+              kind: "system",
+              taskId: "preview-task",
+              taskTitle: "参加需求反复横跳研讨会",
+              reminderKind: "ddl_due",
+              deadlineSnapshotMs: deadlineAtMs.getTime(),
+              triggerAtMs: deadlineAtMs.getTime(),
+              firedAtMs: Date.now(),
+            },
+            additionalCount: 2,
+          }}
+        />
+      );
+    }
   }
 
   return <WorkShackleApp />;

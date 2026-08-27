@@ -107,10 +107,18 @@ mod tests {
         let nodes = SystemReminderService::compute_nodes(0, deadline_at_ms).expect("nodes");
 
         assert_eq!(nodes.len(), 4);
-        assert!(nodes.iter().any(|node| node.kind == SystemReminderKind::ProgressHalf));
-        assert!(nodes.iter().any(|node| node.kind == SystemReminderKind::QuarterRemaining));
-        assert!(nodes.iter().any(|node| node.kind == SystemReminderKind::OneHourRemaining));
-        assert!(nodes.iter().any(|node| node.kind == SystemReminderKind::DdlDue));
+        assert!(nodes
+            .iter()
+            .any(|node| node.kind == SystemReminderKind::ProgressHalf));
+        assert!(nodes
+            .iter()
+            .any(|node| node.kind == SystemReminderKind::QuarterRemaining));
+        assert!(nodes
+            .iter()
+            .any(|node| node.kind == SystemReminderKind::OneHourRemaining));
+        assert!(nodes
+            .iter()
+            .any(|node| node.kind == SystemReminderKind::DdlDue));
     }
 
     #[test]
@@ -298,8 +306,8 @@ mod tests {
     fn nodes_outside_the_task_range_are_skipped() {
         let planned_at_ms = 17_700_000;
         let deadline_at_ms = 18_000_000;
-        let nodes = SystemReminderService::compute_nodes(planned_at_ms, deadline_at_ms)
-            .expect("nodes");
+        let nodes =
+            SystemReminderService::compute_nodes(planned_at_ms, deadline_at_ms).expect("nodes");
 
         assert!(nodes.iter().all(|node| {
             node.trigger_at_ms > planned_at_ms && node.trigger_at_ms <= deadline_at_ms

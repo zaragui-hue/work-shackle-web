@@ -11,14 +11,12 @@ import {
 import { TASK_STATUS_OPTIONS } from "../tasks/taskStatusActions";
 import {
   formatCompletedTime,
-  formatOverdueDuration,
   formatRemainingUntilDeadline,
   isDeadlineOverdueToday,
   overdueTreatmentPrompt,
 } from "./todayDisplay";
 import { DdlTimeProgress } from "./DdlTimeProgress";
 import { FormalTaskTiming } from "./FormalTaskTiming";
-import { overdueChaosLabel, overdueChaosLevel } from "./ddlProgressDisplay";
 import { TaskAutoStartBroadcast } from "./TaskAutoStartBroadcast";
 import { TaskPriorityMenu } from "./TaskPriorityMenu";
 import { useTaskPressure } from "./useTaskPressure";
@@ -42,27 +40,6 @@ type TodayTaskCardProps = {
   onPriorityChange?: (task: Task, priority: number) => void | Promise<void>;
   priorityBusy?: boolean;
 };
-
-function OverdueChaosStamp({ deadlineAtMs }: { deadlineAtMs: number }) {
-  const [nowMs, setNowMs] = useState(() => Date.now());
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => setNowMs(Date.now()), 1_000);
-    return () => window.clearInterval(intervalId);
-  }, []);
-
-  const level = overdueChaosLevel(deadlineAtMs, nowMs);
-  const label = overdueChaosLabel(level);
-
-  return (
-    <span
-      className={`today-task-card__chaos-stamp today-task-card__chaos-stamp--${level}`}
-      aria-label={`逾期状态：${label}`}
-    >
-      {label}
-    </span>
-  );
-}
 
 export function TodayTaskCard({
   task,
@@ -129,10 +106,6 @@ export function TodayTaskCard({
           </button>
 
           <div className="today-task-card__actions">
-            {variant === "overdue" && task.deadlineAtMs != null ? (
-              <OverdueChaosStamp deadlineAtMs={task.deadlineAtMs} />
-            ) : null}
-
             <TaskPriorityMenu
               taskTitle={task.title}
               value={displayPriority}
@@ -205,7 +178,6 @@ export function TodayTaskCard({
               <div className="today-task-card__compact-meta">
                 {task.deadlineAtMs != null ? (
                   <>
-                    <span>{formatOverdueDuration(task.deadlineAtMs)}</span>
                     <span>原 DDL {formatDeadlineShort(task.deadlineAtMs)}</span>
                   </>
                 ) : null}

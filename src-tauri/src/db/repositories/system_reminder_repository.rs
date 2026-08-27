@@ -120,7 +120,10 @@ pub fn compute_nodes(
 
     let duration_ms = deadline_at_ms - planned_at_ms;
     let mut candidates = vec![
-        (SystemReminderKind::ProgressHalf, planned_at_ms + duration_ms / 2),
+        (
+            SystemReminderKind::ProgressHalf,
+            planned_at_ms + duration_ms / 2,
+        ),
         (
             SystemReminderKind::QuarterRemaining,
             planned_at_ms + duration_ms * 3 / 4,
@@ -206,10 +209,7 @@ impl SystemReminderRepository {
         connection: &Connection,
         input: MarkSystemReminderFiredInput,
     ) -> Result<SystemReminderLogEntry, SystemReminderRepositoryError> {
-        if input.deadline_snapshot_ms <= 0
-            || input.scheduled_at_ms <= 0
-            || input.fired_at_ms <= 0
-        {
+        if input.deadline_snapshot_ms <= 0 || input.scheduled_at_ms <= 0 || input.fired_at_ms <= 0 {
             return Err(SystemReminderRepositoryError::InvalidInput {
                 message: "system reminder timestamps must be positive".to_string(),
             });

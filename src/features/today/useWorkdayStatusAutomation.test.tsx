@@ -74,7 +74,7 @@ function renderHarness() {
 }
 
 describe("useWorkdayStatusAutomation", () => {
-  it("switches a due reminder once and reports success", async () => {
+  it("switches a due reminder once without a success notice", async () => {
     vi.mocked(switchWorkStatus).mockResolvedValue({
       ...working,
       recordId: "r2",
@@ -84,8 +84,8 @@ describe("useWorkdayStatusAutomation", () => {
     });
     renderHarness();
 
-    expect(await screen.findByText("已自动切换：💻 会议中")).toBeTruthy();
-    expect(switchWorkStatus).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(switchWorkStatus).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/已自动切换/)).toBeNull();
   });
 
   it("stops after failure and allows a manual retry", async () => {
@@ -104,6 +104,10 @@ describe("useWorkdayStatusAutomation", () => {
     fireEvent.click(screen.getByRole("button", { name: "重试" }));
 
     await waitFor(() => expect(switchWorkStatus).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText("已自动切换：💻 会议中")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.queryByText("状态没切过去，工位拒绝配合")).toBeNull();
+    });
+    expect(screen.queryByText(/已自动切换/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "重试" })).toBeNull();
   });
 });

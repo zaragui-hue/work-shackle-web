@@ -23,13 +23,9 @@ export function useWorkdayStatusAutomation(manager: WorkdayReminderManager) {
   ) => {
     setSwitching(true);
     try {
-      const next = await switchStatus(reminder.suggestedStatus);
+      await switchStatus(reminder.suggestedStatus);
       setFailedReminder(null);
-      setNotice({
-        tone: "success",
-        title: `已自动切换：${next.emoji} ${next.name}`,
-        message: reminder.message,
-      });
+      setNotice(null);
     } catch {
       setFailedReminder(reminder);
       setNotice({

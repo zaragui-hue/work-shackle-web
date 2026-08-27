@@ -26,6 +26,14 @@ export function formatHmsCountdown(remainingMs: number): string {
   return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}`;
 }
 
+export function workCountdownHeadline(progress: number): string {
+  if (progress >= 90) return "再撑一下，门禁快拦不住你了";
+  if (progress >= 75) return "下班开始有轮廓了";
+  if (progress >= 50) return "已经熬过一半，别在这时散架";
+  if (progress >= 25) return "工位坐稳，释放正在路上";
+  return "离下班还早，先把今天骗过去";
+}
+
 export function computeWorkCountdown(
   schedule: WorkCountdownInput,
   nowMs: number,
@@ -51,9 +59,10 @@ export function computeWorkCountdown(
   }
 
   const remainingMs = endAt.getTime() - now;
+  const progress = ((now - startAt.getTime()) / (endAt.getTime() - startAt.getTime())) * 100;
   return {
     phase: "working",
-    primaryText: "距离下班还有",
+    primaryText: workCountdownHeadline(progress),
     countdownText: formatHmsCountdown(remainingMs),
   };
 }

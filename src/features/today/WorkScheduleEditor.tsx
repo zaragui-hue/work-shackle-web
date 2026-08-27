@@ -16,6 +16,18 @@ import {
 } from "./workdayReminders";
 import "./WorkScheduleEditor.css";
 
+const HOURS = Array.from({ length: 24 }, (_, value) =>
+  String(value).padStart(2, "0"),
+);
+const MINUTES = Array.from({ length: 60 }, (_, value) =>
+  String(value).padStart(2, "0"),
+);
+
+function splitClock(value: string) {
+  const [hour = "", minute = ""] = value.split(":");
+  return { hour, minute };
+}
+
 type WorkScheduleEditorProps = {
   schedule: WorkSchedule;
   onSaved: (next: WorkSchedule) => void;
@@ -30,6 +42,7 @@ export function WorkScheduleEditor({
   const [endTime, setEndTime] = useState(schedule.effectiveEnd);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const selectedEndTime = splitClock(endTime);
 
   useEffect(() => {
     setEndTime(schedule.effectiveEnd);
@@ -77,14 +90,37 @@ export function WorkScheduleEditor({
         WORKDAY TOOLS / <span>{schedule.hasTodayOverride ? "今日临时" : "默认排班"}</span>
       </p>
       <h2 className="work-schedule-editor__title">工位控制台</h2>
-      <input
-        className="work-schedule-editor__time"
-        type="time"
+      <div
+        className="work-schedule-editor__time-controls"
+        role="group"
         aria-label="下班时间"
-        value={endTime}
-        disabled={saving}
-        onChange={(event) => void persist(event.target.value)}
-      />
+      >
+        <select
+          aria-label="下班小时"
+          value={selectedEndTime.hour}
+          disabled={saving}
+          onChange={(event) => {
+            void persist(`${event.target.value}:${selectedEndTime.minute}`);
+          }}
+        >
+          {HOURS.map((hour) => (
+            <option value={hour} key={hour}>{hour}</option>
+          ))}
+        </select>
+        <span aria-hidden="true">:</span>
+        <select
+          aria-label="下班分钟"
+          value={selectedEndTime.minute}
+          disabled={saving}
+          onChange={(event) => {
+            void persist(`${selectedEndTime.hour}:${event.target.value}`);
+          }}
+        >
+          {MINUTES.map((minute) => (
+            <option value={minute} key={minute}>{minute}</option>
+          ))}
+        </select>
+      </div>
       {error ? (
         <p className="work-schedule-editor__error" role="alert">
           {error}

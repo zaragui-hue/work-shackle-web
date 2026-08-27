@@ -38,6 +38,16 @@
   box-shadow: none;
 }
 
+.ws-input:disabled {
+  border-color: #aaa79f;
+  color: #77746d;
+  background-color: #e7e5df;
+  background-image: none;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
 .ws-input--textarea {
   min-height: 96px;
   resize: vertical;

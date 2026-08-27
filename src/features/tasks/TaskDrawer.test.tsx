@@ -97,6 +97,7 @@ describe("TaskDrawer", () => {
     expect(screen.getByLabelText("完成时间 分钟").tagName).toBe("SELECT");
     expect((screen.getByLabelText("开始时间 日期") as HTMLInputElement).disabled).toBe(true);
     expect((screen.getByLabelText("完成时间 分钟") as HTMLSelectElement).disabled).toBe(true);
+    expect(document.querySelector(".task-core-fields__time-range--disabled")).toBeTruthy();
     expect(screen.queryByRole("progressbar", { name: "时间进度" })).toBeNull();
     expect(screen.queryByLabelText("主状态")).toBeNull();
     expect(screen.queryByText("任务管理")).toBeNull();
@@ -292,6 +293,7 @@ describe("TaskDrawer", () => {
     ]) {
       expect((screen.getByLabelText(label) as HTMLInputElement).disabled).toBe(true);
     }
+    expect(document.querySelector(".task-core-fields__time-range--disabled")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "申请延期" })).toBeNull();
   });
 });

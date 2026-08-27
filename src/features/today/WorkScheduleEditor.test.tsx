@@ -47,16 +47,18 @@ describe("WorkScheduleEditor", () => {
 
     expect(screen.queryByLabelText("上班")).toBeNull();
     expect(screen.queryByRole("button", { name: "保存" })).toBeNull();
-    const timeInput = screen.getByLabelText("下班时间") as HTMLInputElement;
-    expect(timeInput.type).toBe("time");
-    expect(screen.queryByLabelText("下班小时")).toBeNull();
-    expect(screen.queryByLabelText("下班分钟")).toBeNull();
-    fireEvent.change(timeInput, { target: { value: "19:00" } });
+    const hour = screen.getByLabelText("下班小时") as HTMLSelectElement;
+    const minute = screen.getByLabelText("下班分钟") as HTMLSelectElement;
+    expect(hour.value).toBe("18");
+    expect(minute.value).toBe("30");
+    expect(hour.options).toHaveLength(24);
+    expect(minute.options).toHaveLength(60);
+    fireEvent.change(hour, { target: { value: "19" } });
 
     await waitFor(() => {
       expect(saveDefaultWorkTimes).toHaveBeenCalledWith({
         startTime: "09:30",
-        endTime: "19:00",
+        endTime: "19:30",
       });
     });
     expect(saveTodayWorkOverride).not.toHaveBeenCalled();
@@ -85,7 +87,7 @@ describe("WorkScheduleEditor", () => {
     );
 
     expect(screen.getByText("今日临时")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("下班时间"), { target: { value: "21:00" } });
+    fireEvent.change(screen.getByLabelText("下班小时"), { target: { value: "21" } });
 
     await waitFor(() => {
       expect(saveTodayWorkOverride).toHaveBeenCalledWith({
@@ -101,11 +103,13 @@ describe("WorkScheduleEditor", () => {
 
     render(<WorkScheduleEditor schedule={defaultSchedule} onSaved={vi.fn()} />);
 
-    const timeInput = screen.getByLabelText("下班时间") as HTMLInputElement;
-    fireEvent.change(timeInput, { target: { value: "19:00" } });
+    const hour = screen.getByLabelText("下班小时") as HTMLSelectElement;
+    const minute = screen.getByLabelText("下班分钟") as HTMLSelectElement;
+    fireEvent.change(hour, { target: { value: "19" } });
 
     await waitFor(() => {
-      expect(timeInput.value).toBe("18:30");
+      expect(hour.value).toBe("18");
+      expect(minute.value).toBe("30");
     });
     expect(screen.getByRole("alert")).toBeTruthy();
   });

@@ -30,43 +30,60 @@
   letter-spacing: -0.065em;
 }
 
-.work-schedule-editor__time {
-  display: block;
+.work-schedule-editor__time-controls {
   min-width: 0;
   max-width: 100%;
-  min-height: 58px;
-  width: fit-content;
+  width: min(100%, 300px);
   margin: 2px 0 6px;
-  padding: 2px 9px 4px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 6px;
   color: var(--color-anchor);
   background: var(--color-signal);
   border: 2px solid var(--color-anchor);
   border-radius: 3px;
+  box-shadow: 5px 5px 0 var(--color-danger);
+}
+
+.work-schedule-editor__time-controls select {
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: var(--color-anchor);
+  background: transparent;
   font-family: var(--font-data);
-  font-size: var(--font-size-work-time);
+  font-size: clamp(3.2rem, 6vw, 4rem);
   font-weight: 900;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.08em;
+  letter-spacing: -0.09em;
+  text-align: center;
   line-height: 0.95;
-  box-shadow: 5px 5px 0 var(--color-danger);
-  transform: none;
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
 }
 
-.work-schedule-editor__time::-webkit-calendar-picker-indicator {
-  margin-left: 8px;
-  opacity: 0.72;
-  cursor: pointer;
+.work-schedule-editor__time-controls > span {
+  padding-bottom: 5px;
+  font-family: var(--font-data);
+  font-size: clamp(2.8rem, 5vw, 3.5rem);
+  font-weight: 900;
+  line-height: 1;
 }
 
-.work-schedule-editor__time:focus-visible {
+.work-schedule-editor__time-controls:focus-within {
   outline: 4px solid #fff;
   outline-offset: 4px;
 }
 
-.work-schedule-editor__time:disabled {
+.work-schedule-editor__time-controls select:focus-visible {
+  outline: 0;
+}
+
+.work-schedule-editor__time-controls select:disabled {
   cursor: wait;
   opacity: 0.76;
 }

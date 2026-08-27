@@ -141,6 +141,56 @@ describe("TodayTaskBoard", () => {
     expect(screen.queryByText("任务管理")).toBeNull();
   });
 
+  it("opens postponement from the status selector without changing main status", () => {
+    const started = task("postpone", "需要延期", "in_progress");
+    const tasks: TodayTasks = {
+      formalTasks: [started],
+      upcomingDeadlineTasks: [],
+      overdueTasks: [],
+      completedTodayTasks: [],
+      autoStartedTaskIds: [],
+    };
+    const onPostpone = vi.fn();
+    const onStatusChange = vi.fn();
+
+    render(
+      <TodayTaskBoard
+        tasks={tasks}
+        onPostpone={onPostpone}
+        onStatusChange={onStatusChange}
+      />,
+    );
+
+    const status = screen.getByLabelText("需要延期 主状态") as HTMLSelectElement;
+    expect(Array.from(status.options).map((option) => option.textContent))
+      .toContain("申请延期");
+    fireEvent.change(status, { target: { value: "__postpone__" } });
+
+    expect(onPostpone).toHaveBeenCalledWith(started);
+    expect(onStatusChange).not.toHaveBeenCalled();
+    expect(status.value).toBe("in_progress");
+  });
+
+  it("does not offer postponement when the task has no completion time", () => {
+    const withoutDeadline = {
+      ...task("no-deadline", "没有完成时间", "in_progress"),
+      deadlineAtMs: undefined,
+    };
+    const tasks: TodayTasks = {
+      formalTasks: [withoutDeadline],
+      upcomingDeadlineTasks: [],
+      overdueTasks: [],
+      completedTodayTasks: [],
+      autoStartedTaskIds: [],
+    };
+
+    render(<TodayTaskBoard tasks={tasks} onPostpone={vi.fn()} />);
+
+    const status = screen.getByLabelText("没有完成时间 主状态") as HTMLSelectElement;
+    expect(Array.from(status.options).map((option) => option.textContent))
+      .not.toContain("申请延期");
+  });
+
   it("shows a trimmed note and omits an empty note row", () => {
     const withNote = {
       ...task("note", "有备注"),

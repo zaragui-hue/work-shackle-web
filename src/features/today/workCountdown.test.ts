@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { computeWorkCountdown } from "./workCountdown";
+import { computeWorkCountdown, workCountdownHeadline } from "./workCountdown";
 
 const defaultSchedule = {
   workDate: "2026-08-14",
@@ -25,8 +25,18 @@ describe("computeWorkCountdown", () => {
     const result = computeWorkCountdown(defaultSchedule, localMs(12, 0, 0));
 
     expect(result.phase).toBe("working");
-    expect(result.primaryText).toBe("距离下班还有");
+    expect(result.primaryText).toBe("工位坐稳，释放正在路上");
     expect(result.countdownText).toBe("06:00:00");
+  });
+
+  it("changes the working headline at stable progress boundaries", () => {
+    expect(workCountdownHeadline(0)).toBe("离下班还早，先把今天骗过去");
+    expect(workCountdownHeadline(24.99)).toBe("离下班还早，先把今天骗过去");
+    expect(workCountdownHeadline(25)).toBe("工位坐稳，释放正在路上");
+    expect(workCountdownHeadline(50)).toBe("已经熬过一半，别在这时散架");
+    expect(workCountdownHeadline(75)).toBe("下班开始有轮廓了");
+    expect(workCountdownHeadline(90)).toBe("再撑一下，门禁快拦不住你了");
+    expect(workCountdownHeadline(100)).toBe("再撑一下，门禁快拦不住你了");
   });
 
   it("shows one second remaining before end", () => {

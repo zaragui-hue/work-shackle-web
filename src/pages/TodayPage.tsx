@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 
 import { copy } from "../config/copy";
 import { CreateTaskDrawer } from "../features/tasks/CreateTaskDrawer";
+import { PostponeTaskModal } from "../features/tasks/PostponeTaskModal";
 import { TaskDrawer } from "../features/tasks/TaskDrawer";
 import { changeTaskStatus } from "../features/tasks/taskStatusActions";
 import { LunchReminderBanner } from "../features/today/LunchReminderBanner";
@@ -51,6 +52,7 @@ export function TodayPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [postponingTask, setPostponingTask] = useState<Task | null>(null);
   const [todayTasks, setTodayTasks] = useState<TodayTasks>(EMPTY_TODAY);
   const [announcedTaskIds, setAnnouncedTaskIds] = useState<string[]>([]);
   const hasLoadedTasks = useRef(false);
@@ -307,11 +309,13 @@ export function TodayPage() {
           </StatusCockpit>
         </section>
 
-        <Card
-          title="今天这些破事 / 先狠狠干掉"
-          headerAccent
-          className="today-page__tasks-card"
-        >
+        <Card className="today-page__tasks-card">
+          <header className="today-page__tasks-heading today-board__section-head">
+            <h2 className="today-board__section-title">
+              今天这些破事 / 先狠狠干掉
+            </h2>
+            <span className="today-board__section-badge">今日清单</span>
+          </header>
           {!lunchReminderLoading && lunchReminder && !lunchReminderDismissed ? (
             <LunchReminderBanner
               reminder={lunchReminder}
@@ -355,6 +359,7 @@ export function TodayPage() {
               announcedTaskIds={announcedTaskIds}
               onBroadcastDismissed={dismissTaskBroadcast}
               onStatusChange={handleTaskStatusChange}
+              onPostpone={setPostponingTask}
               statusBusyTaskId={statusBusyTaskId}
               onPriorityChange={handleTaskPriorityChange}
               priorityBusyTaskIds={priorityBusyTaskIds}
@@ -401,6 +406,15 @@ export function TodayPage() {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onChanged={() => void loadTodayTasks()}
+      />
+
+      <PostponeTaskModal
+        open={postponingTask !== null}
+        taskId={postponingTask?.id ?? null}
+        currentDeadlineAtMs={postponingTask?.deadlineAtMs}
+        plannedAtMs={postponingTask?.plannedAtMs}
+        onClose={() => setPostponingTask(null)}
+        onPostponed={() => void loadTodayTasks()}
       />
     </>
   );

@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useForm } from "react-hook-form";
 
 import {
@@ -16,7 +16,7 @@ import {
   toCreateTaskInput,
 } from "./createTaskForm";
 import { TaskCoreFields } from "./TaskCoreFields";
-import { currentMinuteValue } from "./taskDateTime";
+import { addMinutesToDateTime, currentMinuteValue } from "./taskDateTime";
 import "./CreateTaskDrawer.css";
 
 type CreateTaskDrawerProps = {
@@ -27,11 +27,14 @@ type CreateTaskDrawerProps = {
 
 export function CreateTaskDrawer({ open, onClose, onCreated }: CreateTaskDrawerProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const startAtEditedRef = useRef(false);
   const {
     register,
     control,
+    getValues,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateTaskFormValues>({
     resolver: zodResolver(createTaskFormSchema),
@@ -42,11 +45,12 @@ export function CreateTaskDrawer({ open, onClose, onCreated }: CreateTaskDrawerP
     if (!open) {
       return;
     }
+    startAtEditedRef.current = false;
     reset(createDefaultFormValues());
     setSubmitError(null);
   }, [open, reset]);
 
-  const onSubmit = handleSubmit(async (values) => {
+  const submitValidated = handleSubmit(async (values) => {
     setSubmitError(null);
     try {
       const task = await createTask(toCreateTaskInput(values));
@@ -56,6 +60,27 @@ export function CreateTaskDrawer({ open, onClose, onCreated }: CreateTaskDrawerP
       setSubmitError(mapTaskError(error as TaskAppError));
     }
   });
+
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!startAtEditedRef.current) {
+      const values = getValues();
+      const minimum = currentMinuteValue();
+      if (values.startAt < minimum) {
+        setValue("startAt", minimum, {
+          shouldDirty: false,
+          shouldTouch: false,
+        });
+        if (values.endAt <= minimum) {
+          setValue("endAt", addMinutesToDateTime(minimum, 1), {
+            shouldDirty: false,
+            shouldTouch: false,
+          });
+        }
+      }
+    }
+    void submitValidated();
+  };
 
   return (
     <Drawer
@@ -79,6 +104,9 @@ export function CreateTaskDrawer({ open, onClose, onCreated }: CreateTaskDrawerP
           control={control}
           errors={errors}
           minStartAt={currentMinuteValue()}
+          onStartAtChange={() => {
+            startAtEditedRef.current = true;
+          }}
           autoFocusTitle
         />
 

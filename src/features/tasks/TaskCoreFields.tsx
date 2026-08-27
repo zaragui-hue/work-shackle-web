@@ -23,6 +23,7 @@ type TaskCoreFieldsProps<T extends FieldValues & CreateTaskFormValues> = {
   autoFocusTitle?: boolean;
   onFieldBlur?: () => void;
   onSelectChange?: () => void;
+  onStartAtChange?: () => void;
 };
 
 const path = <T extends FieldValues>(name: keyof CreateTaskFormValues) => name as Path<T>;
@@ -45,6 +46,7 @@ export function TaskCoreFields<T extends FieldValues & CreateTaskFormValues>({
   autoFocusTitle = false,
   onFieldBlur,
   onSelectChange,
+  onStartAtChange,
 }: TaskCoreFieldsProps<T>) {
   const startAt = String(useWatch({ control, name: path<T>("startAt") }) ?? "");
   const timeFieldsDisabled = disabled || timeDisabled;
@@ -69,7 +71,12 @@ export function TaskCoreFields<T extends FieldValues & CreateTaskFormValues>({
         {...register(path<T>("note"), { onBlur: onFieldBlur })}
       />
 
-      <section className="task-core-fields__time-range" aria-labelledby="task-core-time-range">
+      <section
+        className={`task-core-fields__time-range${
+          timeFieldsDisabled ? " task-core-fields__time-range--disabled" : ""
+        }`}
+        aria-labelledby="task-core-time-range"
+      >
         <h3 id="task-core-time-range">任务时间段</h3>
         {timeDisabled && !disabled ? (
           <p className="task-core-fields__time-lock">任务已开始，完成时间请通过申请延期调整。</p>
@@ -84,7 +91,10 @@ export function TaskCoreFields<T extends FieldValues & CreateTaskFormValues>({
               min={minStartAt}
               disabled={timeFieldsDisabled}
               error={errorMessage(errors, "startAt")}
-              onChange={field.onChange}
+              onChange={(value) => {
+                onStartAtChange?.();
+                field.onChange(value);
+              }}
               onBlur={() => {
                 field.onBlur();
                 onFieldBlur?.();

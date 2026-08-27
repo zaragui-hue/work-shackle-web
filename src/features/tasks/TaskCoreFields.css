@@ -21,6 +21,27 @@
   background: var(--color-signal);
 }
 
+.task-core-fields__time-range--disabled {
+  border-color: #aaa79f;
+  color: #68655f;
+  background: #e7e5df;
+  box-shadow: 4px 4px 0 #c4c1ba;
+}
+
+.task-core-fields__time-range--disabled h3 {
+  border-color: #8c8982;
+  color: #68655f;
+  background: #d1cec7;
+}
+
+.task-core-fields__time-range--disabled .ws-field__label,
+.task-core-fields__time-range--disabled .task-datetime-field__part > span,
+.task-core-fields__time-range--disabled .task-datetime-field__part-label,
+.task-core-fields__time-range--disabled .task-datetime-field__time-selectors label > span {
+  color: #77746d;
+  opacity: 1;
+}
+
 .task-core-fields__time-lock {
   margin: 0;
   padding: 7px 9px;

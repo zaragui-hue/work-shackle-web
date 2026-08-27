@@ -23,6 +23,8 @@ import { useTaskPressure } from "./useTaskPressure";
 import "../tasks/priorityTone.css";
 import "./TodayTaskCard.css";
 
+const POSTPONE_ACTION = "__postpone__";
+
 export type TodayTaskCardVariant =
   | "upcoming"
   | "formal"
@@ -36,6 +38,7 @@ type TodayTaskCardProps = {
   announceAutoStart?: boolean;
   onBroadcastDismissed?: (taskId: string) => void;
   onStatusChange?: (task: Task, status: TaskStatus) => void | Promise<void>;
+  onPostpone?: (task: Task) => void;
   statusBusy?: boolean;
   onPriorityChange?: (task: Task, priority: number) => void | Promise<void>;
   priorityBusy?: boolean;
@@ -48,6 +51,7 @@ export function TodayTaskCard({
   announceAutoStart = false,
   onBroadcastDismissed,
   onStatusChange,
+  onPostpone,
   statusBusy = false,
   onPriorityChange,
   priorityBusy = false,
@@ -128,6 +132,11 @@ export function TodayTaskCard({
                   value={task.status}
                   disabled={statusBusy}
                   onChange={(event) => {
+                    if (event.target.value === POSTPONE_ACTION) {
+                      event.currentTarget.value = task.status;
+                      onPostpone?.(task);
+                      return;
+                    }
                     void onStatusChange?.(task, event.target.value as TaskStatus);
                   }}
                 >
@@ -136,6 +145,9 @@ export function TodayTaskCard({
                       {option.label}
                     </option>
                   ))}
+                  {task.deadlineAtMs != null && onPostpone ? (
+                    <option value={POSTPONE_ACTION}>申请延期</option>
+                  ) : null}
                 </select>
               </label>
             )}

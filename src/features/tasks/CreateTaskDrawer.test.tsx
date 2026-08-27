@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createTask } from "../../services/tauri/tasks";
@@ -12,6 +12,7 @@ vi.mock("../../services/tauri/tasks", () => ({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 describe("CreateTaskDrawer", () => {
@@ -79,5 +80,102 @@ describe("CreateTaskDrawer", () => {
     await waitFor(() => expect(createTask).toHaveBeenCalledTimes(1));
     expect(onCreated).toHaveBeenCalledWith(created);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("calibrates an untouched default start time when submission crosses a minute", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 27, 18, 17, 0));
+    vi.mocked(createTask).mockResolvedValue({
+      id: "task-calibrated",
+      title: "跨分钟任务",
+      plannedAtMs: new Date(2026, 7, 27, 18, 18).getTime(),
+      deadlineAtMs: new Date(2026, 7, 28, 18, 0).getTime(),
+      priority: 2,
+      status: "not_started",
+      createdAtMs: Date.now(),
+      updatedAtMs: Date.now(),
+    });
+    render(<CreateTaskDrawer open onClose={vi.fn()} />);
+
+    vi.setSystemTime(new Date(2026, 7, 27, 18, 18, 0));
+    fireEvent.change(screen.getByLabelText("任务名称"), {
+      target: { value: "跨分钟任务" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "创建任务" }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(createTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plannedAtMs: new Date(2026, 7, 27, 18, 18).getTime(),
+      }),
+    );
+  });
+
+  it("does not overwrite a start time the user changed", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 27, 18, 17, 0));
+    vi.mocked(createTask).mockResolvedValue({
+      id: "task-edited",
+      title: "主动改时间",
+      plannedAtMs: new Date(2026, 7, 27, 18, 30).getTime(),
+      deadlineAtMs: new Date(2026, 7, 28, 18, 0).getTime(),
+      priority: 2,
+      status: "not_started",
+      createdAtMs: Date.now(),
+      updatedAtMs: Date.now(),
+    });
+    render(<CreateTaskDrawer open onClose={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("开始时间 分钟"), {
+      target: { value: "30" },
+    });
+    vi.setSystemTime(new Date(2026, 7, 27, 18, 18, 0));
+    fireEvent.change(screen.getByLabelText("任务名称"), {
+      target: { value: "主动改时间" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "创建任务" }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(createTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plannedAtMs: new Date(2026, 7, 27, 18, 30).getTime(),
+      }),
+    );
+  });
+
+  it("moves completion one minute forward when calibration overtakes it", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 27, 17, 59, 0));
+    vi.mocked(createTask).mockResolvedValue({
+      id: "task-range",
+      title: "校准时间段",
+      plannedAtMs: new Date(2026, 7, 27, 18, 1).getTime(),
+      deadlineAtMs: new Date(2026, 7, 27, 18, 2).getTime(),
+      priority: 2,
+      status: "not_started",
+      createdAtMs: Date.now(),
+      updatedAtMs: Date.now(),
+    });
+    render(<CreateTaskDrawer open onClose={vi.fn()} />);
+
+    vi.setSystemTime(new Date(2026, 7, 27, 18, 1, 0));
+    fireEvent.change(screen.getByLabelText("任务名称"), {
+      target: { value: "校准时间段" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "创建任务" }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(createTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plannedAtMs: new Date(2026, 7, 27, 18, 1).getTime(),
+        deadlineAtMs: new Date(2026, 7, 27, 18, 2).getTime(),
+      }),
+    );
   });
 });

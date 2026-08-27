@@ -11,6 +11,7 @@ type TodayTaskBoardProps = {
   announcedTaskIds?: string[];
   onBroadcastDismissed?: (taskId: string) => void;
   onStatusChange?: (task: Task, status: TaskStatus) => void | Promise<void>;
+  onPostpone?: (task: Task) => void;
   statusBusyTaskId?: string | null;
   onPriorityChange?: (task: Task, priority: number) => void | Promise<void>;
   priorityBusyTaskIds?: string[];
@@ -56,6 +57,7 @@ function TodayTaskList({
   announcedTaskIds,
   onBroadcastDismissed,
   onStatusChange,
+  onPostpone,
   statusBusyTaskId,
   onPriorityChange,
   priorityBusyTaskIds,
@@ -67,6 +69,7 @@ function TodayTaskList({
   announcedTaskIds: Set<string>;
   onBroadcastDismissed?: (taskId: string) => void;
   onStatusChange?: (task: Task, status: TaskStatus) => void | Promise<void>;
+  onPostpone?: (task: Task) => void;
   statusBusyTaskId?: string | null;
   onPriorityChange?: (task: Task, priority: number) => void | Promise<void>;
   priorityBusyTaskIds?: string[];
@@ -82,6 +85,7 @@ function TodayTaskList({
           announceAutoStart={variant === "formal" && announcedTaskIds.has(task.id)}
           onBroadcastDismissed={onBroadcastDismissed}
           onStatusChange={onStatusChange}
+          onPostpone={onPostpone}
           statusBusy={statusBusyTaskId === task.id}
           onPriorityChange={onPriorityChange}
           priorityBusy={priorityBusyTaskIds?.includes(task.id)}
@@ -138,6 +142,7 @@ export function TodayTaskBoard({
   announcedTaskIds = [],
   onBroadcastDismissed,
   onStatusChange,
+  onPostpone,
   statusBusyTaskId,
   onPriorityChange,
   priorityBusyTaskIds = [],
@@ -164,6 +169,7 @@ export function TodayTaskBoard({
             announcedTaskIds={announcedTaskIdSet}
             onBroadcastDismissed={onBroadcastDismissed}
             onStatusChange={onStatusChange}
+            onPostpone={onPostpone}
             statusBusyTaskId={statusBusyTaskId}
             onPriorityChange={onPriorityChange}
             priorityBusyTaskIds={priorityBusyTaskIds}
@@ -185,6 +191,7 @@ export function TodayTaskBoard({
             announcedTaskIds={announcedTaskIdSet}
             onBroadcastDismissed={onBroadcastDismissed}
             onStatusChange={onStatusChange}
+            onPostpone={onPostpone}
             statusBusyTaskId={statusBusyTaskId}
             onPriorityChange={onPriorityChange}
             priorityBusyTaskIds={priorityBusyTaskIds}

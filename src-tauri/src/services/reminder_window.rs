@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, LogicalSize, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
 
 use super::reminder_engine::ReminderTriggeredPayload;
 
@@ -32,6 +32,10 @@ impl<R: Runtime> TauriReminderWindowPresenter<R> {
 impl<R: Runtime> ReminderWindowPresenter for TauriReminderWindowPresenter<R> {
     fn present(&self, payload: &ReminderWindowShowPayload) -> Result<(), String> {
         let window = ensure_reminder_window(&self.app)?;
+        let (_, height) = reminder_window_size(payload);
+        window
+            .set_size(LogicalSize::new(520.0, height))
+            .map_err(|error| error.to_string())?;
         window
             .emit(REMINDER_WINDOW_SHOW_EVENT, payload)
             .map_err(|error| error.to_string())?;
@@ -49,10 +53,10 @@ impl<R: Runtime> ReminderWindowPresenter for TauriReminderWindowPresenter<R> {
 pub fn reminder_urgency(payload: &ReminderTriggeredPayload) -> u8 {
     match payload {
         ReminderTriggeredPayload::System { reminder_kind, .. } => match reminder_kind.as_str() {
+            "ddl_due" => 110,
             "one_hour_remaining" => 100,
             "quarter_remaining" => 90,
             "progress_half" => 70,
-            "ddl_due" => 100,
             "ddl_10" => 90,
             "ddl_30" => 80,
             "ddl_60" => 60,
@@ -60,6 +64,14 @@ pub fn reminder_urgency(payload: &ReminderTriggeredPayload) -> u8 {
         },
         ReminderTriggeredPayload::Custom { .. } => 75,
     }
+}
+
+pub fn reminder_window_size(payload: &ReminderWindowShowPayload) -> (f64, f64) {
+    let is_deadline_due = matches!(
+        &payload.primary,
+        ReminderTriggeredPayload::System { reminder_kind, .. } if reminder_kind == "ddl_due"
+    );
+    (520.0, if is_deadline_due { 560.0 } else { 520.0 })
 }
 
 fn urgency_tie_break_ms(payload: &ReminderTriggeredPayload) -> i64 {
@@ -253,13 +265,20 @@ mod tests {
         ];
         let presentation = build_window_presentation(&triggered);
         assert!(matches!(
-            presentation.primary,
+            &presentation.primary,
             ReminderTriggeredPayload::System {
                 reminder_kind,
                 ..
             } if reminder_kind == "ddl_due"
         ));
         assert_eq!(presentation.additional_count, 2);
+        assert_eq!(reminder_window_size(&presentation), (520.0, 560.0));
+    }
+
+    #[test]
+    fn regular_reminder_keeps_compact_window_size() {
+        let presentation = build_window_presentation(&[custom_payload("a", "A")]);
+        assert_eq!(reminder_window_size(&presentation), (520.0, 520.0));
     }
 
     #[test]
@@ -330,6 +349,7 @@ mod tests {
             vec![
                 "one_hour_remaining".to_string(),
                 "quarter_remaining".to_string(),
+                "ddl_due".to_string(),
             ]
         );
     }

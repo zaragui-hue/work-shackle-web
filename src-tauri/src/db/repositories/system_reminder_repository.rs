@@ -10,13 +10,15 @@ pub enum SystemReminderKind {
     ProgressHalf,
     QuarterRemaining,
     OneHourRemaining,
+    DdlDue,
 }
 
 impl SystemReminderKind {
-    pub const ALL: [Self; 3] = [
+    pub const ALL: [Self; 4] = [
         Self::ProgressHalf,
         Self::QuarterRemaining,
         Self::OneHourRemaining,
+        Self::DdlDue,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -24,6 +26,7 @@ impl SystemReminderKind {
             Self::ProgressHalf => "progress_half",
             Self::QuarterRemaining => "quarter_remaining",
             Self::OneHourRemaining => "one_hour_remaining",
+            Self::DdlDue => "ddl_due",
         }
     }
 
@@ -32,6 +35,7 @@ impl SystemReminderKind {
             Self::ProgressHalf => 1,
             Self::QuarterRemaining => 2,
             Self::OneHourRemaining => 3,
+            Self::DdlDue => 4,
         }
     }
 
@@ -40,6 +44,7 @@ impl SystemReminderKind {
             "progress_half" => Some(Self::ProgressHalf),
             "quarter_remaining" => Some(Self::QuarterRemaining),
             "one_hour_remaining" => Some(Self::OneHourRemaining),
+            "ddl_due" => Some(Self::DdlDue),
             _ => None,
         }
     }
@@ -149,6 +154,11 @@ pub fn compute_nodes(
             nodes.push(node);
         }
     }
+    nodes.push(SystemReminderNode {
+        kind: SystemReminderKind::DdlDue,
+        trigger_at_ms: deadline_at_ms,
+        deadline_snapshot_ms: deadline_at_ms,
+    });
     nodes.sort_by_key(|node| (node.trigger_at_ms, node.kind.urgency()));
     Ok(nodes)
 }
@@ -305,16 +315,27 @@ mod tests {
         let deadline_at_ms = 10_800_000;
         let nodes = compute_nodes(planned_at_ms, deadline_at_ms).expect("compute nodes");
 
-        assert_eq!(nodes.len(), 3);
+        assert_eq!(nodes.len(), 4);
         assert_eq!(nodes[0].kind, SystemReminderKind::ProgressHalf);
         assert_eq!(nodes[0].trigger_at_ms, 5_400_000);
         assert_eq!(nodes[1].kind, SystemReminderKind::OneHourRemaining);
         assert_eq!(nodes[1].trigger_at_ms, 7_200_000);
         assert_eq!(nodes[2].kind, SystemReminderKind::QuarterRemaining);
         assert_eq!(nodes[2].trigger_at_ms, 8_100_000);
+        assert_eq!(nodes[3].kind, SystemReminderKind::DdlDue);
+        assert_eq!(nodes[3].trigger_at_ms, deadline_at_ms);
         assert!(nodes
             .iter()
             .all(|node| node.deadline_snapshot_ms == deadline_at_ms));
+    }
+
+    #[test]
+    fn ddl_due_kind_round_trips() {
+        assert_eq!(SystemReminderKind::DdlDue.as_str(), "ddl_due");
+        assert_eq!(
+            SystemReminderKind::from_str("ddl_due"),
+            Some(SystemReminderKind::DdlDue)
+        );
     }
 
     #[test]
@@ -427,8 +448,10 @@ mod tests {
     fn same_minute_nodes_merge_to_the_most_urgent_kind() {
         let nodes = compute_nodes(1, 120_001).expect("compute nodes");
 
-        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes.len(), 2);
         assert_eq!(nodes[0].kind, SystemReminderKind::QuarterRemaining);
         assert_eq!(nodes[0].trigger_at_ms, 60_000);
+        assert_eq!(nodes[1].kind, SystemReminderKind::DdlDue);
+        assert_eq!(nodes[1].trigger_at_ms, 120_001);
     }
 }

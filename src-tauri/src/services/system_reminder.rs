@@ -106,10 +106,11 @@ mod tests {
         let deadline_at_ms = 10_800_000;
         let nodes = SystemReminderService::compute_nodes(0, deadline_at_ms).expect("nodes");
 
-        assert_eq!(nodes.len(), 3);
+        assert_eq!(nodes.len(), 4);
         assert!(nodes.iter().any(|node| node.kind == SystemReminderKind::ProgressHalf));
         assert!(nodes.iter().any(|node| node.kind == SystemReminderKind::QuarterRemaining));
         assert!(nodes.iter().any(|node| node.kind == SystemReminderKind::OneHourRemaining));
+        assert!(nodes.iter().any(|node| node.kind == SystemReminderKind::DdlDue));
     }
 
     #[test]
@@ -224,7 +225,7 @@ mod tests {
             custom_count(&db.connection, &task.id),
             MAX_USER_REMINDERS as i64
         );
-        assert_eq!(system_log_count(&db.connection), 3);
+        assert_eq!(system_log_count(&db.connection), 4);
     }
 
     #[test]
@@ -300,9 +301,9 @@ mod tests {
         let nodes = SystemReminderService::compute_nodes(planned_at_ms, deadline_at_ms)
             .expect("nodes");
 
-        assert!(nodes
-            .iter()
-            .all(|node| node.trigger_at_ms > planned_at_ms && node.trigger_at_ms < deadline_at_ms));
+        assert!(nodes.iter().all(|node| {
+            node.trigger_at_ms > planned_at_ms && node.trigger_at_ms <= deadline_at_ms
+        }));
         assert_eq!(system_log_count(&open_test_database().connection), 0);
     }
 }

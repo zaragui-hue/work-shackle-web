@@ -115,7 +115,7 @@ impl ReminderEngineService {
             let Some(deadline_snapshot_ms) = task.deadline_at_ms else {
                 continue;
             };
-            if now_ms <= task.planned_at_ms || now_ms >= deadline_snapshot_ms {
+            if now_ms <= task.planned_at_ms {
                 continue;
             }
 
@@ -123,6 +123,14 @@ impl ReminderEngineService {
                 .map_err(map_system_reminder_error)?;
             let mut selected_triggered: Option<(SystemReminderLogEntry, SystemReminderKind)> = None;
             for node in nodes {
+                let is_due_node = node.kind == SystemReminderKind::DdlDue;
+                if now_ms >= deadline_snapshot_ms {
+                    if deadline_snapshot_ms <= cutoff_ms || !is_due_node {
+                        continue;
+                    }
+                } else if is_due_node {
+                    continue;
+                }
                 if node.trigger_at_ms > now_ms {
                     continue;
                 }
@@ -346,6 +354,52 @@ mod tests {
         let result = ReminderEngineService::tick(&db.connection, 10_000, cutoff).expect("tick");
         assert!(result.triggered.is_empty());
         assert_eq!(system_fired_count(&db.connection), 0);
+    }
+
+    #[test]
+    fn deadline_due_fires_when_crossed_during_active_session() {
+        let db = open_test_database();
+        let cutoff = 10_000;
+        let task =
+            create_task_with_deadline(&db.connection, "到点任务", 1_000, 20_000, vec![]);
+
+        let result = ReminderEngineService::tick(&db.connection, 20_000, cutoff).expect("tick");
+
+        assert!(matches!(
+            result.triggered.as_slice(),
+            [ReminderTriggeredPayload::System {
+                task_id,
+                reminder_kind,
+                trigger_at_ms: 20_000,
+                ..
+            }] if task_id == &task.id && reminder_kind == "ddl_due"
+        ));
+        assert_eq!(system_fired_count(&db.connection), 1);
+    }
+
+    #[test]
+    fn startup_does_not_backfill_an_already_missed_deadline() {
+        let db = open_test_database();
+        let cutoff = 20_000;
+        create_task_with_deadline(&db.connection, "历史旧账", 1_000, 20_000, vec![]);
+
+        let result = ReminderEngineService::tick(&db.connection, 21_000, cutoff).expect("tick");
+
+        assert!(result.triggered.is_empty());
+        assert_eq!(system_fired_count(&db.connection), 0);
+    }
+
+    #[test]
+    fn repeated_tick_does_not_refire_deadline_due() {
+        let db = open_test_database();
+        let cutoff = 10_000;
+        create_task_with_deadline(&db.connection, "只炸一次", 1_000, 20_000, vec![]);
+
+        ReminderEngineService::tick(&db.connection, 20_000, cutoff).expect("first tick");
+        let second = ReminderEngineService::tick(&db.connection, 21_000, cutoff).expect("second");
+
+        assert!(second.triggered.is_empty());
+        assert_eq!(system_fired_count(&db.connection), 1);
     }
 
     #[test]

@@ -1,0 +1,20 @@
+.web-startup { min-height: 100vh; display: grid; place-items: center; padding: 32px; }
+.web-startup__card {
+  width: min(640px, 100%);
+  overflow: hidden;
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-shell);
+  background: var(--color-paper-raised);
+  box-shadow: 12px 12px 0 var(--color-ink);
+}
+.web-startup__card--danger { box-shadow: 12px 12px 0 var(--color-danger); }
+.web-startup__brand { display: flex; align-items: center; gap: 10px; padding: 15px 18px; border-bottom: var(--border-ink-strong); background: var(--color-signal); }
+.web-startup__logo { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; color: #fff; background: var(--color-anchor); font-size: .78rem; font-weight: 1000; transform: rotate(-6deg); }
+.web-startup__brand div { display: grid; }
+.web-startup__brand strong { font-size: 1.35rem; font-weight: 1000; letter-spacing: -.05em; }
+.web-startup__brand small { margin-top: 3px; color: var(--color-ink-muted); font-family: var(--font-data); font-size: .53rem; font-weight: 900; letter-spacing: .14em; }
+.web-startup__body { position: relative; padding: 48px; text-align: left; }
+.web-startup__body h1 { max-width: 12em; margin: 20px 0 12px; font-size: clamp(2rem, 5vw, 3.4rem); font-weight: 1000; line-height: .98; letter-spacing: -.06em; }
+.web-startup__body p { max-width: 32em; margin: 0; color: var(--color-ink-muted); line-height: 1.7; }
+.web-startup__stamp { position: absolute; top: 34px; right: 38px; padding: 10px 12px; border: 3px solid var(--color-danger); color: var(--color-danger); font-size: .78rem; font-weight: 1000; line-height: 1.05; text-align: center; transform: rotate(8deg); }
+.web-startup__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }

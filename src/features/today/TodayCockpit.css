@@ -1,0 +1,33 @@
+.status-cockpit { display: grid; grid-template-columns: minmax(0,2.15fr) minmax(285px,1fr); gap: 4px; padding: 4px; border-radius: 8px; background: var(--color-anchor); box-shadow: var(--shadow-stage); overflow: hidden; }
+.status-cockpit__work { min-width: 0; min-height: 293px; display: grid; grid-template-rows: auto 1fr auto auto; gap: 6px; padding: 14px; color: #fff; background: var(--color-stage); }
+.work-countdown__heading-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.work-countdown__kicker { margin: 0 0 4px; display: inline-flex; align-items: center; gap: 7px; color: var(--color-signal); font-family: var(--font-data); font-size: .68rem; font-weight: 900; letter-spacing: .16em; }
+.work-countdown__kicker span { width: 7px; height: 7px; border-radius: 50%; background: var(--color-danger); animation: cockpit-pulse 1.6s ease-out infinite; }
+.status-cockpit__work h2 { max-width: 9em; margin: 0; color: #fff; font-size: clamp(2.5rem,4.8vw,4rem); font-weight: 1000; line-height: .94; letter-spacing: -.065em; text-wrap: balance; }
+.work-countdown__percent { margin-top: 8px; padding: 7px 9px; border: 2px solid var(--color-signal); border-radius: 3px; color: var(--color-signal); background: var(--color-anchor); font-family: var(--font-data); font-size: .9rem; box-shadow: 4px 4px 0 var(--color-danger); transform: rotate(3deg); white-space: nowrap; }
+.work-countdown__clock { align-self: end; display: flex; align-items: flex-end; gap: 12px; font-family: var(--font-data); font-size: clamp(2.2rem,4vw,3.2rem); font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: -.08em; }
+.work-countdown__clock > span { display: inline-flex; align-items: baseline; gap: 4px; }
+.work-countdown__clock .work-countdown__hours { font-size: clamp(5.8rem,9.8vw,8rem); line-height: .72; }
+.work-countdown__clock small { color: #a6a8ac; font-family: inherit; font-size: .65rem; letter-spacing: 0; }
+.work-countdown__track { position: relative; height: 49px; }
+.work-countdown__track::before { content: ""; position: absolute; left: 0; right: 0; bottom: 10px; height: 10px; border: 2px solid var(--color-ink); border-radius: 58% 43% 52% 47%; background: var(--color-anchor); transform: rotate(-.6deg) skewX(-5deg); }
+.work-countdown__track > i { position: absolute; z-index: 1; left: 2px; bottom: 14px; height: 6px; max-width: calc(100% - 4px); border-radius: 999px; background: var(--color-signal); }
+.work-countdown__track > b { position: absolute; z-index: 4; right: -3px; top: 0; padding: 5px 7px; border: 2px solid var(--color-anchor); color: var(--color-anchor); background: var(--color-signal); font-size: .68rem; box-shadow: 1px 2px 0 var(--color-ink); transform: rotate(4deg); }
+.workhorse-runner { position: absolute; z-index: 3; bottom: 1px; width: 86px; height: 72px; filter: drop-shadow(2px 3px 0 rgba(0,0,0,.32)); transition: left 900ms cubic-bezier(.22,1,.36,1); }
+.workhorse-runner > span { display: block; width: 100%; height: 100%; background-repeat: no-repeat; background-size: 600% 100%; animation: web-horse-gallop 720ms steps(5,end) infinite; }
+.status-cockpit__work footer { display: flex; justify-content: space-between; color: #a9abb0; font-family: var(--font-data); font-size: .65rem; font-weight: 800; }
+.status-cockpit__reaction { min-width: 0; min-height: 293px; display: grid; align-content: space-between; gap: 8px; padding: 12px; overflow: hidden; color: var(--color-anchor); background: var(--color-reaction); }
+.status-cockpit__status-row { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--color-anchor); font-family: var(--font-data); font-size: .58rem; font-weight: 900; letter-spacing: .12em; }
+.status-cockpit__status-row select { max-width: 10.5rem; min-height: 33px; padding: 5px 8px; border: 2px solid var(--color-anchor); color: var(--color-anchor); background: #fff; font-size: .68rem; font-weight: 900; }
+.status-cockpit__meme { position: relative; min-height: 210px; display: grid; grid-template-columns: 96px minmax(0,1fr); align-items: end; }
+.status-cockpit__meme img { position: relative; z-index: 2; width: 110px; height: 138px; object-fit: contain; object-position: bottom; margin-left: -8px; margin-bottom: -5px; filter: drop-shadow(3px 4px 0 rgba(52,92,255,.35)); }
+.status-cockpit__meme-mark { position: absolute; right: -18px; top: -52px; color: var(--color-danger); opacity: .5; font-size: clamp(7.5rem,12.75vw,10.3rem); font-weight: 1000; line-height: 1; transform: rotate(-9deg); -webkit-text-stroke: 2px var(--color-anchor); }
+.status-cockpit__speech { position: relative; z-index: 3; align-self: center; margin-left: -4px; padding: 12px; border: 3px solid var(--color-anchor); border-radius: 6px 6px 6px 1px; background: var(--color-signal); box-shadow: 5px 5px 0 var(--color-anchor); transform: rotate(-1deg); }
+.status-cockpit__speech strong { font-size: 1rem; }
+.status-cockpit__speech p { margin: 6px 0 0; font-size: clamp(1rem,1.55vw,1.18rem); font-weight: 900; line-height: 1.25; }
+.decision-card { margin-top: 18px; padding: 22px 26px; border: var(--border-ink-strong); border-radius: 6px; background: #ffe6de; display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+.decision-card h3 { margin: 7px 0 4px; font-size: 1.45rem; }.decision-card p { margin: 0; color: var(--color-ink-muted); }.decision-card > div:last-child { display: flex; gap: 10px; }
+.decision-card--night { color: #fff; background: #20273b; }.decision-card--night p,.decision-card--night .kicker { color: #b8c5ec; }
+@keyframes cockpit-pulse { from { box-shadow: 0 0 0 0 rgba(255,75,46,.5); } to { box-shadow: 0 0 0 8px rgba(255,75,46,0); } }
+@keyframes web-horse-gallop { from { background-position: 0 0; } to { background-position: 100% 0; } }
+@media (max-width: 860px) { .status-cockpit { grid-template-columns: 1fr; } .status-cockpit__work { min-height: 330px; } .status-cockpit__reaction { min-height: 270px; } }

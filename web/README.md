@@ -26,3 +26,9 @@ npm test
 npm run build
 npm run check:isolation
 ```
+
+## 在线版本
+
+`main` 分支更新后，GitHub Actions 会先执行测试、隔离检查和生产构建，再发布到仓库的 GitHub Pages 地址。
+
+线上版本和桌面 App 独立维护，不会自动同步桌面端功能。

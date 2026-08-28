@@ -14,6 +14,7 @@ import {
   REMINDER_STATUS_OPTIONS,
   reminderStatusLabel,
 } from "./workdayReminders";
+import { CompactClockSelect } from "./CompactClockSelect";
 import "./WorkScheduleEditor.css";
 
 const HOURS = Array.from({ length: 24 }, (_, value) =>
@@ -95,31 +96,25 @@ export function WorkScheduleEditor({
         role="group"
         aria-label="下班时间"
       >
-        <select
-          aria-label="下班小时"
+        <CompactClockSelect
+          label="下班小时"
           value={selectedEndTime.hour}
+          values={HOURS}
           disabled={saving}
-          onChange={(event) => {
-            void persist(`${event.target.value}:${selectedEndTime.minute}`);
+          onSelect={(hour) => {
+            void persist(`${hour}:${selectedEndTime.minute}`);
           }}
-        >
-          {HOURS.map((hour) => (
-            <option value={hour} key={hour}>{hour}</option>
-          ))}
-        </select>
+        />
         <span aria-hidden="true">:</span>
-        <select
-          aria-label="下班分钟"
+        <CompactClockSelect
+          label="下班分钟"
           value={selectedEndTime.minute}
+          values={MINUTES}
           disabled={saving}
-          onChange={(event) => {
-            void persist(`${selectedEndTime.hour}:${event.target.value}`);
+          onSelect={(minute) => {
+            void persist(`${selectedEndTime.hour}:${minute}`);
           }}
-        >
-          {MINUTES.map((minute) => (
-            <option value={minute} key={minute}>{minute}</option>
-          ))}
-        </select>
+        />
       </div>
       {error ? (
         <p className="work-schedule-editor__error" role="alert">

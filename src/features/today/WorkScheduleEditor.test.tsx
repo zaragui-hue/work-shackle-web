@@ -32,6 +32,11 @@ const defaultSchedule = {
   hasTodayOverride: false,
 };
 
+function selectClockValue(label: string, value: string) {
+  fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${label}：`) }));
+  fireEvent.click(screen.getByRole("option", { name: value }));
+}
+
 describe("WorkScheduleEditor", () => {
   it("saves default work times from the today countdown panel", async () => {
     const onSaved = vi.fn();
@@ -47,13 +52,12 @@ describe("WorkScheduleEditor", () => {
 
     expect(screen.queryByLabelText("上班")).toBeNull();
     expect(screen.queryByRole("button", { name: "保存" })).toBeNull();
-    const hour = screen.getByLabelText("下班小时") as HTMLSelectElement;
-    const minute = screen.getByLabelText("下班分钟") as HTMLSelectElement;
-    expect(hour.value).toBe("18");
-    expect(minute.value).toBe("30");
-    expect(hour.options).toHaveLength(24);
-    expect(minute.options).toHaveLength(60);
-    fireEvent.change(hour, { target: { value: "19" } });
+    const hour = screen.getByRole("button", { name: "下班小时：18" });
+    const minute = screen.getByRole("button", { name: "下班分钟：30" });
+    expect(hour.tagName).toBe("BUTTON");
+    expect(minute.tagName).toBe("BUTTON");
+    expect(screen.queryByRole("combobox", { name: "下班小时" })).toBeNull();
+    selectClockValue("下班小时", "19");
 
     await waitFor(() => {
       expect(saveDefaultWorkTimes).toHaveBeenCalledWith({
@@ -87,7 +91,7 @@ describe("WorkScheduleEditor", () => {
     );
 
     expect(screen.getByText("今日临时")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("下班小时"), { target: { value: "21" } });
+    selectClockValue("下班小时", "21");
 
     await waitFor(() => {
       expect(saveTodayWorkOverride).toHaveBeenCalledWith({
@@ -103,13 +107,11 @@ describe("WorkScheduleEditor", () => {
 
     render(<WorkScheduleEditor schedule={defaultSchedule} onSaved={vi.fn()} />);
 
-    const hour = screen.getByLabelText("下班小时") as HTMLSelectElement;
-    const minute = screen.getByLabelText("下班分钟") as HTMLSelectElement;
-    fireEvent.change(hour, { target: { value: "19" } });
+    selectClockValue("下班小时", "19");
 
     await waitFor(() => {
-      expect(hour.value).toBe("18");
-      expect(minute.value).toBe("30");
+      expect(screen.getByRole("button", { name: "下班小时：18" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "下班分钟：30" })).toBeTruthy();
     });
     expect(screen.getByRole("alert")).toBeTruthy();
   });

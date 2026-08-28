@@ -164,7 +164,7 @@ git commit -m "feat(web): add app style navigation header"
 - Create: `web/src/features/today/TodayCockpit.test.tsx`
 - Create: `web/src/features/today/todayPresentation.ts`
 - Create: `web/src/features/today/todayPresentation.test.ts`
-- Create: `web/src/assets/workhorse/workhorse-running-clear-v1.png`
+- Create: `web/src/assets/workhorse/workhorse-running-sprite-v1.png`
 - Create: `web/src/assets/workhorse/reactions/professional-smile-v2.png`
 - Create: `web/src/assets/workhorse/reactions/overtime-stone-v2.png`
 - Create: `web/src/assets/workhorse/reactions/power-down-v1.png`
@@ -189,7 +189,7 @@ Expected: FAIL because the presentation selector and component do not exist.
 
 - [ ] **Step 3: Copy only approved horse assets into Web**
 
-Copy the four listed images from `src/assets/mascot/workhorse/` into `web/src/assets/workhorse/`. Keep them as independent files so `web/scripts/check-isolation.mjs` continues to reject desktop-source imports.
+Copy the four listed images from `src/assets/mascot/workhorse/` into `web/src/assets/workhorse/`: one running sprite and three reaction states. Keep them as independent files so `web/scripts/check-isolation.mjs` continues to reject desktop-source imports.
 
 - [ ] **Step 4: Implement the stage and decision cards**
 

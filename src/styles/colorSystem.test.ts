@@ -98,12 +98,15 @@ describe("dopamine brutalist color system", () => {
     );
   });
 
-  it("uses poster-scale headline, countdown, and reaction type", () => {
+  it("uses the alert-strip headline, poster-scale countdown, and reaction type", () => {
     const countdown = readSource("src/features/today/WorkCountdownBanner.css");
     const cockpit = readSource("src/features/today/StatusCockpit.css");
 
     expect(countdown).toMatch(
-      /\.work-countdown__headline[\s\S]*?font-size:\s*var\(--font-size-hero\)/,
+      /\.work-countdown__alert-strip[\s\S]*?background:\s*var\(--color-signal\)/,
+    );
+    expect(countdown).toMatch(
+      /\.work-countdown__headline[\s\S]*?font-size:\s*clamp\(2rem,\s*3\.6vw,\s*3\.5rem\)/,
     );
     expect(countdown).toMatch(
       /\.work-countdown__digit--hours[\s\S]*?font-size:\s*var\(--font-size-countdown\)/,

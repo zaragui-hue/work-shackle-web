@@ -15,19 +15,24 @@ export function WorkCountdownBanner({ display, schedule }: WorkCountdownBannerPr
 
   return (
     <div className="work-countdown" aria-live="polite">
-      <div className="work-countdown__heading-row">
-        <div>
+      <div className="work-countdown__heading">
+        <div className="work-countdown__heading-row">
           <p className="work-countdown__kicker">
             <span className="work-countdown__live" aria-hidden="true" />
             LIVE / 距离释放
           </p>
+          {progressState ? (
+            <span className="work-countdown__percent">
+              班味 {progressState.progress}%
+            </span>
+          ) : null}
+        </div>
+        <div className="work-countdown__alert-strip">
+          <span className="work-countdown__alert-code">
+            SYSTEM NOTICE / SHIFT RELEASE
+          </span>
           <h2 className="work-countdown__headline">{display.primaryText}</h2>
         </div>
-        {progressState ? (
-          <span className="work-countdown__percent">
-            班味 {progressState.progress}%
-          </span>
-        ) : null}
       </div>
       {parts ? (
         <div className="work-countdown__clock" aria-label={display.countdownText ?? undefined}>

@@ -35,4 +35,21 @@ describe("WorkCountdownBanner", () => {
     expect(screen.queryByText("18:30 下班")).toBeNull();
     expect(screen.getByText(/班味 \d+%/)).toBeTruthy();
   });
+
+  it("renders long countdown copy as a system notice", () => {
+    const primaryText = "下班节点尚未渲染，先维持人类在线状态";
+
+    render(
+      <WorkCountdownBanner
+        display={{
+          phase: "working",
+          primaryText,
+          countdownText: "07:10:31",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("SYSTEM NOTICE / SHIFT RELEASE")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: primaryText })).toBeTruthy();
+  });
 });

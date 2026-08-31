@@ -25,18 +25,67 @@ describe("computeWorkCountdown", () => {
     const result = computeWorkCountdown(defaultSchedule, localMs(12, 0, 0));
 
     expect(result.phase).toBe("working");
-    expect(result.primaryText).toBe("工位坐稳，释放正在路上");
+    expect(result.primaryText).toMatch(/班味|副本|工位|进度条/);
     expect(result.countdownText).toBe("06:00:00");
   });
 
-  it("changes the working headline at stable progress boundaries", () => {
-    expect(workCountdownHeadline(0)).toBe("离下班还早，先把今天骗过去");
-    expect(workCountdownHeadline(24.99)).toBe("离下班还早，先把今天骗过去");
-    expect(workCountdownHeadline(25)).toBe("工位坐稳，释放正在路上");
-    expect(workCountdownHeadline(50)).toBe("已经熬过一半，别在这时散架");
-    expect(workCountdownHeadline(75)).toBe("下班开始有轮廓了");
-    expect(workCountdownHeadline(90)).toBe("再撑一下，门禁快拦不住你了");
-    expect(workCountdownHeadline(100)).toBe("再撑一下，门禁快拦不住你了");
+  it("matches copy stages to the remaining time", () => {
+    expect(
+      workCountdownHeadline(
+        "2026-08-14",
+        7 * 60 * 60 * 1000,
+        localMs(10, 0),
+      ),
+    ).toMatch(/系统|工位|下班|赛博工牌/);
+    expect(
+      workCountdownHeadline(
+        "2026-08-14",
+        6 * 60 * 60 * 1000,
+        localMs(11, 0),
+      ),
+    ).toMatch(/班味|副本|工位|进度条/);
+    expect(
+      workCountdownHeadline(
+        "2026-08-14",
+        3 * 60 * 60 * 1000,
+        localMs(12, 0),
+      ),
+    ).toMatch(/释放协议|下班权限|赛博越狱|自由信号/);
+    expect(
+      workCountdownHeadline(
+        "2026-08-14",
+        60 * 60 * 1000,
+        localMs(16, 0),
+      ),
+    ).toMatch(/释放协议|下班权限|赛博越狱|自由信号/);
+    expect(
+      workCountdownHeadline(
+        "2026-08-14",
+        60 * 60 * 1000 - 1,
+        localMs(17, 0),
+      ),
+    ).toMatch(/关机程序|门禁|班味|撤离倒计时/);
+  });
+
+  it("keeps copy stable within an hour and changes at the next clock hour", () => {
+    const before = workCountdownHeadline(
+      "2026-08-14",
+      5 * 60 * 60 * 1000,
+      localMs(10, 1),
+    );
+    const sameHour = workCountdownHeadline(
+      "2026-08-14",
+      5 * 60 * 60 * 1000 - 30 * 60 * 1000,
+      localMs(10, 31),
+    );
+    const nextHour = workCountdownHeadline(
+      "2026-08-14",
+      4 * 60 * 60 * 1000,
+      localMs(11, 0),
+    );
+
+    expect(sameHour).toBe(before);
+    expect(nextHour).not.toBe(before);
   });
 
   it("shows one second remaining before end", () => {

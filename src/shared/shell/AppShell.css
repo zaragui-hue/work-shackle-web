@@ -1,16 +1,17 @@
 .ws-shell {
-  min-height: calc(100vh - 48px);
+  min-height: 100dvh;
   display: grid;
   grid-template-rows: auto 1fr;
-  width: min(calc(100% - 34px), 1260px);
-  margin: 24px auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   padding: 18px 20px 14px;
   overflow: hidden;
-  border-radius: 12px;
-  border: var(--border-ink-strong);
+  border: 0;
+  border-radius: 0;
   color: var(--color-ink);
   background: var(--color-paper);
-  box-shadow: var(--shadow-soft);
+  box-shadow: none;
 }
 
 .ws-shell__brand {
@@ -240,11 +241,7 @@
 
 @media (max-width: 720px) {
   .ws-shell {
-    width: calc(100% - 16px);
-    min-height: calc(100vh - 16px);
-    margin: 8px auto;
     padding: 12px;
-    border-radius: 8px;
   }
 
   .ws-shell__brand {

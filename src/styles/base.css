@@ -16,13 +16,7 @@ body {
   font-size: var(--font-size-body);
   line-height: var(--line-height-body);
   color: var(--color-ink);
-  background-color: var(--color-anchor);
-  background-image: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--color-canvas) 18%, transparent) 0 1px,
-    transparent 1.2px
-  );
-  background-size: 16px 16px;
+  background-color: var(--color-paper);
   -webkit-font-smoothing: antialiased;
 }
 

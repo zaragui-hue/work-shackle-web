@@ -1,0 +1,111 @@
+.ws-shell.ws-shell--fullscreen {
+  width: 100%;
+  max-width: none;
+  min-height: 100dvh;
+  margin: 0;
+  padding: clamp(12px, 1.4vw, 28px);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.ws-shell--fullscreen .today-page__dashboard {
+  grid-template-columns: minmax(0, 1fr) clamp(340px, 22vw, 460px);
+}
+
+.ws-shell__fullscreen-exit {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border: 2px solid var(--color-anchor);
+  border-radius: 3px;
+  color: var(--color-signal);
+  background: var(--color-anchor);
+  box-shadow: 3px 3px 0 var(--color-danger);
+  font-size: var(--font-size-nav);
+  font-weight: 900;
+  white-space: nowrap;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.ws-shell__fullscreen-exit:hover:not(:disabled) {
+  color: var(--color-anchor);
+  background: var(--color-signal);
+  box-shadow: 5px 5px 0 var(--color-danger);
+  transform: translate(-1px, -1px);
+}
+
+.ws-shell__fullscreen-exit:active:not(:disabled) {
+  box-shadow: 1px 1px 0 var(--color-danger);
+  transform: translate(2px, 2px);
+}
+
+.ws-shell__fullscreen-exit:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.ws-shell__fullscreen-exit-icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+@media (max-width: 1050px) {
+  .ws-shell--fullscreen .ws-shell__brand {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 11px;
+  }
+
+  .ws-shell--fullscreen .ws-shell__header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 760px) {
+  .ws-shell--fullscreen .today-page__dashboard {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .ws-shell--fullscreen .ws-shell__header-actions {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    justify-content: stretch;
+  }
+
+  .ws-shell--fullscreen .ws-shell__live {
+    justify-self: end;
+  }
+
+  .ws-shell--fullscreen .ws-shell__nav {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-shell__fullscreen-exit {
+    transition: none;
+  }
+
+  .ws-shell__fullscreen-exit:hover:not(:disabled),
+  .ws-shell__fullscreen-exit:active:not(:disabled) {
+    transform: none;
+  }
+}

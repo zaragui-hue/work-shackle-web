@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-window-fullscreen",
+  "description": "Allows the main application window to leave native fullscreen mode",
+  "windows": ["main"],
+  "permissions": ["core:window:allow-set-fullscreen"]
+}

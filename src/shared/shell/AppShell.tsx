@@ -8,7 +8,9 @@ import {
   useWorkStatus,
 } from "../../features/today/WorkStatusContext";
 import { AppNavigation, type AppTabId } from "./AppNavigation";
+import { useWindowFullscreen } from "./useWindowFullscreen";
 import "./AppShell.css";
+import "./AppShellFullscreen.css";
 
 export function AppShell() {
   return (
@@ -22,6 +24,7 @@ function AppShellContent() {
   const [tab, setTab] = useState<AppTabId>("today");
   const [openTaskRequest, setOpenTaskRequest] = useState<string | null>(null);
   const { current, loading } = useWorkStatus();
+  const { isFullscreen, exiting, exitFullscreen } = useWindowFullscreen();
 
   useReminderOpenTaskBridge(
     useCallback((taskId: string) => {
@@ -31,7 +34,7 @@ function AppShellContent() {
   );
 
   return (
-    <div className="ws-shell">
+    <div className={`ws-shell${isFullscreen ? " ws-shell--fullscreen" : ""}`}>
       <header className="ws-shell__brand">
         <div className="ws-shell__brand-lockup">
           <span className="ws-shell__logo" aria-hidden="true">WS</span>
@@ -41,6 +44,18 @@ function AppShellContent() {
           </div>
         </div>
         <div className="ws-shell__header-actions">
+          {isFullscreen ? (
+            <button
+              type="button"
+              className="ws-shell__fullscreen-exit"
+              aria-label="退出全屏"
+              disabled={exiting}
+              onClick={() => void exitFullscreen()}
+            >
+              <FullscreenExitIcon />
+              <span>{exiting ? "正在退出" : "退出全屏"}</span>
+            </button>
+          ) : null}
           <p
             className={`ws-shell__live${loading ? " ws-shell__live--loading" : ""}`}
             aria-label={`当前工作状态：${current?.name ?? "正在读取"}`}
@@ -66,5 +81,17 @@ function AppShellContent() {
       </main>
 
     </div>
+  );
+}
+
+function FullscreenExitIcon() {
+  return (
+    <svg
+      className="ws-shell__fullscreen-exit-icon"
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+    >
+      <path d="M8 3v5H3M12 3v5h5M8 17v-5H3M12 17v-5h5" />
+    </svg>
   );
 }

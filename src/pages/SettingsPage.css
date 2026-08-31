@@ -107,16 +107,6 @@
   background: color-mix(in srgb, var(--color-stage) 4%, var(--color-paper-raised));
 }
 
-.settings-work-time--today {
-  margin-top: var(--space-2);
-}
-
-.settings-work-time--modal {
-  padding: 0;
-  background: transparent;
-  border: 0;
-}
-
 .settings-work-time__row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);

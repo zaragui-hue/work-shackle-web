@@ -7,6 +7,8 @@ import { WorkScheduleEditor } from "../features/today/WorkScheduleEditor";
 import type { WorkSchedule } from "../services/tauri/settings";
 import type { Task, TodayTasks } from "../services/tauri/tasks";
 import { AppNavigation } from "../shared/shell/AppNavigation";
+import { AppUpdateAvatar } from "../shared/shell/AppUpdateAvatar";
+import type { AppUpdateState } from "../shared/shell/useAppUpdate";
 import { Button, Card, Mascot } from "../shared/ui";
 import "../shared/shell/AppShell.css";
 import "../features/today/StatusCockpit.css";
@@ -15,13 +17,14 @@ import "./TodayPage.css";
 export function DesignPreviewPage() {
   const schedule = useMemo(buildPreviewSchedule, []);
   const tasks = useMemo(buildPreviewTasks, []);
+  const updateState = useMemo(buildPreviewUpdateState, []);
   const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="ws-shell">
       <header className="ws-shell__brand">
         <div className="ws-shell__brand-lockup">
-          <span className="ws-shell__logo" aria-hidden="true">WS</span>
+          <AppUpdateAvatar state={updateState} onActivate={() => undefined} />
           <div className="ws-shell__brand-copy">
             <h1 className="ws-shell__heading">精神状态事务所</h1>
             <p className="ws-shell__eyebrow">Office survival system</p>
@@ -67,7 +70,7 @@ export function DesignPreviewPage() {
           </section>
 
           <Card
-            title="今天这些破事 / 先狠狠干掉"
+            title="今天这些破事"
             headerAccent
             className="today-page__tasks-card"
           >
@@ -88,6 +91,27 @@ export function DesignPreviewPage() {
       <CreateTaskDrawer open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
+}
+
+function buildPreviewUpdateState(): AppUpdateState {
+  const state = new URLSearchParams(window.location.search).get("update");
+  if (state === "available") {
+    return { status: "available", version: "0.1.2", body: "修复窗口边缘" };
+  }
+  if (state === "downloading") {
+    return { status: "downloading", version: "0.1.2", progress: 68 };
+  }
+  if (state === "installing") {
+    return { status: "installing", version: "0.1.2" };
+  }
+  if (state === "failed") {
+    return {
+      status: "failed",
+      message: "更新安装失败，点击重试",
+      retry: "install",
+    };
+  }
+  return { status: "current" };
 }
 
 function buildPreviewSchedule(): WorkSchedule {

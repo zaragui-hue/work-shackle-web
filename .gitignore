@@ -21,6 +21,12 @@ src-tauri/target/
 *.db-shm
 *.db-wal
 
+# Local Tauri updater signing keys
+src-tauri/.keys/
+
+# Locally packaged installers are uploaded to GitHub Releases, not committed
+release/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

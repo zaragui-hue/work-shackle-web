@@ -21,6 +21,7 @@ import { StatusCockpit } from "../features/today/StatusCockpit";
 import { useWorkStatus } from "../features/today/WorkStatusContext";
 import { WorkdayStatusNotice } from "../features/today/WorkdayStatusNotice";
 import { isTodayFullyEmpty } from "../features/today/todayDisplay";
+import { useCalendarDayRefresh } from "../features/today/useCalendarDayRefresh";
 import { useTaskAutoStart } from "../features/today/useTaskAutoStart";
 import { useWorkCountdown } from "../features/today/useWorkCountdown";
 import { WorkCountdownBanner } from "../features/today/WorkCountdownBanner";
@@ -94,8 +95,8 @@ export function TodayPage() {
     dismiss: dismissLunchReminder,
   } = useLunchReminder();
   const [switchingToLunch, setSwitchingToLunch] = useState(false);
-  const reminderManager = useWorkdayReminders(workSchedule?.workDate);
-  const statusAutomation = useWorkdayStatusAutomation(reminderManager);
+  const reminderManager = useWorkdayReminders(workSchedule);
+  const statusAutomation = useWorkdayStatusAutomation(reminderManager, workSchedule);
   const { switchStatus } = useWorkStatus();
 
   const loadTodayTasks = useCallback(async () => {
@@ -118,6 +119,7 @@ export function TodayPage() {
   }, []);
 
   useTaskAutoStart(todayTasks.formalTasks, loadTodayTasks);
+  useCalendarDayRefresh(loadTodayTasks);
 
   const dismissTaskBroadcast = useCallback((taskId: string) => {
     setAnnouncedTaskIds((current) => current.filter((id) => id !== taskId));
@@ -311,9 +313,7 @@ export function TodayPage() {
 
         <Card className="today-page__tasks-card">
           <header className="today-page__tasks-heading today-board__section-head">
-            <h2 className="today-board__section-title">
-              今天这些破事 / 先狠狠干掉
-            </h2>
+            <h2 className="today-board__section-title">今天这些破事</h2>
             <span className="today-board__section-badge">今日清单</span>
           </header>
           {!lunchReminderLoading && lunchReminder && !lunchReminderDismissed ? (

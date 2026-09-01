@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
+import { refreshDynamicAppIconAfter } from "./dynamicAppIconEvents";
+
 export type ActiveOvertime = {
   id: string;
   workDate: string;
@@ -12,9 +14,9 @@ export async function getActiveOvertime(): Promise<ActiveOvertime | null> {
 }
 
 export async function startOvertime(): Promise<ActiveOvertime> {
-  return invoke<ActiveOvertime>("start_overtime");
+  return refreshDynamicAppIconAfter(invoke<ActiveOvertime>("start_overtime"));
 }
 
 export async function endOvertime(): Promise<void> {
-  return invoke<void>("end_overtime");
+  return refreshDynamicAppIconAfter(invoke<void>("end_overtime"));
 }

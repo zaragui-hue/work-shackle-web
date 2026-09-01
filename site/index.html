@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7d66d" />
+    <meta name="description" content="精神状态事务所：一款有点嘴欠、但真的能帮你下班的桌面任务管理工具。" />
+    <meta property="og:title" content="精神状态事务所｜打工人的桌面生存系统" />
+    <meta property="og:description" content="盯住 DDL、收拾昨日烂尾、提醒你该下班了。支持 macOS 与 Windows。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="assets/product-today.png" />
+    <title>精神状态事务所｜打工人的桌面生存系统</title>
+    <link rel="icon" href="assets/brand-icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到主要内容</a>
+
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="精神状态事务所首页">
+        <img src="assets/brand-icon.svg" alt="" />
+        <span><strong>精神状态事务所</strong><small>OFFICE SURVIVAL SYSTEM</small></span>
+      </a>
+      <nav class="site-nav" aria-label="页面导航">
+        <a href="#features">功能</a><a href="#scenes">场景</a><a href="#downloads">下载</a>
+        <a class="nav-github" href="https://github.com/zaragui-hue/work-shackle-web" target="_blank" rel="noreferrer">GitHub ↗</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top">
+        <div class="hero-copy reveal">
+          <p class="kicker"><span></span> DESKTOP APP · v0.1.2</p>
+          <h1>今天的破事，<br /><em>别留到明天。</em></h1>
+          <p class="hero-lead">一个有点嘴欠、但真的能帮你下班的桌面任务管理工具。盯住 DDL、收拾昨日烂尾，也提醒你别把工位坐成永久产权。</p>
+          <div class="hero-actions">
+            <a class="button button-primary download-link" data-os="macos" data-version="v0.1.2" data-asset="精神状态事务所_0.1.2_macOS_arm64.dmg" href="https://github.com/zaragui-hue/work-shackle-web/releases/download/v0.1.2/%E7%B2%BE%E7%A5%9E%E7%8A%B6%E6%80%81%E4%BA%8B%E5%8A%A1%E6%89%80_0.1.2_macOS_arm64.dmg">
+              <span class="button-icon">⌘</span><span>下载 macOS 版<small>Apple Silicon · DMG</small></span>
+            </a>
+            <a class="button button-secondary download-link" data-os="windows" data-version="v0.1.2" data-asset="精神状态事务所_0.1.2_Windows_x64_Setup.exe" href="https://github.com/zaragui-hue/work-shackle-web/releases/download/v0.1.2/%E7%B2%BE%E7%A5%9E%E7%8A%B6%E6%80%81%E4%BA%8B%E5%8A%A1%E6%89%80_0.1.2_Windows_x64_Setup.exe">
+              <span class="button-icon">⊞</span><span>下载 Windows 版<small>x64 · 安装程序</small></span>
+            </a>
+          </div>
+          <p class="download-note" id="release-status">当前稳定版 v0.1.2 · 免费下载 · 数据保存在本地</p>
+        </div>
+
+        <div class="hero-visual reveal" aria-label="精神状态事务所产品界面预览">
+          <div class="floating-sticker sticker-one">班味<br /><strong>69%</strong></div>
+          <div class="floating-sticker sticker-two">人还在线<span></span></div>
+          <div class="app-window">
+            <div class="window-bar"><span class="traffic"><i></i><i></i><i></i></span><b>精神状态事务所</b><span class="window-live">● LIVE</span></div>
+            <img src="assets/product-today.png" alt="精神状态事务所今日任务、下班倒计时与昨日烂尾界面" />
+          </div>
+          <img class="hero-horse" src="assets/workhorse-running.png" alt="奔跑的打工马吉祥物" />
+        </div>
+      </section>
+
+      <section class="ticker" aria-label="产品亮点"><div><span>DDL 雷达</span><i>✦</i><span>昨日烂尾</span><i>✦</i><span>下班倒计时</span><i>✦</i><span>动态桌面图标</span><i>✦</i><span>本地数据</span><i>✦</i><span>跨平台</span></div></section>
+
+      <section class="section feature-section" id="features">
+        <div class="section-heading reveal"><p class="section-index">01 / CORE FEATURES</p><h2>不是另一个<br />乖巧的待办清单</h2><p>它不劝你热爱工作，只负责让每件破事知道自己该待在哪。</p></div>
+        <div class="feature-grid">
+          <article class="feature-card feature-blue reveal"><span class="feature-number">01</span><div class="feature-emoji">⏱</div><h3>下班倒计时</h3><p>把今天还剩多少班味摆在桌面上。离下班越近，灵魂越完整。</p></article>
+          <article class="feature-card feature-yellow reveal"><span class="feature-number">02</span><div class="feature-emoji">💥</div><h3>DDL 分级预警</h3><p>从“从容”到“距离爆炸”，紧急程度一眼可见，不再靠记忆硬扛。</p></article>
+          <article class="feature-card feature-coral reveal"><span class="feature-number">03</span><div class="feature-emoji">🧾</div><h3>昨日烂尾现场</h3><p>任务过了截止日才进旧账；跨天但仍在有效期内的任务继续留在今日。</p></article>
+          <article class="feature-card feature-paper reveal"><span class="feature-number">04</span><div class="feature-emoji">🧠</div><h3>状态比“完成”更多</h3><p>进行中、暂停、等别人、已完成、已取消，真实还原办公室里的复杂现场。</p></article>
+          <article class="feature-card feature-dark reveal"><span class="feature-number">05</span><div class="feature-emoji">🔔</div><h3>该出现时才出现</h3><p>重要节点会提醒你；平时安静待着，不把通知本身变成下一件破事。</p></article>
+          <article class="feature-card feature-mint reveal"><span class="feature-number">06</span><div class="feature-emoji">🔒</div><h3>本地优先</h3><p>任务数据保存在你的电脑里。无需注册账号，打开就能开始收拾现场。</p></article>
+        </div>
+      </section>
+
+      <section class="icon-story">
+        <div class="icon-story-copy reveal"><p class="section-index">MOOD-BASED APP ICON</p><h2>图标也会跟着你<br /><span>一起过这一天</span></h2><p>早上勉强营业，下午灵魂出走，临近下班开始兴奋，加班时彻底摆烂；如果 DDL 爆炸，它会比你先慌。</p><div class="icon-live-label"><span class="pulse"></span><strong id="icon-state-name">早上 · 勉强营业</strong></div></div>
+        <div class="icon-stage reveal">
+          <div class="time-track" aria-hidden="true"><span></span></div>
+          <div class="active-icon-wrap"><img id="active-icon" src="assets/icon-morning.png" alt="会随状态变化的应用图标" /></div>
+          <div class="icon-timeline" role="list" aria-label="应用图标状态">
+            <button class="icon-state active" data-icon="assets/icon-morning.png" data-label="早上 · 勉强营业" type="button"><img src="assets/icon-morning.png" alt="" /><span>09:00</span></button>
+            <button class="icon-state" data-icon="assets/icon-afternoon.png" data-label="下午 · 灵魂出走" type="button"><img src="assets/icon-afternoon.png" alt="" /><span>15:00</span></button>
+            <button class="icon-state" data-icon="assets/icon-offwork-soon.png" data-label="临近下班 · 开始兴奋" type="button"><img src="assets/icon-offwork-soon.png" alt="" /><span>17:55</span></button>
+            <button class="icon-state" data-icon="assets/icon-overtime.png" data-label="加班中 · 灵魂已下线" type="button"><img src="assets/icon-overtime.png" alt="" /><span>21:30</span></button>
+            <button class="icon-state" data-icon="assets/icon-deadline-alert.png" data-label="DDL 告急 · 它比你先慌" type="button"><img src="assets/icon-deadline-alert.png" alt="" /><span>DDL!</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section showcase-section">
+        <div class="section-heading showcase-heading reveal"><p class="section-index">02 / PRODUCT TOUR</p><h2>现场长这样</h2><p>一屏看清今天、DDL、旧账与下班时间；新增任务时，该细的地方也没有省。</p></div>
+        <div class="showcase-grid">
+          <figure class="showcase-main reveal"><div class="shot-label"><span>LIVE VIEW</span><b>今日状态总览</b></div><img src="assets/product-today.png" alt="今日状态总览截图" loading="lazy" /></figure>
+          <figure class="showcase-side reveal"><div class="shot-label"><span>QUICK CREATE</span><b>把破事登记在案</b></div><img src="assets/product-create-task.png" alt="新建任务抽屉截图" loading="lazy" /></figure>
+        </div>
+      </section>
+
+      <section class="section scenes-section" id="scenes">
+        <div class="section-heading reveal"><p class="section-index">03 / USE CASES</p><h2>适合这些<br />熟悉的现场</h2></div>
+        <div class="scene-list">
+          <article class="scene reveal"><span>01</span><div><h3>需求不断横跳</h3><p>每次改动都有去处，不让“再润色一下”凭空消失。</p></div></article>
+          <article class="scene reveal"><span>02</span><div><h3>同时推进多件事</h3><p>用状态和优先级分清正在做、等别人和暂时放下。</p></div></article>
+          <article class="scene reveal"><span>03</span><div><h3>跨天任务很多</h3><p>没有 DDL 或仍在有效期内的跨天任务，会一直留在今日视野。</p></div></article>
+          <article class="scene reveal"><span>04</span><div><h3>总是忘记下班</h3><p>设好工作时间，让桌面上的倒计时替你守住下班线。</p></div></article>
+        </div>
+      </section>
+
+      <section class="downloads-section" id="downloads">
+        <div class="downloads-intro reveal"><p class="section-index">04 / DOWNLOAD</p><h2>把事务所<br />搬到你的桌面</h2><p>无需账号，安装后直接使用。安装包统一由 GitHub Releases 托管。</p><a class="text-link" href="https://github.com/zaragui-hue/work-shackle-web/releases" target="_blank" rel="noreferrer">查看全部 Releases ↗</a></div>
+        <div class="downloads-panel reveal">
+          <div class="latest-version">
+            <div><span class="version-badge">LATEST</span><h3>v0.1.2</h3><p>跨天任务归类修复 · 最新动态应用图标 · macOS / Windows</p></div>
+            <div class="latest-actions">
+              <a class="button button-download download-link" data-os="macos" data-version="v0.1.2" data-asset="精神状态事务所_0.1.2_macOS_arm64.dmg" href="https://github.com/zaragui-hue/work-shackle-web/releases/download/v0.1.2/%E7%B2%BE%E7%A5%9E%E7%8A%B6%E6%80%81%E4%BA%8B%E5%8A%A1%E6%89%80_0.1.2_macOS_arm64.dmg">⌘ macOS arm64</a>
+              <a class="button button-download download-link" data-os="windows" data-version="v0.1.2" data-asset="精神状态事务所_0.1.2_Windows_x64_Setup.exe" href="https://github.com/zaragui-hue/work-shackle-web/releases/download/v0.1.2/%E7%B2%BE%E7%A5%9E%E7%8A%B6%E6%80%81%E4%BA%8B%E5%8A%A1%E6%89%80_0.1.2_Windows_x64_Setup.exe">⊞ Windows x64</a>
+            </div>
+          </div>
+          <div class="version-history" id="version-history">
+            <article class="version-row" data-tag="v0.1.1"><div><strong>v0.1.1</strong><span>上一稳定版</span></div><div><a href="https://github.com/zaragui-hue/work-shackle-web/releases/download/v0.1.1/%E7%B2%BE%E7%A5%9E%E7%8A%B6%E6%80%81%E4%BA%8B%E5%8A%A1%E6%89%80_0.1.1_macOS_arm64.dmg">macOS</a><a href="https://github.com/zaragui-hue/work-shackle-web/releases/download/v0.1.1/%E7%B2%BE%E7%A5%9E%E7%8A%B6%E6%80%81%E4%BA%8B%E5%8A%A1%E6%89%80_0.1.1_Windows_x64_Setup.exe">Windows</a></div></article>
+            <article class="version-row" data-tag="v0.1.0"><div><strong>v0.1.0</strong><span>初始公开版本</span></div><div><a href="https://github.com/zaragui-hue/work-shackle-web/releases/download/v0.1.0/Work%20Shackle_0.1.0_macOS_arm64.dmg">macOS</a><a href="https://github.com/zaragui-hue/work-shackle-web/releases/download/v0.1.0/Work%20Shackle_0.1.0_Windows_x64_Setup.exe">Windows</a></div></article>
+          </div>
+          <div class="install-notes"><p><b>macOS</b> 当前安装包未经过 Apple 公证；首次打开如被拦截，请在“系统设置 → 隐私与安全性”中允许打开。</p><p><b>Windows</b> 当前安装包未做发布者签名；若 SmartScreen 提示，请确认下载来源为本项目 GitHub Releases。</p></div>
+        </div>
+      </section>
+
+      <section class="github-cta">
+        <img src="assets/workhorse-smile.png" alt="保持职业微笑的打工马" loading="lazy" />
+        <div><p class="section-index">OPEN SOURCE ON GITHUB</p><h2>代码公开，<br />精神状态也公开。</h2><p>查看源码、提交问题，或者围观这个事务所接下来还能长出什么。</p></div>
+        <a class="button button-github" href="https://github.com/zaragui-hue/work-shackle-web" target="_blank" rel="noreferrer">前往 GitHub <span>↗</span></a>
+      </section>
+    </main>
+
+    <footer><div class="brand footer-brand"><img src="assets/brand-icon.svg" alt="" /><span><strong>精神状态事务所</strong><small>人还在线，灵魂偶尔离席。</small></span></div><p>© 2026 Work Shackle · Made for surviving the workday.</p></footer>
+  </body>
+</html>

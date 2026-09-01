@@ -25,7 +25,7 @@ export function StartupPanel({
   return (
     <main className="ws-startup">
       <section className="ws-startup__panel">
-        <p className="ws-startup__eyebrow">Work Shackle</p>
+        <p className="ws-startup__eyebrow">精神状态事务所</p>
         <h1>正在把桌子擦干净</h1>
         <p className={`ws-startup__status ws-startup__status--${viewState}`}>
           {message}

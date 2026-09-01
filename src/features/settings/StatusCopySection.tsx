@@ -10,6 +10,7 @@ import {
   type WorkStatusAppError,
 } from "../../services/tauri/workStatus";
 import { Button, Input } from "../../shared/ui";
+import { isSettingsWorkStatus } from "../today/workStatusOptions";
 import "./StatusCopySection.css";
 
 export function StatusCopySection() {
@@ -28,7 +29,9 @@ export function StatusCopySection() {
     setLoadError(null);
     try {
       const fixedStatuses = await listWorkStatuses();
-      const editable = fixedStatuses.filter((status) => status.selectable);
+      const editable = fixedStatuses.filter(
+        (status) => status.selectable && isSettingsWorkStatus(status.id),
+      );
       const copyEntries = await Promise.all(
         editable.map(async (status) => {
           const copies = await listStatusCopies(status.id);

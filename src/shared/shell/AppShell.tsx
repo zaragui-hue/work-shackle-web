@@ -3,11 +3,14 @@ import { TodayPage } from "../../pages/TodayPage";
 import { TasksPage } from "../../pages/TasksPage";
 import { SettingsPage } from "../../pages/SettingsPage";
 import { useReminderOpenTaskBridge } from "../../features/reminder/reminderWindowActions";
+import { useDynamicAppIcon } from "../../features/app-icon/useDynamicAppIcon";
 import {
   WorkStatusProvider,
   useWorkStatus,
 } from "../../features/today/WorkStatusContext";
 import { AppNavigation, type AppTabId } from "./AppNavigation";
+import { AppUpdateAvatar } from "./AppUpdateAvatar";
+import { useAppUpdate } from "./useAppUpdate";
 import { useWindowFullscreen } from "./useWindowFullscreen";
 import "./AppShell.css";
 import "./AppShellFullscreen.css";
@@ -24,7 +27,9 @@ function AppShellContent() {
   const [tab, setTab] = useState<AppTabId>("today");
   const [openTaskRequest, setOpenTaskRequest] = useState<string | null>(null);
   const { current, loading } = useWorkStatus();
+  useDynamicAppIcon(current);
   const { isFullscreen, exiting, exitFullscreen } = useWindowFullscreen();
+  const appUpdate = useAppUpdate();
 
   useReminderOpenTaskBridge(
     useCallback((taskId: string) => {
@@ -37,7 +42,10 @@ function AppShellContent() {
     <div className={`ws-shell${isFullscreen ? " ws-shell--fullscreen" : ""}`}>
       <header className="ws-shell__brand">
         <div className="ws-shell__brand-lockup">
-          <span className="ws-shell__logo" aria-hidden="true">WS</span>
+          <AppUpdateAvatar
+            state={appUpdate.state}
+            onActivate={appUpdate.activate}
+          />
           <div className="ws-shell__brand-copy">
             <h1 className="ws-shell__heading">精神状态事务所</h1>
             <p className="ws-shell__eyebrow">Office survival system</p>

@@ -483,19 +483,18 @@ fn classify_today_tasks(connection: &Connection, as_of_ms: i64) -> Result<TodayT
             continue;
         }
 
-        let planned_today = calendar_day::is_same_local_calendar_day(dto.planned_at_ms, today);
-        let deadline_today = dto.deadline_at_ms.is_some_and(|deadline_at_ms| {
-            calendar_day::is_same_local_calendar_day(deadline_at_ms, today)
-        });
+        let planned_date = calendar_day::local_date_from_ms(dto.planned_at_ms);
+        let has_reached_planned_date = planned_date <= today;
         let is_historical_overdue = dto.deadline_at_ms.is_some_and(|deadline_at_ms| {
             calendar_day::is_local_calendar_day_before(deadline_at_ms, today)
         });
 
         if is_historical_overdue {
-            overdue_tasks.push(dto.clone());
+            overdue_tasks.push(dto);
+            continue;
         }
 
-        if planned_today || deadline_today {
+        if has_reached_planned_date {
             if dto
                 .deadline_at_ms
                 .is_some_and(|deadline_at_ms| deadline_at_ms > as_of_ms)
@@ -1733,8 +1732,83 @@ mod tests {
         }
 
         const TODAY: &str = "2026-08-14";
-        const TOMORROW: &str = "2026-08-15";
         const YESTERDAY: &str = "2026-08-13";
+
+        #[test]
+        fn task_remains_formal_between_planned_day_and_deadline_day() {
+            let db = open_test_database();
+            insert_task(
+                &db.connection,
+                "active-range",
+                local_ms("2026-09-01", "09:00"),
+                Some(local_ms("2026-09-30", "18:00")),
+            );
+
+            let result = query_at(&db.connection, local_ms("2026-09-15", "12:00"));
+            assert_eq!(ids(&result.formal_tasks), vec!["active-range"]);
+            assert!(result.overdue_tasks.is_empty());
+        }
+
+        #[test]
+        fn task_remains_formal_for_entire_deadline_calendar_day() {
+            let db = open_test_database();
+            insert_task(
+                &db.connection,
+                "deadline-today",
+                local_ms("2026-09-01", "09:00"),
+                Some(local_ms("2026-09-30", "10:00")),
+            );
+
+            let result = query_at(&db.connection, local_ms("2026-09-30", "23:00"));
+            assert_eq!(ids(&result.formal_tasks), vec!["deadline-today"]);
+            assert!(result.overdue_tasks.is_empty());
+            assert!(result.upcoming_deadline_tasks.is_empty());
+        }
+
+        #[test]
+        fn task_moves_to_overdue_on_day_after_deadline() {
+            let db = open_test_database();
+            insert_task(
+                &db.connection,
+                "expired-range",
+                local_ms("2026-09-01", "09:00"),
+                Some(local_ms("2026-09-30", "18:00")),
+            );
+
+            let result = query_at(&db.connection, local_ms("2026-10-01", "00:01"));
+            assert!(result.formal_tasks.is_empty());
+            assert_eq!(ids(&result.overdue_tasks), vec!["expired-range"]);
+        }
+
+        #[test]
+        fn cross_day_task_without_deadline_remains_formal() {
+            let db = open_test_database();
+            insert_task(
+                &db.connection,
+                "undated-carryover",
+                local_ms("2026-09-01", "09:00"),
+                None,
+            );
+
+            let result = query_at(&db.connection, local_ms("2026-10-01", "12:00"));
+            assert_eq!(ids(&result.formal_tasks), vec!["undated-carryover"]);
+            assert!(result.overdue_tasks.is_empty());
+        }
+
+        #[test]
+        fn future_planned_task_does_not_appear_early() {
+            let db = open_test_database();
+            insert_task(
+                &db.connection,
+                "future-task",
+                local_ms("2026-09-20", "09:00"),
+                Some(local_ms("2026-09-30", "18:00")),
+            );
+
+            let result = query_at(&db.connection, local_ms("2026-09-15", "12:00"));
+            assert!(result.formal_tasks.is_empty());
+            assert!(result.overdue_tasks.is_empty());
+        }
 
         #[test]
         fn planned_today_enters_formal_tasks() {
@@ -1752,12 +1826,12 @@ mod tests {
         }
 
         #[test]
-        fn deadline_today_with_planned_tomorrow_enters_formal_tasks() {
+        fn deadline_today_with_planned_yesterday_enters_formal_tasks() {
             let db = open_test_database();
             insert_task(
                 &db.connection,
                 "formal-ddl-today",
-                local_ms(TOMORROW, "09:00"),
+                local_ms(YESTERDAY, "09:00"),
                 Some(local_ms(TODAY, "18:00")),
             );
 
@@ -1813,7 +1887,7 @@ mod tests {
         }
 
         #[test]
-        fn planned_today_with_yesterday_deadline_in_formal_and_overdue() {
+        fn historical_deadline_is_only_overdue() {
             let db = open_test_database();
             insert_task(
                 &db.connection,
@@ -1823,7 +1897,7 @@ mod tests {
             );
 
             let result = query_at(&db.connection, local_ms(TODAY, "16:00"));
-            assert_eq!(ids(&result.formal_tasks), vec!["dual-formal-overdue"]);
+            assert!(result.formal_tasks.is_empty());
             assert_eq!(ids(&result.overdue_tasks), vec!["dual-formal-overdue"]);
             assert!(result.upcoming_deadline_tasks.is_empty());
         }

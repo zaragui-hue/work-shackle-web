@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
+import { refreshDynamicAppIconAfter } from "./dynamicAppIconEvents";
 import { ErrorCode, type Phase1ErrorCode } from "./errorCodes";
 
 export const TASK_IPC_ERROR_CODES = [
@@ -177,11 +178,11 @@ export function mapTaskError(error: TaskAppError): string {
 }
 
 export async function createTask(input: CreateTaskInput): Promise<Task> {
-  return invoke<Task>("create_task", { input });
+  return refreshDynamicAppIconAfter(invoke<Task>("create_task", { input }));
 }
 
 export async function updateTask(input: UpdateTaskInput): Promise<Task> {
-  return invoke<Task>("update_task", { input });
+  return refreshDynamicAppIconAfter(invoke<Task>("update_task", { input }));
 }
 
 export async function getTaskDetail(id: string): Promise<TaskDetail> {
@@ -207,13 +208,13 @@ export async function queryTodayTasks(): Promise<TodayTasks> {
 }
 
 export async function completeTask(id: string): Promise<Task> {
-  return invoke<Task>("complete_task", { id });
+  return refreshDynamicAppIconAfter(invoke<Task>("complete_task", { id }));
 }
 
 export async function cancelTask(id: string): Promise<Task> {
-  return invoke<Task>("cancel_task", { id });
+  return refreshDynamicAppIconAfter(invoke<Task>("cancel_task", { id }));
 }
 
 export async function postponeTask(input: PostponeTaskInput): Promise<TaskDetail> {
-  return invoke<TaskDetail>("postpone_task", { input });
+  return refreshDynamicAppIconAfter(invoke<TaskDetail>("postpone_task", { input }));
 }

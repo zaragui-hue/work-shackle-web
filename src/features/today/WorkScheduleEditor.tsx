@@ -43,6 +43,7 @@ export function WorkScheduleEditor({
   const [endTime, setEndTime] = useState(schedule.effectiveEnd);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [clearConfirming, setClearConfirming] = useState(false);
   const selectedEndTime = splitClock(endTime);
 
   useEffect(() => {
@@ -125,92 +126,182 @@ export function WorkScheduleEditor({
       {reminderManager ? (
         <section className="work-reminders" aria-labelledby="work-reminders-title">
           <div className="work-reminders__head">
-            <div>
-              <p className="work-reminders__eyebrow">工位小闹钟</p>
-              <h3 id="work-reminders-title">上班过程提醒</h3>
+            <h3 id="work-reminders-title">工位小闹钟</h3>
+            <div className="work-reminders__head-actions">
+              {clearConfirming ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setClearConfirming(false)}
+                  >取消</Button>
+                  <Button
+                    className="work-reminders__clear-confirm"
+                    onClick={() => {
+                      if (reminderManager.clearAll()) {
+                        setClearConfirming(false);
+                      }
+                    }}
+                  >确认清空</Button>
+                </>
+              ) : (
+                <Button
+                  variant="secondary"
+                  disabled={Boolean(reminderManager.draft) || reminderManager.reminders.length === 0}
+                  onClick={() => setClearConfirming(true)}
+                >清空全部</Button>
+              )}
+              {!clearConfirming ? (
+                <Button
+                  variant="wheat"
+                  disabled={Boolean(reminderManager.draft)}
+                  onClick={reminderManager.startAdd}
+                >＋ 添加</Button>
+              ) : null}
             </div>
-            <Button variant="secondary" onClick={reminderManager.addReminder}>+ 加一条</Button>
           </div>
+          {reminderManager.draft ? (
+            <p className="work-reminders__editing-hint">
+              请先保存或取消当前修改
+            </p>
+          ) : null}
+          {reminderManager.storageError ? (
+            <p className="work-reminders__error" role="alert">
+              {reminderManager.storageError}
+            </p>
+          ) : null}
           <div className="work-reminders__list">
-            {reminderManager.reminders.map((reminder) => (
-              <details className="work-reminder-row" key={reminder.id}>
-                <summary className="work-reminder-row__summary">
-                  <time>{reminder.time}</time>
-                  <span className="work-reminder-row__summary-copy">
-                    <strong>{reminder.label}</strong>
-                    <small>
-                      {reminder.message} · 自动切到{reminderStatusLabel(reminder.suggestedStatus)}
-                    </small>
-                  </span>
-                  <span className="work-reminder-row__state">
-                    {reminder.enabled ? "已开" : "已关"}
-                  </span>
-                </summary>
-                <div className="work-reminder-row__editor">
-                  <div className="work-reminder-row__top">
-                    <label className="work-reminder-row__toggle">
-                      <input
-                        type="checkbox"
-                        checked={reminder.enabled}
-                        onChange={(event) => reminderManager.updateReminder(reminder.id, {
-                          enabled: event.target.checked,
-                        })}
-                      />
-                      <span>{reminder.enabled ? "开着" : "歇会"}</span>
-                    </label>
-                    <input
-                      className="work-reminder-row__time"
-                      type="time"
-                      aria-label={`${reminder.label}提醒时间`}
-                      value={reminder.time}
-                      onChange={(event) => reminderManager.updateReminder(reminder.id, {
-                        time: event.target.value,
-                      })}
-                    />
-                    <input
-                      className="work-reminder-row__label"
-                      aria-label="提醒名称"
-                      value={reminder.label}
-                      onChange={(event) => reminderManager.updateReminder(reminder.id, {
-                        label: event.target.value,
-                      })}
-                    />
-                    <button
-                      type="button"
-                      className="work-reminder-row__remove"
-                      aria-label={`删除${reminder.label}提醒`}
-                      onClick={() => reminderManager.removeReminder(reminder.id)}
-                    >×</button>
-                  </div>
-                  <input
-                    className="work-reminder-row__message"
-                    aria-label={`${reminder.label}提醒文案`}
-                    value={reminder.message}
-                    onChange={(event) => reminderManager.updateReminder(reminder.id, {
-                      message: event.target.value,
-                    })}
+            {reminderManager.reminders.length === 0 && !reminderManager.draft ? (
+              <p className="work-reminders__empty">
+                还没有小闹钟，添加后每天沿用。
+              </p>
+            ) : null}
+            {reminderManager.reminders.map((reminder) =>
+              reminderManager.draft?.mode === "edit"
+                && reminderManager.draft.value.id === reminder.id ? (
+                  <WorkReminderRangeEditor
+                    key={reminder.id}
+                    manager={reminderManager}
                   />
-                  <label className="work-reminder-row__status">
-                    <span>到点建议</span>
-                    <select
-                      aria-label={`${reminder.label}建议状态`}
-                      value={reminder.suggestedStatus}
-                      onChange={(event) => reminderManager.updateReminder(reminder.id, {
-                        suggestedStatus: event.target.value,
-                      })}
-                    >
-                      {REMINDER_STATUS_OPTIONS.map((option) => (
-                        <option value={option.value} key={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              </details>
-            ))}
+                ) : (
+                  <button
+                    type="button"
+                    className="work-reminder-row"
+                    key={reminder.id}
+                    disabled={Boolean(reminderManager.draft)}
+                    onClick={() => reminderManager.startEdit(reminder.id)}
+                  >
+                    <time>{reminder.startTime}–{reminder.endTime}</time>
+                    <strong>{reminderStatusLabel(reminder.statusType)}</strong>
+                    <span>编辑 ›</span>
+                  </button>
+                ),
+            )}
+            {reminderManager.draft?.mode === "create" ? (
+              <WorkReminderRangeEditor manager={reminderManager} />
+            ) : null}
           </div>
-          <p className="work-reminders__note">到点会自动切换状态；关闭的提醒不会触发。</p>
         </section>
       ) : null}
+    </div>
+  );
+}
+
+function WorkReminderRangeEditor({
+  manager,
+}: {
+  manager: WorkdayReminderManager;
+}) {
+  const draft = manager.draft;
+  if (!draft) {
+    return null;
+  }
+  const reminder = draft.value;
+  const start = splitClock(reminder.startTime);
+  const end = splitClock(reminder.endTime);
+
+  return (
+    <div className="work-reminder-row__editor">
+      <div className="work-reminder-row__actions">
+        <strong>{draft.mode === "create" ? "添加小闹钟" : "编辑小闹钟"}</strong>
+        {draft.mode === "edit" ? (
+          <button
+            type="button"
+            className="work-reminder-row__delete"
+            onClick={manager.deleteDraftReminder}
+          >删除</button>
+        ) : null}
+      </div>
+
+      <div className="work-reminder-row__range" aria-label="提醒时间段">
+        <fieldset>
+          <legend>开始时间</legend>
+          <div className="work-reminder-row__clock">
+            <CompactClockSelect
+              label="开始小时"
+              value={start.hour}
+              values={HOURS}
+              onSelect={(hour) => manager.updateDraft({
+                startTime: `${hour}:${start.minute}`,
+              })}
+            />
+            <span aria-hidden="true">:</span>
+            <CompactClockSelect
+              label="开始分钟"
+              value={start.minute}
+              values={MINUTES}
+              onSelect={(minute) => manager.updateDraft({
+                startTime: `${start.hour}:${minute}`,
+              })}
+            />
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>结束时间</legend>
+          <div className="work-reminder-row__clock">
+            <CompactClockSelect
+              label="结束小时"
+              value={end.hour}
+              values={HOURS}
+              onSelect={(hour) => manager.updateDraft({
+                endTime: `${hour}:${end.minute}`,
+              })}
+            />
+            <span aria-hidden="true">:</span>
+            <CompactClockSelect
+              label="结束分钟"
+              value={end.minute}
+              values={MINUTES}
+              onSelect={(minute) => manager.updateDraft({
+                endTime: `${end.hour}:${minute}`,
+              })}
+            />
+          </div>
+        </fieldset>
+      </div>
+
+      <label className="work-reminder-row__status">
+        <span>内容</span>
+        <select
+          aria-label="提醒内容"
+          value={reminder.statusType ?? ""}
+          onChange={(event) => manager.updateDraft({
+            statusType: event.target.value || null,
+          })}
+        >
+          <option value="">请选择</option>
+          {REMINDER_STATUS_OPTIONS.map((option) => (
+            <option value={option.value} key={option.value}>{option.label}</option>
+          ))}
+        </select>
+      </label>
+
+      {draft.error ? (
+        <p className="work-reminder-row__error" role="alert">{draft.error}</p>
+      ) : null}
+      <div className="work-reminder-row__footer">
+        <Button variant="secondary" onClick={manager.cancelDraft}>取消</Button>
+        <Button onClick={manager.saveDraft}>保存</Button>
+      </div>
     </div>
   );
 }

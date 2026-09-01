@@ -4,6 +4,7 @@ import {
 } from "../../assets/mascot";
 import { Button, Mascot, Select } from "../../shared/ui";
 import { useWorkStatus } from "./WorkStatusContext";
+import { isManualWorkStatus } from "./workStatusOptions";
 import "./WorkStatusPanel.css";
 
 export function WorkStatusPanel({
@@ -21,6 +22,10 @@ export function WorkStatusPanel({
     reload,
     switchStatus,
   } = useWorkStatus();
+  const selectableStatuses = statuses.filter((status) => isManualWorkStatus(status.id));
+  const selectedStatus = current && !isManualWorkStatus(current.statusType)
+    ? ""
+    : current?.statusType ?? "";
 
   const onSwitch = async (statusType: string) => {
     if (!statusType || switchingId || current?.statusType === statusType) {
@@ -70,12 +75,12 @@ export function WorkStatusPanel({
         <div className="work-status-panel__fields">
           <Select
             label="当前状态"
-            value={current?.statusType ?? ""}
+            value={selectedStatus}
             disabled={Boolean(switchingId)}
             onChange={(event) => void onSwitch(event.target.value)}
           >
-            {current ? null : <option value="">还没选状态</option>}
-            {statuses.map((status) => (
+            {selectedStatus ? null : <option value="">选择精神档位</option>}
+            {selectableStatuses.map((status) => (
               <option key={status.id} value={status.id}>
                 {status.emoji} {status.name}
                 {switchingId === status.id ? " 切换中…" : ""}

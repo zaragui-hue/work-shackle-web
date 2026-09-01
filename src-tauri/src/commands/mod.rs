@@ -1,3 +1,4 @@
+mod app_icon;
 mod busy_rule;
 mod calendar;
 mod contact;
@@ -9,6 +10,7 @@ mod work_end_decision;
 mod work_status;
 mod workspace;
 
+pub use app_icon::*;
 pub use busy_rule::*;
 pub use calendar::*;
 pub use contact::*;

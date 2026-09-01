@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { useMemo, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { WorkSchedule } from "../../services/tauri/settings";
 import {
   getCurrentWorkStatus,
   listWorkStatuses,
@@ -23,13 +23,21 @@ vi.mock("../../services/tauri/workStatus", async () => {
   };
 });
 
-const reminder: WorkdayReminder = {
+const schedule: WorkSchedule = {
+  workDate: "2026-08-24",
+  defaultStart: "09:00",
+  defaultEnd: "18:00",
+  effectiveStart: "09:00",
+  effectiveEnd: "18:00",
+  hasTodayOverride: false,
+};
+
+const meeting: WorkdayReminder = {
   id: "meeting-1400",
-  time: "14:00",
-  label: "开会",
-  message: "职业假笑准备。",
-  suggestedStatus: "meeting",
-  enabled: true,
+  startTime: "14:00",
+  endTime: "15:00",
+  statusType: "meeting",
+  createdAtMs: 1,
 };
 
 const working = {
@@ -47,18 +55,28 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function Harness() {
-  const [active, setActive] = useState<WorkdayReminder | null>(reminder);
-  const manager = useMemo(() => ({
-    reminders: [reminder],
+function Harness({
+  active,
+  nowMs,
+}: {
+  active: WorkdayReminder | null;
+  nowMs: number;
+}) {
+  const manager = {
+    reminders: active ? [active] : [],
     activeReminder: active,
-    addReminder: () => undefined,
-    updateReminder: () => undefined,
-    removeReminder: () => undefined,
-    dismissActive: () => setActive(null),
-    completeActive: () => setActive(null),
-  }), [active]);
-  const automation = useWorkdayStatusAutomation(manager);
+    nowMs,
+    draft: null,
+    storageError: null,
+    startAdd: () => undefined,
+    startEdit: () => undefined,
+    updateDraft: () => undefined,
+    saveDraft: () => undefined,
+    cancelDraft: () => undefined,
+    deleteDraftReminder: () => undefined,
+    clearAll: () => true,
+  };
+  const automation = useWorkdayStatusAutomation(manager, schedule);
   return (
     <div>
       {automation.notice ? <span>{automation.notice.title}</span> : null}
@@ -67,47 +85,64 @@ function Harness() {
   );
 }
 
-function renderHarness() {
+function setup(
+  active: WorkdayReminder | null,
+  nowMs: number,
+  useDefaultSwitchMock = true,
+) {
   vi.mocked(listWorkStatuses).mockResolvedValue([]);
   vi.mocked(getCurrentWorkStatus).mockResolvedValue(working);
-  return render(<WorkStatusProvider><Harness /></WorkStatusProvider>);
+  if (useDefaultSwitchMock) {
+    vi.mocked(switchWorkStatus).mockImplementation(async (statusType) => ({
+      ...working,
+      recordId: `r-${statusType}`,
+      statusType,
+      name: statusType,
+    }));
+  }
+  return render(
+    <WorkStatusProvider>
+      <Harness active={active} nowMs={nowMs} />
+    </WorkStatusProvider>,
+  );
 }
 
 describe("useWorkdayStatusAutomation", () => {
-  it("switches a due reminder once without a success notice", async () => {
-    vi.mocked(switchWorkStatus).mockResolvedValue({
-      ...working,
-      recordId: "r2",
-      statusType: "meeting",
-      emoji: "💻",
-      name: "会议中",
-    });
-    renderHarness();
+  it("enters a range and restores focus when it ends", async () => {
+    const during = new Date(2026, 7, 24, 14, 30).getTime();
+    const view = setup(meeting, during);
+    await waitFor(() => expect(switchWorkStatus).toHaveBeenCalledWith("meeting"));
 
-    await waitFor(() => expect(switchWorkStatus).toHaveBeenCalledTimes(1));
-    expect(screen.queryByText(/已自动切换/)).toBeNull();
+    view.rerender(
+      <WorkStatusProvider>
+        <Harness active={null} nowMs={new Date(2026, 7, 24, 15, 0).getTime()} />
+      </WorkStatusProvider>,
+    );
+    await waitFor(() => expect(switchWorkStatus).toHaveBeenCalledWith("focus_brick"));
   });
 
-  it("stops after failure and allows a manual retry", async () => {
+  it("lets an active range win in the prepare window, then prepares to leave", async () => {
+    const view = setup(meeting, new Date(2026, 7, 24, 17, 45).getTime());
+    await waitFor(() => expect(switchWorkStatus).toHaveBeenCalledWith("meeting"));
+    expect(switchWorkStatus).not.toHaveBeenCalledWith("preparing_leave");
+
+    view.rerender(
+      <WorkStatusProvider>
+        <Harness active={null} nowMs={new Date(2026, 7, 24, 17, 50).getTime()} />
+      </WorkStatusProvider>,
+    );
+    await waitFor(() => expect(switchWorkStatus).toHaveBeenCalledWith("preparing_leave"));
+  });
+
+  it("shows the existing retry path when a status switch fails", async () => {
+    vi.mocked(listWorkStatuses).mockResolvedValue([]);
+    vi.mocked(getCurrentWorkStatus).mockResolvedValue(working);
     vi.mocked(switchWorkStatus).mockRejectedValueOnce({ code: "DATABASE_ERROR", details: {} });
-    renderHarness();
+    setup(meeting, new Date(2026, 7, 24, 14, 30).getTime(), false);
 
     expect(await screen.findByText("状态没切过去，工位拒绝配合")).toBeTruthy();
-    expect(switchWorkStatus).toHaveBeenCalledTimes(1);
-
-    vi.mocked(switchWorkStatus).mockResolvedValue({
-      ...working,
-      statusType: "meeting",
-      emoji: "💻",
-      name: "会议中",
-    });
+    vi.mocked(switchWorkStatus).mockResolvedValue({ ...working, statusType: "meeting" });
     fireEvent.click(screen.getByRole("button", { name: "重试" }));
-
     await waitFor(() => expect(switchWorkStatus).toHaveBeenCalledTimes(2));
-    await waitFor(() => {
-      expect(screen.queryByText("状态没切过去，工位拒绝配合")).toBeNull();
-    });
-    expect(screen.queryByText(/已自动切换/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "重试" })).toBeNull();
   });
 });

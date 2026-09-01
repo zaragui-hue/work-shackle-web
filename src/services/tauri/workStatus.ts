@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
+import { refreshDynamicAppIconAfter } from "./dynamicAppIconEvents";
 import { ErrorCode, type Phase1ErrorCode } from "./errorCodes";
 import { TaskErrorCode, type TaskIpcErrorCode } from "./tasks";
 
@@ -64,9 +65,11 @@ export async function getCurrentWorkStatus(): Promise<CurrentWorkStatus | null> 
 export async function switchWorkStatus(
   statusType: string,
 ): Promise<CurrentWorkStatus> {
-  return invoke<CurrentWorkStatus>("switch_work_status", {
-    input: { statusType },
-  });
+  return refreshDynamicAppIconAfter(
+    invoke<CurrentWorkStatus>("switch_work_status", {
+      input: { statusType },
+    }),
+  );
 }
 
 export async function listStatusCopies(

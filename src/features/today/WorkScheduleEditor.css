@@ -12,8 +12,7 @@
   box-shadow: 6px 6px 0 var(--color-signal);
 }
 
-.work-schedule-editor__kicker,
-.work-reminders__eyebrow {
+.work-schedule-editor__kicker {
   margin: 0;
   color: var(--color-reaction);
   font-size: 0.68rem;
@@ -68,6 +67,34 @@
   line-height: 1.45;
 }
 
+.work-reminders__error,
+.work-reminder-row__error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 0.7rem;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.work-reminders__error { color: #fff; }
+
+.work-reminders__editing-hint {
+  margin: -3px 0 0;
+  color: var(--color-signal);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.work-reminders__empty {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed color-mix(in srgb, white 45%, transparent);
+  border-radius: 9px;
+  color: color-mix(in srgb, white 72%, var(--color-anchor));
+  font-size: 0.72rem;
+  text-align: center;
+}
+
 .work-schedule-editor__error { margin: 4px 0 0; color: #fff; font-size: 0.78rem; font-weight: 800; }
 
 .work-reminders {
@@ -87,83 +114,95 @@
 
 .work-reminders__head h3 { margin: 2px 0 0; font-size: 1rem; letter-spacing: -0.03em; }
 .work-reminders__head .ws-button { min-height: 34px; padding: 6px 10px; font-size: 0.72rem; }
+.work-reminders__head-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
+.work-reminders__clear-confirm { background: var(--color-danger); color: #fff; }
 .work-reminders__list {
-  position: relative;
   display: grid;
-  padding-left: 14px;
-}
-
-.work-reminders__list::before {
-  content: "";
-  position: absolute;
-  left: 4px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  background: color-mix(in srgb, white 30%, transparent);
+  gap: 8px;
 }
 
 .work-reminder-row {
-  position: relative;
-  padding: 0;
-  border: 0;
-  border-bottom: 2px solid var(--color-anchor);
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1.5px solid var(--color-anchor);
+  border-radius: 9px;
   color: var(--color-anchor);
   background: var(--color-paper-raised);
-}
-
-.work-reminder-row::before {
-  content: "";
-  position: absolute;
-  left: -14px;
-  top: 13px;
-  z-index: 2;
-  width: 7px;
-  height: 7px;
-  border: 2px solid var(--color-ink);
-  border-radius: 50%;
-  background: var(--color-orange);
-}
-
-.work-reminder-row:nth-child(2)::before { background: var(--color-lime); }
-.work-reminder-row:nth-child(3)::before { background: var(--color-blue); }
-.work-reminder-row:nth-child(4)::before { background: #fff; }
-
-.work-reminder-row__summary {
-  display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto;
-  gap: 6px;
-  align-items: start;
-  padding: 8px 0;
+  text-align: left;
   cursor: pointer;
-  list-style: none;
 }
 
-.work-reminder-row__summary::-webkit-details-marker { display: none; }
-.work-reminder-row__summary time { font-family: var(--font-data); font-size: 0.68rem; font-weight: 900; line-height: 1.35; }
-.work-reminder-row__summary-copy { min-width: 0; }
-.work-reminder-row__summary-copy strong { display: block; font-size: 0.74rem; }
-.work-reminder-row__summary-copy small { display: block; margin-top: 2px; overflow: hidden; color: var(--color-ink-muted); font-size: 0.62rem; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
-.work-reminder-row__state { color: var(--color-blue); font-size: 0.58rem; font-weight: 900; }
+.work-reminder-row:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 3px 3px 0 var(--color-signal);
+}
+
+.work-reminder-row:disabled { cursor: not-allowed; opacity: 0.55; }
+.work-reminder-row time { font-family: var(--font-data); font-size: 0.68rem; font-weight: 900; white-space: nowrap; }
+.work-reminder-row strong { overflow: hidden; font-size: 0.76rem; text-overflow: ellipsis; white-space: nowrap; }
+.work-reminder-row > span { color: var(--color-ink-muted); font-size: 0.65rem; font-weight: 900; white-space: nowrap; }
 
 .work-reminder-row__editor {
   display: grid;
-  gap: 7px;
-  margin-bottom: 8px;
-  padding: 9px;
-  border: 1px solid #d1cec6;
-  border-radius: 9px;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid var(--color-anchor);
+  border-radius: 10px;
   background: var(--color-paper-raised);
+  box-shadow: 4px 4px 0 var(--color-signal);
 }
 
-.work-reminder-row__top {
-  display: grid;
-  grid-template-columns: auto 82px minmax(0, 1fr) auto;
-  gap: 6px;
+.work-reminder-row__actions {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.work-reminder-row input,
+.work-reminder-row__actions > strong { font-size: 0.78rem; }
+
+.work-reminder-row__range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.work-reminder-row__range fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 7px;
+  border: 1px solid color-mix(in srgb, var(--color-ink) 28%, transparent);
+  border-radius: 7px;
+}
+
+.work-reminder-row__range legend {
+  padding: 0 4px;
+  color: var(--color-ink-muted);
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.work-reminder-row__clock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+}
+
+.work-reminder-row__clock .compact-clock-select__trigger {
+  min-height: 36px;
+  padding: 4px 6px;
+  border-color: var(--color-anchor);
+  color: var(--color-anchor);
+  background: var(--color-signal);
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
 .work-reminder-row select {
   min-width: 0;
   height: 30px;
@@ -173,20 +212,6 @@
   background: var(--color-paper-raised);
   font-size: 0.72rem;
 }
-
-.work-reminder-row__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.65rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.work-reminder-row__toggle input { width: 15px; height: 15px; accent-color: var(--color-blue); }
-.work-reminder-row__time { font-family: var(--font-data); font-weight: 900; }
-.work-reminder-row__label { font-weight: 800; }
-.work-reminder-row__message { width: 100%; }
 
 .work-reminder-row__status {
   display: flex;
@@ -199,9 +224,14 @@
 }
 
 .work-reminder-row__status select { width: min(60%, 150px); }
-.work-reminder-row__remove { width: 27px; height: 27px; padding: 0; border: 1.5px solid var(--color-ink); border-radius: 7px; background: var(--color-orange); font-size: 1rem; font-weight: 900; line-height: 1; }
+.work-reminder-row__delete { padding: 4px 7px; border: 0; color: var(--color-danger); background: transparent; font-size: 0.68rem; font-weight: 900; }
+.work-reminder-row__footer { display: flex; justify-content: flex-end; gap: 8px; padding-top: 2px; }
+.work-reminder-row__footer .ws-button { min-height: 34px; padding: 6px 12px; font-size: 0.72rem; }
 
 @media (max-width: 420px) {
-  .work-reminder-row__top { grid-template-columns: auto 82px minmax(0, 1fr); }
-  .work-reminder-row__remove { grid-column: 3; justify-self: end; }
+  .work-reminders__head { align-items: flex-start; }
+  .work-reminders__head-actions { flex-wrap: wrap; }
+  .work-reminder-row { grid-template-columns: 1fr auto; }
+  .work-reminder-row strong { grid-column: 1 / -1; grid-row: 2; }
+  .work-reminder-row__range { grid-template-columns: 1fr; }
 }

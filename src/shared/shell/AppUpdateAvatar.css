@@ -1,0 +1,93 @@
+.ws-update-avatar {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+}
+
+.ws-update-avatar__button {
+  position: relative;
+  padding: 0;
+  font: inherit;
+}
+
+.ws-update-avatar__button:disabled {
+  cursor: wait;
+  opacity: 1;
+}
+
+.ws-update-avatar__badge {
+  position: absolute;
+  right: -7px;
+  bottom: -6px;
+  min-width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  padding: 0 3px;
+  border: 2px solid var(--color-anchor);
+  border-radius: 999px;
+  color: white;
+  background: var(--color-stage);
+  font-family: var(--font-data);
+  font-size: 0.58rem;
+  font-weight: 1000;
+  line-height: 1;
+  transform: rotate(6deg);
+}
+
+.ws-update-avatar[data-state="downloading"] .ws-update-avatar__badge,
+.ws-update-avatar[data-state="installing"] .ws-update-avatar__badge {
+  background: var(--color-reaction);
+}
+
+.ws-update-avatar[data-state="failed"] .ws-update-avatar__badge {
+  background: var(--color-danger);
+}
+
+.ws-update-avatar[data-state="installing"] .ws-update-avatar__badge {
+  animation: ws-update-spin 900ms linear infinite;
+}
+
+.ws-update-avatar__bubble {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 10px);
+  left: 0;
+  width: max-content;
+  max-width: min(260px, calc(100vw - 48px));
+  margin: 0;
+  padding: 7px 9px;
+  border: 2px solid var(--color-anchor);
+  border-radius: 3px;
+  color: var(--color-ink);
+  background: var(--color-paper-raised);
+  box-shadow: 3px 3px 0 var(--color-anchor);
+  font-size: var(--font-size-caption);
+  font-weight: 900;
+}
+
+@keyframes ws-update-spin {
+  to { transform: rotate(366deg); }
+}
+
+@media (max-width: 460px) {
+  .ws-update-avatar {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .ws-update-avatar__badge {
+    right: -6px;
+    bottom: -5px;
+    min-width: 18px;
+    height: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-update-avatar[data-state="installing"] .ws-update-avatar__badge {
+    animation: none;
+  }
+}

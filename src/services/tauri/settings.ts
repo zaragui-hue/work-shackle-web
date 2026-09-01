@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
+import { refreshDynamicAppIconAfter } from "./dynamicAppIconEvents";
 import { ErrorCode, type Phase1ErrorCode } from "./errorCodes";
 import { TaskErrorCode, type TaskIpcErrorCode } from "./tasks";
 
@@ -54,17 +55,23 @@ export async function getWorkSchedule(): Promise<WorkSchedule> {
 export async function saveDefaultWorkTimes(
   input: SaveWorkTimesInput,
 ): Promise<WorkSchedule> {
-  return invoke<WorkSchedule>("save_default_work_times", { input });
+  return refreshDynamicAppIconAfter(
+    invoke<WorkSchedule>("save_default_work_times", { input }),
+  );
 }
 
 export async function saveTodayWorkOverride(
   input: SaveWorkTimesInput,
 ): Promise<WorkSchedule> {
-  return invoke<WorkSchedule>("save_today_work_override", { input });
+  return refreshDynamicAppIconAfter(
+    invoke<WorkSchedule>("save_today_work_override", { input }),
+  );
 }
 
 export async function clearTodayWorkOverride(): Promise<WorkSchedule> {
-  return invoke<WorkSchedule>("clear_today_work_override");
+  return refreshDynamicAppIconAfter(
+    invoke<WorkSchedule>("clear_today_work_override"),
+  );
 }
 
 export async function getLunchSchedule(): Promise<LunchSchedule> {

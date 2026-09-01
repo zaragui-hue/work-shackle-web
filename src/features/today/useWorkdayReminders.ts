@@ -1,78 +1,203 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import type { WorkSchedule } from "../../services/tauri/settings";
 import {
   createWorkdayReminder,
-  findDueWorkdayReminder,
+  findActiveWorkdayReminder,
   loadWorkdayReminders,
   saveWorkdayReminders,
+  sortWorkdayReminders,
+  validateWorkdayReminder,
   type WorkdayReminder,
+  type WorkdayReminderDraftValue,
 } from "./workdayReminders";
+
+export type WorkdayReminderDraft = {
+  mode: "create" | "edit";
+  value: WorkdayReminderDraftValue;
+  error: string | null;
+};
 
 export type WorkdayReminderManager = {
   reminders: WorkdayReminder[];
   activeReminder: WorkdayReminder | null;
-  addReminder: () => void;
-  updateReminder: (id: string, patch: Partial<WorkdayReminder>) => void;
-  removeReminder: (id: string) => void;
-  dismissActive: () => void;
-  completeActive: () => void;
+  nowMs: number;
+  draft: WorkdayReminderDraft | null;
+  storageError: string | null;
+  startAdd: () => void;
+  startEdit: (id: string) => void;
+  updateDraft: (patch: Partial<WorkdayReminderDraftValue>) => void;
+  saveDraft: () => void;
+  cancelDraft: () => void;
+  deleteDraftReminder: () => void;
+  clearAll: () => boolean;
 };
 
-export function useWorkdayReminders(workDate?: string): WorkdayReminderManager {
+export function useWorkdayReminders(
+  schedule?: WorkSchedule | null,
+): WorkdayReminderManager {
   const storage = typeof window === "undefined" ? null : window.localStorage;
   const [reminders, setReminders] = useState<WorkdayReminder[]>(() =>
-    loadWorkdayReminders(storage),
+    loadWorkdayReminders(storage, schedule),
   );
-  const [activeReminder, setActiveReminder] = useState<WorkdayReminder | null>(null);
-  const handledIds = useRef(new Set<string>());
+  const [draft, setDraft] = useState<WorkdayReminderDraft | null>(null);
+  const [storageError, setStorageError] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
-    saveWorkdayReminders(storage, reminders);
-  }, [reminders, storage]);
+    const interval = window.setInterval(() => setNowMs(Date.now()), 15_000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
-    handledIds.current.clear();
-    setActiveReminder(null);
-  }, [workDate]);
-
-  useEffect(() => {
-    if (!workDate || activeReminder) {
+    if (!schedule?.workDate) {
       return;
     }
-    const tick = () => {
-      const due = findDueWorkdayReminder({
-        reminders,
-        workDate,
-        nowMs: Date.now(),
-        handledIds: handledIds.current,
-      });
-      if (due) {
-        setActiveReminder(due);
-      }
-    };
-    tick();
-    const interval = window.setInterval(tick, 15_000);
-    return () => window.clearInterval(interval);
-  }, [activeReminder, reminders, workDate]);
+    setReminders(loadWorkdayReminders(storage, schedule));
+    setNowMs(Date.now());
+  }, [schedule?.workDate, storage]);
 
-  const handleActive = useCallback(() => {
-    if (activeReminder) {
-      handledIds.current.add(activeReminder.id);
+  const persist = useCallback((next: WorkdayReminder[]): boolean => {
+    try {
+      saveWorkdayReminders(storage, next);
+      setStorageError(null);
+      return true;
+    } catch {
+      setStorageError("小闹钟保存失败，请重试");
+      return false;
     }
-    setActiveReminder(null);
-  }, [activeReminder]);
+  }, [storage]);
+
+  const startAdd = useCallback(() => {
+    if (draft) {
+      return;
+    }
+    setDraft({
+      mode: "create",
+      value: createWorkdayReminder(),
+      error: null,
+    });
+    setStorageError(null);
+  }, [draft]);
+
+  const startEdit = useCallback((id: string) => {
+    if (draft) {
+      return;
+    }
+    const reminder = reminders.find((candidate) => candidate.id === id);
+    if (!reminder) {
+      return;
+    }
+    setDraft({ mode: "edit", value: { ...reminder }, error: null });
+    setStorageError(null);
+  }, [draft, reminders]);
+
+  const updateDraft = useCallback((patch: Partial<WorkdayReminderDraftValue>) => {
+    setDraft((current) => current ? {
+      ...current,
+      value: { ...current.value, ...patch },
+      error: null,
+    } : null);
+    setStorageError(null);
+  }, []);
+
+  const saveDraft = useCallback(() => {
+    if (!draft) {
+      return;
+    }
+    const error = validateWorkdayReminder(draft.value, reminders, schedule);
+    if (error) {
+      setDraft((current) => current ? { ...current, error } : null);
+      return;
+    }
+    const statusType = draft.value.statusType;
+    if (!statusType) {
+      setDraft((current) => current ? { ...current, error: "请选择提醒内容" } : null);
+      return;
+    }
+    const saved: WorkdayReminder = { ...draft.value, statusType };
+    const next = sortWorkdayReminders(
+      draft.mode === "create"
+        ? [...reminders, saved]
+        : reminders.map((reminder) => reminder.id === saved.id ? saved : reminder),
+    );
+    if (!persist(next)) {
+      setDraft((current) => current
+        ? { ...current, error: "保存失败，请重试" }
+        : null);
+      return;
+    }
+    setReminders(next);
+    setDraft(null);
+    setNowMs(Date.now());
+  }, [draft, persist, reminders, schedule]);
+
+  const cancelDraft = useCallback(() => {
+    setDraft(null);
+    setStorageError(null);
+  }, []);
+
+  const deleteDraftReminder = useCallback(() => {
+    if (!draft || draft.mode !== "edit") {
+      return;
+    }
+    const next = reminders.filter((reminder) => reminder.id !== draft.value.id);
+    if (!persist(next)) {
+      setDraft((current) => current
+        ? { ...current, error: "删除失败，请重试" }
+        : null);
+      return;
+    }
+    setReminders(next);
+    setDraft(null);
+    setNowMs(Date.now());
+  }, [draft, persist, reminders]);
+
+  const clearAll = useCallback((): boolean => {
+    if (draft || !persist([])) {
+      return false;
+    }
+    setReminders([]);
+    setNowMs(Date.now());
+    return true;
+  }, [draft, persist]);
+
+  const activeReminder = useMemo(() => {
+    if (!schedule?.workDate) {
+      return null;
+    }
+    return findActiveWorkdayReminder({
+      reminders,
+      workDate: schedule.workDate,
+      nowMs,
+    });
+  }, [nowMs, reminders, schedule?.workDate]);
 
   return useMemo(() => ({
     reminders,
     activeReminder,
-    addReminder: () => setReminders((current) => [...current, createWorkdayReminder()]),
-    updateReminder: (id, patch) => setReminders((current) =>
-      current.map((reminder) => reminder.id === id ? { ...reminder, ...patch } : reminder),
-    ),
-    removeReminder: (id) => setReminders((current) =>
-      current.filter((reminder) => reminder.id !== id),
-    ),
-    dismissActive: handleActive,
-    completeActive: handleActive,
-  }), [activeReminder, handleActive, reminders]);
+    nowMs,
+    draft,
+    storageError,
+    startAdd,
+    startEdit,
+    updateDraft,
+    saveDraft,
+    cancelDraft,
+    deleteDraftReminder,
+    clearAll,
+  }), [
+    activeReminder,
+    cancelDraft,
+    clearAll,
+    deleteDraftReminder,
+    draft,
+    nowMs,
+    reminders,
+    saveDraft,
+    startAdd,
+    startEdit,
+    storageError,
+    updateDraft,
+  ]);
 }

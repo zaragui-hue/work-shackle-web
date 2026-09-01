@@ -22,9 +22,11 @@ export function WorkdayReminderPrompt({
         className="workday-reminder-prompt__icon"
       />
       <div className="workday-reminder-prompt__copy">
-        <p className="workday-reminder-prompt__kicker">{reminder.time} · {reminder.label}</p>
-        <h2>{reminder.message}</h2>
-        <p>建议切换为「{reminderStatusLabel(reminder.suggestedStatus)}」，当然最终解释权归你。</p>
+        <p className="workday-reminder-prompt__kicker">
+          {reminder.startTime}–{reminder.endTime} · 工位小闹钟
+        </p>
+        <h2>{reminderStatusLabel(reminder.statusType)}</h2>
+        <p>该时间段会自动联动当前精神档位。</p>
       </div>
       <div className="workday-reminder-prompt__actions">
         <Button disabled={switching} onClick={onSwitch}>

@@ -14,8 +14,8 @@ use commands::{
     query_calendar_day_tasks, query_calendar_task_counts, query_history_tasks, query_tasks,
     query_today_tasks, reset_busy_rules_to_default, resolve_default_workspace_path,
     save_busy_rules, save_default_work_times, save_lunch_times, save_status_copy,
-    save_today_work_override, set_workspace_path_command, start_overtime, switch_work_status,
-    update_task, validate_workspace_candidate, AppState,
+    save_today_work_override, set_dynamic_app_icon, set_workspace_path_command, start_overtime,
+    switch_work_status, update_task, validate_workspace_candidate, AppState,
 };
 use services::single_instance::handle_second_instance;
 
@@ -27,9 +27,12 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             initialize_app,
+            set_dynamic_app_icon,
             get_workspace_status,
             validate_workspace_candidate,
             set_workspace_path_command,

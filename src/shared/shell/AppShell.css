@@ -6,7 +6,7 @@
   max-width: none;
   margin: 0;
   padding: 18px 20px 14px;
-  overflow: hidden;
+  overflow: clip;
   border: 0;
   border-radius: 0;
   color: var(--color-ink);
@@ -15,6 +15,9 @@
 }
 
 .ws-shell__brand {
+  position: sticky;
+  z-index: 30;
+  top: 0;
   min-height: 78px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -23,6 +26,7 @@
   padding: 14px 16px 16px;
   border-bottom: var(--border-ink-strong);
   background: var(--color-signal);
+  box-shadow: 0 8px 18px rgba(27, 35, 63, 0.16);
 }
 
 .ws-shell__brand-lockup {
